@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
-import { clearInbox, core, createReview, decide } from "./helpers";
+import { clearInbox, core, createReview, decide, settingsDialog } from "./helpers";
 
 const payload = {
   summary: "Two proposals.",
@@ -65,7 +65,7 @@ test("the sidebar lists what is waiting on every page, oldest first, and ⌥↓ 
 
   // still there inside settings
   await page.keyboard.press("ControlOrMeta+,");
-  await expect(page.locator("[data-settings]")).toBeVisible();
+  await expect(settingsDialog(page)).toBeVisible();
   await expect(waiting).toBeVisible();
   await page.keyboard.press("Escape");
 

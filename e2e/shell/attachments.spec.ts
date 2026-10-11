@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { core, linkPlugin, layout } from "./helpers";
+import { core, linkPlugin, layout, settingsSection } from "./helpers";
 import { scratch } from "../helpers/scratch";
 
 /** A plugin whose view asks for the file its payload names and reports what came. */
@@ -125,12 +125,12 @@ test("a plugin that takes files says so in its details, and Settings › Data to
 
   await page.goto("/#/");
   await page.keyboard.press("ControlOrMeta+,");
-  await page.locator('[data-section="plugins"]').click();
-  const row = page.locator('[data-plugin-row="reader"]');
+  await settingsSection(page, "Plugins").click();
+  const row = page.getByTestId("plugin-row-reader");
   await row.getByRole("button", { name: "Details of reader" }).click();
-  await expect(row.locator("[data-plugin-takes]")).toHaveText(".bin");
-  await page.locator('[data-section="data"]').click();
-  await expect(page.locator("[data-attachment-totals]")).toHaveText(
+  await expect(row.getByTestId("plugin-takes")).toHaveText(".bin");
+  await settingsSection(page, "Data").click();
+  await expect(page.getByTestId("attachment-totals")).toHaveText(
     info.attachments.count === 0 ? "None stored" : /\d+ files?, .+\. They go with their reviews/,
   );
 

@@ -269,16 +269,10 @@ function PluginEntry({
   const origin = originOf(p);
   // asked before a removal, in place of whatever the line says
   const ask = removing ? (
-    <span className="settings-plugin-ask" data-plugin-remove-ask>
+    <span className="settings-plugin-ask" data-testid="plugin-remove-ask">
       Remove {p.title || p.name}?
       {linked ? " The folder stays where it is." : " Reviews that rendered from it keep doing so."}
-      <button
-        type="button"
-        className="settings-reset-link danger"
-        onClick={remove}
-        disabled={removing === "busy"}
-        data-plugin-remove-confirm
-      >
+      <button type="button" className="settings-reset-link danger" onClick={remove} disabled={removing === "busy"}>
         {removing === "busy" ? "Removing…" : "Remove"}
       </button>
       <button
@@ -307,8 +301,7 @@ function PluginEntry({
     <div
       ref={box}
       className={`settings-plugin ${open ? "is-open" : ""} ${fresh ? "is-fresh" : ""}`}
-      data-plugin-settings={p.name}
-      data-plugin-row={p.name}
+      data-testid={`plugin-row-${p.name}`}
     >
       <SettingsRow
         icon={<PluginIcon icon={p.icon} size={16} strokeWidth={1.75} />}
@@ -319,7 +312,7 @@ function PluginEntry({
             {p.error ? (
               // why it is broken, on hover or keyboard focus
               <Tooltip label={p.error} tone="danger">
-                <span className="with-icon danger" tabIndex={0} data-plugin-broken>
+                <span className="with-icon danger" tabIndex={0} data-testid="plugin-broken">
                   <TriangleAlert size={12} />
                   broken
                 </span>
@@ -341,7 +334,6 @@ function PluginEntry({
             className="chrome-button settings-plugin-update"
             onClick={updateNow}
             disabled={updating}
-            data-plugin-update={p.name}
           >
             {updating ? "Updating…" : `Update to ${p.update}`}
           </button>
@@ -404,9 +396,9 @@ function PluginEntry({
         </Tooltip>
       </SettingsRow>
       {open ? (
-        <div className="settings-subrows" data-plugin-details={p.name}>
+        <div className="settings-subrows" data-testid="plugin-details">
           {p.error ? (
-            <p className="notice notice-danger settings-plugin-error" data-plugin-error>
+            <p className="notice notice-danger settings-plugin-error" data-testid="plugin-error">
               This plugin is broken: {p.error}
             </p>
           ) : null}
@@ -427,13 +419,13 @@ function PluginEntry({
             {p.attachments ? (
               <>
                 <dt>Files</dt>
-                <dd data-plugin-takes>{takes(p.attachments)}</dd>
+                <dd data-testid="plugin-takes">{takes(p.attachments)}</dd>
               </>
             ) : null}
             {links.length ? (
               <>
                 <dt>Opens without asking</dt>
-                <dd className="settings-plugin-links" data-plugin-links={p.name}>
+                <dd className="settings-plugin-links" data-testid="plugin-links">
                   {links.map((origin) => (
                     <span key={origin} className="settings-link-chip mono">
                       {origin}
@@ -442,7 +434,6 @@ function PluginEntry({
                         className="settings-link-forget"
                         aria-label={`Ask again before opening ${origin}`}
                         onClick={() => onForgetLink(origin)}
-                        data-forget-link={origin}
                       >
                         <X size={12} />
                       </button>
@@ -455,13 +446,7 @@ function PluginEntry({
           {p.usable && p.samples?.length ? (
             <div className="settings-plugin-actions">
               {p.samples.length === 1 ? (
-                <button
-                  type="button"
-                  className="chrome-button"
-                  onClick={() => sendSample()}
-                  disabled={sending}
-                  data-plugin-sample
-                >
+                <button type="button" className="chrome-button" onClick={() => sendSample()} disabled={sending}>
                   <Send size={13} /> Send a sample
                 </button>
               ) : (
@@ -472,7 +457,6 @@ function PluginEntry({
                     className="chrome-button"
                     onClick={() => sendSample(sample)}
                     disabled={sending}
-                    data-plugin-sample={sample}
                   >
                     <Send size={13} /> {sample}
                   </button>

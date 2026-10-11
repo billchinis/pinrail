@@ -45,7 +45,7 @@ export function UpdatesRows() {
 
   const action =
     status.state === "ready" ? (
-      <button type="button" className="chrome-button button-primary" onClick={() => run(restart)} data-update-restart>
+      <button type="button" className="chrome-button button-primary" onClick={() => run(restart)}>
         Restart to update
       </button>
     ) : status.state === "available" ? (
@@ -58,7 +58,6 @@ export function UpdatesRows() {
         className="chrome-button"
         disabled={unavailable || status.state === "checking" || status.state === "downloading"}
         onClick={() => run(check)}
-        data-update-check
       >
         Check for updates
       </button>

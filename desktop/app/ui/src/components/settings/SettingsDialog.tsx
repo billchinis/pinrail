@@ -57,7 +57,6 @@ function PortField({ value, onChange }: { value: number; onChange: (port: number
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === "Enter" && commit()}
-      data-setting-port
     />
   );
 }
@@ -207,7 +206,6 @@ export function SettingsDialog({
         aria-modal="true"
         aria-label="Settings"
         onMouseDown={(e) => e.stopPropagation()}
-        data-settings
       >
         <nav className="settings-rail" aria-label="Settings sections">
           <div className="settings-rail-title">Settings</div>
@@ -217,14 +215,13 @@ export function SettingsDialog({
               type="button"
               className={section === s.key ? "is-active" : ""}
               onClick={() => onSection(s.key)}
-              data-section={s.key}
             >
               {s.icon}
               {s.label}
             </button>
           ))}
         </nav>
-        <div className="settings-body">
+        <div className="settings-body" data-testid="settings-body">
           <Tooltip label="Close" keys={["Esc"]}>
             <button type="button" className="bar-button settings-close" onClick={onClose} aria-label="Close settings">
               <X size={16} />
@@ -511,7 +508,7 @@ export function SettingsDialog({
                   label="Files sent with reviews"
                   description={
                     info?.attachments ? (
-                      <span data-attachment-totals>
+                      <span data-testid="attachment-totals">
                         {info.attachments.count === 0
                           ? "None stored"
                           : `${info.attachments.count} file${info.attachments.count === 1 ? "" : "s"}, ${size(info.attachments.bytes)}. They go with their reviews`}
@@ -543,7 +540,7 @@ export function SettingsDialog({
                 <SettingsRow label="Plugins" description="To write your own, see pinrail.dev/docs/building/writing" />
                 <SettingsRow label="License" description="Apache License 2.0" note={noticesError ?? undefined}>
                   {native ? (
-                    <button type="button" className="chrome-button" onClick={openNotices} data-open-notices>
+                    <button type="button" className="chrome-button" onClick={openNotices}>
                       Third-party notices
                     </button>
                   ) : null}

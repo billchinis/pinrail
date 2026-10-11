@@ -1,7 +1,7 @@
 // What the shell specs share: where the core listens, and reviews submitted,
 // decided and cleared through its API, as an agent or the app would.
 
-import { expect, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -51,6 +51,13 @@ export async function clearInbox(request: APIRequestContext) {
     expect(response.status(), `discarding ${r.id}: ${await response.text()}`).toBe(200);
   }
 }
+
+/** The settings dialog. */
+export const settingsDialog = (page: Page) => page.getByRole("dialog", { name: "Settings", exact: true });
+
+/** A section's button in the settings dialog's rail, such as "Data". */
+export const settingsSection = (page: Page, name: string) =>
+  page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name, exact: true });
 
 /** Installs a plugin folder as a link, ready for reviews. */
 export async function linkPlugin(request: APIRequestContext, source: string, name: string) {

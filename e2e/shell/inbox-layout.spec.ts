@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { clearInbox, createReview } from "./helpers";
+import { clearInbox, createReview, settingsDialog } from "./helpers";
 
 test("the inbox is grouped by project or one list, newest first, and remembers which", async ({ page }) => {
   await clearInbox(page.request);
@@ -42,11 +42,11 @@ test("the inbox's keys stay quiet under a dialog, and with a modifier", async ({
   await page.goto("/#/");
   await expect(page.getByTestId("review-row")).toHaveCount(1);
   await page.keyboard.press("ControlOrMeta+,");
-  await expect(page.locator("[data-settings]")).toBeVisible();
+  await expect(settingsDialog(page)).toBeVisible();
   await page.keyboard.press("d");
   await expect(discard, "d reached the inbox behind Settings").toHaveCount(0);
   await page.keyboard.press("Escape");
-  await expect(page.locator("[data-settings]")).toHaveCount(0);
+  await expect(settingsDialog(page)).toHaveCount(0);
 
   await page.keyboard.press("ControlOrMeta+d");
   await expect(discard, "⌘D opened the discard dialog").toHaveCount(0);

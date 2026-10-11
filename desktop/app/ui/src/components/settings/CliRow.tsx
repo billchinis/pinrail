@@ -125,7 +125,7 @@ export function CliRow({ open }: { open: boolean }) {
 
   return (
     <SettingsRow label="Install the CLI" description={description} note={note}>
-      <button type="button" className="chrome-button" onClick={installCli} disabled={busy} data-install-cli>
+      <button type="button" className="chrome-button" onClick={installCli} disabled={busy}>
         {busy ? "Installing…" : status.outdated ? "Update" : status.installed ? "Reinstall" : "Install"}
       </button>
     </SettingsRow>

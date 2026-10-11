@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { core, corePort } from "./helpers";
+import { core, corePort, settingsDialog, settingsSection } from "./helpers";
 
 const served = async (request: import("@playwright/test").APIRequestContext) =>
   (await request.get(`${core}/api/v1/settings`)).json();
@@ -7,8 +7,8 @@ const served = async (request: import("@playwright/test").APIRequestContext) =>
 test("keep-days is chosen from the menu and read back from the core", async ({ page }) => {
   await page.goto("/#/");
   await page.keyboard.press("ControlOrMeta+,");
-  await expect(page.locator("[data-settings]")).toBeVisible();
-  await page.locator('[data-section="data"]').click();
+  await expect(settingsDialog(page)).toBeVisible();
+  await settingsSection(page, "Data").click();
 
   const menu = page.getByRole("button", { name: "Keep reviews for" });
   await expect(menu).toContainText("Forever");
@@ -25,17 +25,17 @@ test("keep-days is chosen from the menu and read back from the core", async ({ p
 test("the port is stored for the next start and the row says the server has not moved", async ({ page }) => {
   await page.goto("/#/");
   await page.keyboard.press("ControlOrMeta+,");
-  await page.locator('[data-section="data"]').click();
+  await settingsSection(page, "Data").click();
 
   // the field shows the stored port, which is where the next start listens;
   // the test core was started on another one by hand, so the row says so
   const stored = (await served(page.request)).port;
-  const field = page.locator("[data-setting-port]");
+  const field = page.getByRole("spinbutton", { name: "Port" });
   await expect(field).toHaveValue(String(stored));
   await field.fill("4811");
   await field.press("Enter");
   await expect.poll(async () => (await served(page.request)).port).toBe(4811);
-  await expect(page.locator(".settings-row", { has: field })).toContainText(
+  await expect(settingsDialog(page)).toContainText(
     `Takes effect when Pinrail starts next; until then the server stays on ${corePort}`,
   );
 
@@ -66,7 +66,7 @@ test("an older settings answer that arrives last does not undo a newer change", 
   });
   await page.goto("/#/");
   await page.keyboard.press("ControlOrMeta+,");
-  await expect(page.locator("[data-settings]")).toBeVisible();
+  await expect(settingsDialog(page)).toBeVisible();
 
   const sound = page.getByRole("switch", { name: "Sound" });
   const notifications = page.getByRole("switch", { name: "System notifications" });

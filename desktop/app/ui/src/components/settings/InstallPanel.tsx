@@ -44,16 +44,20 @@ function OfficialPlugins({
   const found = matching(entries, query);
   if (!found.length) {
     return query.trim() ? (
-      <p className="dim" data-official-none>
+      <p className="dim" data-testid="official-none">
         No official plugin matches “{query.trim()}”. To install another plugin, give the path of its folder or zip.
       </p>
     ) : null;
   }
   return (
-    <div className="install-official" data-official-plugins>
+    <div className="install-official" data-testid="official-plugins">
       {query.trim() ? null : <div className="install-official-caption">Official plugins</div>}
       {found.map((e) => (
-        <div key={e.id} className={`install-official-row ${e.needs ? "is-unavailable" : ""}`} data-official={e.name}>
+        <div
+          key={e.id}
+          className={`install-official-row ${e.needs ? "is-unavailable" : ""}`}
+          data-testid={`official-${e.name}`}
+        >
           <span className="settings-row-icon">
             <PluginIcon icon={e.icon} size={16} strokeWidth={1.75} />
           </span>
@@ -68,7 +72,7 @@ function OfficialPlugins({
           ) : installing === e.id ? (
             <span className="dim install-wait">Installing…</span>
           ) : e.installed === e.version ? (
-            <span className="dim install-wait" data-official-installed>
+            <span className="dim install-wait" data-testid="official-installed">
               Installed
             </span>
           ) : (
@@ -77,7 +81,6 @@ function OfficialPlugins({
               className={`chrome-button ${e.installed ? "" : "button-primary"}`}
               onClick={() => onInstall(e)}
               disabled={installing !== null}
-              data-official-install={e.name}
             >
               {e.installed ? `Update to ${e.version}` : "Install"}
             </button>
@@ -104,35 +107,22 @@ function Consequences({ seen }: { seen: Inspection }) {
   return (
     <>
       {seen.source_kind === "archive" ? (
-        <p className="install-runs" data-runs="nothing">
+        <p className="install-runs" data-testid="install-runs">
           <b>Nothing runs on your computer.</b> The bundle is unpacked, checked and used as it is.
         </p>
       ) : (
-        <p className="install-runs" data-runs="nothing">
+        <p className="install-runs" data-testid="install-runs">
           <b>Nothing runs on your computer.</b> The folder is copied without source files, tests and hidden files.
         </p>
       )}
       {seen.attachments ? (
-        <p className="install-runs" data-takes>
+        <p className="install-runs">
           <b>Accepts files:</b> {takes(seen.attachments)}. Agents can attach these files to a review. The files are
           stored with the review and are available only to this plugin's view.
         </p>
       ) : null}
       {installed ? (
-        <p
-          className="install-replaces"
-          data-replaces={
-            installed.source_kind === "index"
-              ? "official"
-              : installed.link
-                ? "link"
-                : installed.unchanged
-                  ? "unchanged"
-                  : seen.older
-                    ? "older"
-                    : "same"
-          }
-        >
+        <p className="install-replaces" data-testid="install-replaces">
           <b>
             {seen.name} {installed.version} is already installed
           </b>
@@ -148,10 +138,7 @@ function Consequences({ seen }: { seen: Inspection }) {
                   ? `, and it is newer than this version. Installing replaces it with this older version for new reviews.`
                   : `. Installing replaces it for new reviews; existing reviews keep the version they were made with.`}
           {installed.links_kept ? null : (
-            <span data-links-forgotten>
-              {" "}
-              The sites it was allowed to open without asking do not carry over to this plugin.
-            </span>
+            <span> The sites it was allowed to open without asking do not carry over to this plugin.</span>
           )}
         </p>
       ) : null}
@@ -186,7 +173,7 @@ function InstallButton({ seen, onInstall }: { seen: Inspection; onInstall: (link
         type="button"
         className="chrome-button button-primary"
         onClick={() => onInstall(false)}
-        data-install-confirm
+        data-testid="install-confirm"
       >
         {label}
       </button>
@@ -207,7 +194,7 @@ function InstallButton({ seen, onInstall }: { seen: Inspection; onInstall: (link
         type="button"
         className="chrome-button button-primary"
         onClick={() => onInstall(false)}
-        data-install-confirm
+        data-testid="install-confirm"
       >
         {label}
       </button>
@@ -227,7 +214,7 @@ function InstallButton({ seen, onInstall }: { seen: Inspection; onInstall: (link
             <span>Install a copy</span>
             <span className="faint">Pinrail keeps its own copy of the folder.</span>
           </button>
-          <button type="button" role="menuitem" onClick={() => choose(true)} data-install-link>
+          <button type="button" role="menuitem" onClick={() => choose(true)}>
             <span>Link to the folder</span>
             <span className="faint">Nothing is copied. Changes to the folder appear the next time the view opens.</span>
           </button>
@@ -361,7 +348,7 @@ export function InstallPanel({
   const seen = "seen" in stage ? stage.seen : null;
 
   return (
-    <div ref={panel} className="install-panel" data-install-panel>
+    <div ref={panel} className="install-panel" data-testid="install-panel">
       <div className="install-source">
         <input
           ref={field}
@@ -401,19 +388,19 @@ export function InstallPanel({
         ) : null}
       </div>
 
-      {stage.at === "looking" ? (
-        <p className="dim install-wait" data-install-looking>
-          Inspecting…
+      {stage.at === "looking" ? <p className="dim install-wait">Inspecting…</p> : null}
+      {error ? (
+        <p className="notice notice-danger install-error" role="alert">
+          {error}
         </p>
       ) : null}
-      {error ? <p className="notice notice-danger install-error">{error}</p> : null}
 
       {searching ? (
         <OfficialPlugins entries={catalog} query={source} installing={installing} onInstall={installOfficial} />
       ) : null}
 
       {seen ? (
-        <div ref={card} className="install-seen" data-install-seen>
+        <div ref={card} className="install-seen" data-testid="install-seen">
           <div className="install-seen-head">
             <span className="settings-row-icon">
               <PluginIcon icon={seen.icon} size={16} strokeWidth={1.75} />
@@ -432,7 +419,11 @@ export function InstallPanel({
           </div>
           <Origin seen={seen} />
           <Consequences seen={seen} />
-          {stage.at === "failed" ? <p className="notice notice-danger install-error">{stage.error}</p> : null}
+          {stage.at === "failed" ? (
+            <p className="notice notice-danger install-error" role="alert">
+              {stage.error}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>

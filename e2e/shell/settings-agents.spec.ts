@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { settingsSection } from "./helpers";
 
 // The browser build has no native side: the section is there, and says the
 // desktop app does the connecting. The skill itself is tested in the app's
@@ -6,14 +7,14 @@ import { expect, test } from "@playwright/test";
 test("Agents lists the skills, and the command line stays in Data", async ({ page }) => {
   await page.goto("/#/");
   await page.keyboard.press("ControlOrMeta+,");
-  await page.locator('[data-section="agents"]').click();
-  const body = page.locator(".settings-body");
+  await settingsSection(page, "Agents").click();
+  const body = page.getByTestId("settings-body");
   await expect(body.getByRole("heading", { name: "Agents", level: 2 })).toBeVisible();
   await expect(body.getByRole("heading", { name: "Command line" })).toHaveCount(0);
   await expect(body.getByRole("heading", { name: "Connect your agents" })).toBeVisible();
   await expect(body.getByText("The desktop app finds your agents and connects them")).toBeVisible();
 
-  await page.locator('[data-section="data"]').click();
+  await settingsSection(page, "Data").click();
   await expect(body.getByRole("heading", { name: "Command line" })).toBeVisible();
   await expect(body.getByText("Install the CLI")).toBeVisible();
 });
@@ -45,9 +46,9 @@ test("Agents fits its width, whatever an agent's message says", async ({ page })
     };
   });
   await page.keyboard.press("ControlOrMeta+,");
-  await page.locator('[data-section="agents"]').click();
-  await page.locator('[data-agent="antigravity"]').waitFor();
-  const body = page.locator(".settings-body");
+  await settingsSection(page, "Agents").click();
+  await page.getByTestId("agent-antigravity").waitFor();
+  const body = page.getByTestId("settings-body");
   const overflow = await body.evaluate((el) => el.scrollWidth - el.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
@@ -84,14 +85,14 @@ test("Update all updates every agent whose skill is outdated", async ({ page }) 
     };
   });
   await page.keyboard.press("ControlOrMeta+,");
-  await page.locator('[data-section="agents"]').click();
-  const updateAll = page.locator("[data-agents-update-all]");
+  await settingsSection(page, "Agents").click();
+  const updateAll = page.getByRole("button", { name: /^Update all/ });
   await expect(updateAll).toHaveText("Update all 2");
   await updateAll.click();
-  await expect(page.locator('[data-agent="codex"]')).toHaveAttribute("data-agent-state", "connected");
-  await expect(page.locator('[data-agent="claude"]')).toHaveAttribute("data-agent-state", "connected");
+  await expect(page.getByTestId("agent-codex")).toHaveClass(/\bis-connected\b/);
+  await expect(page.getByTestId("agent-claude")).toHaveClass(/\bis-connected\b/);
   // an agent that was never connected stays as it was
-  await expect(page.locator('[data-agent="cursor"]')).toHaveAttribute("data-agent-state", "absent");
+  await expect(page.getByTestId("agent-cursor")).toHaveClass(/\bis-absent\b/);
   expect(await page.evaluate(() => (window as unknown as { __connected: string[] }).__connected)).toEqual([
     "claude",
     "codex",

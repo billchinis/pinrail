@@ -45,7 +45,7 @@ test("the history and the Plugins section fetch again only for what they show", 
   await expect(page.locator(".history-title", { hasText: "Live: not history yet" })).toBeVisible();
 
   await page.goto("/#/plugins");
-  await expect(page.locator('[data-plugin-row="list"]')).toBeVisible();
+  await expect(page.getByTestId("plugin-row-list")).toBeVisible();
   const plugins = requests(page, /^\/api\/v1\/plugins$/);
   await createReview(page.request, { title: "Live: not a plugin" });
   await expect(page.locator("[data-waiting-review]", { hasText: "Live: not a plugin" })).toBeVisible();

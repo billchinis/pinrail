@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { settingsDialog, settingsSection } from "./helpers";
 
 // The app on Linux: keys are named as a Linux keyboard names them
 test.beforeEach(async ({ page }) => {
@@ -8,19 +9,19 @@ test.beforeEach(async ({ page }) => {
 test("on Linux, Settings names keys the way a Linux keyboard does", async ({ page }) => {
   await page.goto("/#/");
   await page.keyboard.press("Control+,");
-  const settings = page.locator("[data-settings]");
+  const settings = settingsDialog(page);
   await expect(settings).toBeVisible();
 
-  await page.locator('[data-section="shortcuts"]').click();
+  await settingsSection(page, "Shortcuts").click();
   await expect(settings).toContainText("Alt");
   await expect(settings).toContainText("Shift");
   await expect(settings).toContainText("Ctrl, Alt or Super");
 
-  await page.locator('[data-section="appearance"]').click();
+  await settingsSection(page, "Appearance").click();
   await expect(settings).toContainText("Ctrl+Shift+L");
 
-  for (const section of ["general", "appearance", "shortcuts"]) {
-    await page.locator(`[data-section="${section}"]`).click();
+  for (const section of ["General", "Appearance", "Shortcuts"]) {
+    await settingsSection(page, section).click();
     const text = await settings.innerText();
     expect(text, section).not.toMatch(/[⌘⌥⇧⌃]|menu bar/);
   }

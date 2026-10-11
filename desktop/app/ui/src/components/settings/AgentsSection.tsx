@@ -94,7 +94,6 @@ function AgentCard({
       className={kind === "quiet" ? "agent-remove" : `chrome-button ${kind === "primary" ? "button-primary" : ""}`}
       onClick={() => act(command, agent.id)}
       disabled={busy}
-      data-agent-action={command === "connect_agent" ? "connect" : "disconnect"}
     >
       {kind === "primary" ? <Plug size={13} /> : null}
       {busy ? (command === "connect_agent" ? "Connecting…" : "Removing…") : label}
@@ -158,7 +157,7 @@ function AgentCard({
   }
 
   return (
-    <div className={`agent-card is-${state}`} data-agent={agent.id} data-agent-state={state}>
+    <div className={`agent-card is-${state}`} data-testid={`agent-${agent.id}`}>
       <Tile id={agent.id} />
       <div className="agent-text">
         <div className="agent-name">{agent.name}</div>
@@ -184,7 +183,7 @@ function AnotherAgent() {
       .then(() => setCopied(true))
       .catch(() => {});
   return (
-    <div className="agent-card is-other" data-agent-other>
+    <div className="agent-card is-other">
       <span className="agent-other-icon">
         <Copy size={15} />
       </span>
@@ -222,7 +221,6 @@ export function AgentsSection({ open }: { open: boolean }) {
               className="chrome-button button-primary"
               onClick={updateAll}
               disabled={updating || busy !== null}
-              data-agents-update-all
             >
               {updating ? "Updating…" : `Update all ${outdated.length}`}
             </button>

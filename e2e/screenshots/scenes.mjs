@@ -21,6 +21,10 @@ async function openReview(page, app, id) {
 
 const settle = (page, ms = 350) => page.waitForTimeout(ms);
 
+/** A section's button in the settings dialog's rail, such as "Plugins". */
+const settingsSection = (page, name) =>
+  page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name, exact: true });
+
 /** A port nothing listens on. */
 const freePort = () =>
   new Promise((resolve) => {
@@ -466,7 +470,7 @@ export const scenes = [
       await page.goto(`${app.ui}/#/`);
       await page.getByTestId("inbox-group").first().waitFor();
       await page.keyboard.press("Meta+,");
-      await page.locator('[data-section="plugins"]').click();
+      await settingsSection(page, "Plugins").click();
       await page.getByRole("textbox", { name: "Search official plugins, or give a source path" }).fill(dir);
       await page.getByText("ticket_triage").first().waitFor();
       await settle(page, 500);
@@ -489,8 +493,11 @@ export const scenes = [
         };
       }, AGENTS);
       await page.keyboard.press("Meta+,");
-      await page.locator('[data-section="agents"]').click();
-      await page.locator("[data-agent]").first().waitFor();
+      await settingsSection(page, "Agents").click();
+      await page
+        .getByTestId(/^agent-/)
+        .first()
+        .waitFor();
       await settle(page, 500);
       await shot("settings-agents");
     },
@@ -565,13 +572,16 @@ export const scenes = [
       }
     },
   },
-  ...["general", "plugins"].map((section) => ({
+  ...[
+    ["general", "General"],
+    ["plugins", "Plugins"],
+  ].map(([section, label]) => ({
     name: `settings-${section}`,
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
       await page.getByTestId("inbox-group").first().waitFor();
       await page.keyboard.press("Meta+,");
-      await page.locator(`[data-section="${section}"]`).click();
+      await settingsSection(page, label).click();
       await settle(page, 500);
       await shot(`settings-${section}`);
     },

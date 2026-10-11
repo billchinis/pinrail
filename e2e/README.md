@@ -70,9 +70,15 @@ than adding a test id.
 Use a test id only for an element that has no role or name to find it by.
 Examples are a row whose accessible name is all of its text, a container
 that a spec searches inside, and a block of text whose wording the spec
-checks. The app's element then carries a `data-testid` attribute whose
-value names what the element is, not how it looks, in kebab case, such as
-`review-row` or `inbox-group`.
+checks. The app's element then carries a `data-testid` attribute:
+
+- The id names what the element is, not how it looks, in kebab case, such
+  as `review-row` or `install-panel`.
+- An element that is repeated once per item ends with the item's name, such
+  as `plugin-row-greeter`, so a spec can find one item directly.
+- An element inside such an item has a plain id, such as `plugin-details`,
+  and a spec finds it within the item:
+  `getByTestId("plugin-row-greeter").getByTestId("plugin-details")`.
 
 Test ids exist only for the tests. App code does not read them. Add a test
 id in the same change as the test that uses it, and remove it when no test
@@ -84,6 +90,10 @@ the ARIA attribute or the matcher that reads it, such as `aria-checked`,
 `aria-expanded` or `toBeDisabled()`. Where the app shows a state only
 through a class, a spec may check that class, such as
 `toHaveClass(/is-focused/)`.
+
+A locator that several specs need belongs in `shell/helpers.ts`, such as
+`settingsDialog(page)` for the settings dialog and
+`settingsSection(page, "Data")` for a section's button in its rail.
 
 ## Running the tests
 
