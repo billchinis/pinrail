@@ -51,7 +51,7 @@ test("switching to a review of another plugin loads that plugin's view, and only
   // The screen stays mounted across reviews. The frame for the next review
   // used to boot the plugin it had just shown, handing it a payload it could
   // not read, before the lookup for the right plugin landed.
-  const rows = page.locator("[data-waiting-review]");
+  const rows = page.getByTestId("waiting-review");
   for (let round = 0; round < 3; round++) {
     await rows.filter({ hasText: "Switch: a question" }).click();
     await expect(page).toHaveURL(new RegExp(`/reviews/${question.id}$`));
@@ -132,7 +132,7 @@ test("Copy as markdown copies the review on screen, after moving from another", 
 
   await page.goto(`/#/reviews/${first.id}`);
   await expect(page.frameLocator("#plugin-frame").locator("body")).toContainText("The first review.");
-  await page.locator("[data-waiting-review]").filter({ hasText: "Copy: the second" }).click();
+  await page.getByTestId("waiting-review").filter({ hasText: "Copy: the second" }).click();
   await expect(page.frameLocator("#plugin-frame").locator("body")).toContainText("The second review.");
 
   const asked = page.waitForRequest((r) => new URL(r.url()).searchParams.get("format") === "markdown");

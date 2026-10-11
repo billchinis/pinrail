@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Locator } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { clearInbox, core, createReview, decide, settingsDialog } from "./helpers";
 
 const payload = {
@@ -23,6 +23,10 @@ function review(request: APIRequestContext, title: string, workflow: string, rep
 const decideNothing = (request: APIRequestContext, id: string) =>
   decide(request, id, { decisions: [], undecided: [1, 2] });
 
+/** A project's link in the sidebar, whose name is the project and its count. */
+const project = (page: Page, name: string) =>
+  page.getByRole("region", { name: "Projects" }).getByRole("link", { name: new RegExp(`^${name} \\d+$`) });
+
 test("the sidebar lists what is waiting on every page, oldest first, and ⌥↓ walks it", async ({ page }) => {
   await clearInbox(page.request);
   const first = await review(page.request, "Sidebar: the older one", "pr-review");
@@ -34,18 +38,18 @@ test("the sidebar lists what is waiting on every page, oldest first, and ⌥↓ 
   // projects with their counts, the same as everywhere else; a review
   // that names no project has a row of its own
   await page.goto("/#/history");
-  const waiting = page.locator("[data-waiting]");
+  const waiting = page.getByRole("region", { name: "Waiting" });
   await expect(waiting).toBeVisible();
-  await expect(page.locator('[data-project="acme/api"]')).toContainText("2");
-  await expect(page.locator('[data-project="-"]')).toContainText("1");
-  await page.locator('[data-project="-"]').click();
+  await expect(project(page, "acme/api")).toContainText("2");
+  await expect(project(page, "No project")).toContainText("1");
+  await project(page, "No project").click();
   await expect(page).toHaveURL(/repo=-/);
   await expect(page.getByTestId("inbox-group-name")).toHaveText(["No project"]);
   await expect(page.locator("#inbox-repo")).toContainText("No project");
   await decideNothing(page.request, loose.id);
-  await expect(page.locator('[data-project="-"]')).toHaveCount(0);
+  await expect(project(page, "No project")).toHaveCount(0);
   await page.goto("/#/history");
-  const rows = waiting.locator("[data-waiting-review]");
+  const rows = waiting.getByTestId("waiting-review");
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText("the older one");
   await expect(rows.nth(1)).toContainText("the newer one");
@@ -53,13 +57,13 @@ test("the sidebar lists what is waiting on every page, oldest first, and ⌥↓ 
   // a click opens the review and the row reads as current
   await rows.nth(1).click();
   await expect(page).toHaveURL(new RegExp(`/reviews/${second.id}$`));
-  await expect(rows.nth(1)).toHaveClass(/active/);
+  await expect(rows.nth(1)).toHaveAttribute("aria-current", "page");
 
   // ⌥↓ moves to the next waiting review, wrapping; ⌥↑ goes back. The
   // keys are the shell's, so the view's frame must not hold the focus.
   await page.keyboard.press("Alt+ArrowDown");
   await expect(page).toHaveURL(new RegExp(`/reviews/${first.id}$`));
-  await page.locator(".app-topbar").click();
+  await page.getByTestId("top-bar").click();
   await page.keyboard.press("Alt+ArrowUp");
   await expect(page).toHaveURL(new RegExp(`/reviews/${second.id}$`));
 
@@ -82,9 +86,9 @@ test("more than five waiting points at the inbox", async ({ page }) => {
   const ids: string[] = [];
   for (let i = 1; i <= 7; i++) ids.push((await review(page.request, `Sidebar: batch ${i}`, "batch")).id);
   await page.goto("/#/history");
-  const waiting = page.locator("[data-waiting]");
-  await expect(waiting.locator("[data-waiting-review]")).toHaveCount(5);
-  await expect(waiting.locator(".sidebar-more")).toHaveText("2 more in the inbox");
+  const waiting = page.getByRole("region", { name: "Waiting" });
+  await expect(waiting.getByTestId("waiting-review")).toHaveCount(5);
+  await expect(waiting.getByRole("link", { name: /more in the inbox/ })).toHaveText("2 more in the inbox");
   for (const id of ids) await decideNothing(page.request, id);
   await expect(waiting).toHaveCount(0);
 });
@@ -92,15 +96,15 @@ test("more than five waiting points at the inbox", async ({ page }) => {
 test("a window too narrow for the sidebar gives its whole width to the page", async ({ page }) => {
   await page.setViewportSize({ width: 740, height: 600 });
   await page.goto("/#/history");
-  await expect(page.locator(".app-sidebar")).toBeHidden();
-  const shell = await page.locator(".app-shell").boundingBox();
+  await expect(page.getByRole("complementary", { name: "Workspace" })).toBeHidden();
+  const shell = await page.getByRole("main").boundingBox();
   expect(shell?.x).toBe(0);
   expect(shell?.width).toBe(740);
 });
 
 test("⌘B hides the sidebar and shows it again", async ({ page }) => {
   await page.goto("/#/history");
-  const toggle = page.locator("button.bar-button[aria-label$='sidebar']");
+  const toggle = page.getByRole("button", { name: /^(Hide|Show) sidebar$/ });
   await expect(toggle).toHaveAttribute("aria-label", "Hide sidebar");
 
   await page.keyboard.press("ControlOrMeta+b");
@@ -111,7 +115,7 @@ test("⌘B hides the sidebar and shows it again", async ({ page }) => {
 
 test("a quick second ⌘B is not undone by the reload the first one caused", async ({ page }) => {
   await page.goto("/#/history");
-  const toggle = page.locator("button.bar-button[aria-label$='sidebar']");
+  const toggle = page.getByRole("button", { name: /^(Hide|Show) sidebar$/ });
   await expect(toggle).toHaveAttribute("aria-label", "Hide sidebar");
   // a slow server: the settings the first change makes the app reload come
   // back after the second change
@@ -141,8 +145,8 @@ test("the app's own text cannot be selected, as in a desktop app, but fields and
   await page.goto("/");
   const selectable = (locator: Locator) =>
     locator.first().evaluate((el) => getComputedStyle(el).webkitUserSelect || getComputedStyle(el).userSelect);
-  await expect(page.locator(".nav-count").first()).toBeVisible();
-  expect(await selectable(page.locator(".nav-count"))).toBe("none");
+  await expect(page.getByTestId("inbox-count")).toBeVisible();
+  expect(await selectable(page.getByTestId("inbox-count"))).toBe("none");
   expect(await selectable(page.locator("h1"))).toBe("none");
   expect(await selectable(page.locator("input[type=search]"))).not.toBe("none");
 

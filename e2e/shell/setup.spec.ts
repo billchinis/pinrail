@@ -85,7 +85,7 @@ const agent = (id: string, name: string, found: boolean, state: string, covered_
 
 test("Connect lists only the agents found, and connects the ones chosen", async ({ page }) => {
   await page.goto("/");
-  await page.locator(".app-main").waitFor();
+  await page.getByRole("main").waitFor();
   await page.evaluate(
     (agents) => {
       const w = window as unknown as Record<string, unknown>;

@@ -24,7 +24,7 @@ test("Agents lists the skills, and the command line stays in Data", async ({ pag
 test("Agents fits its width, whatever an agent's message says", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 700 });
   await page.goto("/#/");
-  await page.locator(".app-main").waitFor();
+  await page.getByRole("main").waitFor();
   await page.evaluate(() => {
     const agent = (id: string, name: string, skills: string) => ({
       id,
@@ -55,7 +55,7 @@ test("Agents fits its width, whatever an agent's message says", async ({ page })
 
 test("Update all updates every agent whose skill is outdated", async ({ page }) => {
   await page.goto("/#/");
-  await page.locator(".app-main").waitFor();
+  await page.getByRole("main").waitFor();
   await page.evaluate(() => {
     const agent = (id: string, name: string, state: string) => ({
       id,

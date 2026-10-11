@@ -745,7 +745,7 @@ export function ReviewScreen() {
       ) : null}
 
       {violations.length > 0 ? (
-        <ul className="violations">
+        <ul className="violations" aria-label="Problems with the decision">
           {violations.map((v, i) => (
             <li key={i}>
               <span className="mono">{v.path || "/"}</span>: {v.message}

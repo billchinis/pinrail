@@ -12,7 +12,7 @@ async function dragsAt(page: import("@playwright/test").Page, x: number, y: numb
 
 test("the top bar's empty space moves the window on every screen", async ({ page }) => {
   await page.goto("/");
-  const bar = page.locator(".app-topbar");
+  const bar = page.getByTestId("top-bar");
   await expect(bar).toBeVisible();
   let box = (await bar.boundingBox())!;
   expect(await dragsAt(page, box.x + box.width / 2, box.y + box.height / 2), "the inbox").toBe(true);

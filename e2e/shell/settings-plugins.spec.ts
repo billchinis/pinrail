@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
-import { core, linkPlugin, settingsDialog } from "./helpers";
+import { core, linkPlugin, settingsDialog, toast } from "./helpers";
 import { scratch } from "../helpers/scratch";
 
 const root = path.resolve(__dirname, "..", "..");
@@ -113,7 +113,7 @@ test("a folder is looked at before it is installed, and its row says where it ca
   await dialog.getByTestId("install-confirm").click();
 
   // the app says so, the field is ready for the next one, and the row is marked
-  await expect(page.locator("[data-toast]").filter({ hasText: "Hello 1.2.0 is installed" })).toHaveCount(1);
+  await expect(toast(page, "Hello 1.2.0 is installed")).toHaveCount(1);
   await expect(dialog.getByLabel("Source")).toHaveValue("");
   await expect(seen).toHaveCount(0);
   const row = page.getByTestId("plugin-row-greeter");
@@ -153,9 +153,9 @@ test("a folder is looked at before it is installed, and its row says where it ca
   await row.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(page.getByTestId("plugin-row-greeter")).toHaveCount(0);
   // the app says so in the corner, and the line can be dismissed
-  const removed = page.locator("[data-toast]").filter({ hasText: "Hello plugin was removed" });
+  const removed = toast(page, "Hello plugin was removed");
   await expect(removed).toHaveCount(1);
-  await removed.locator(".toast-close").click();
+  await removed.getByRole("button", { name: "Dismiss" }).click();
   await expect(removed).toHaveCount(0);
   const after = await (await page.request.get(`${core}/api/v1/plugins`)).json();
   expect(after.plugins.some((p: { name: string }) => p.name === "greeter")).toBe(false);

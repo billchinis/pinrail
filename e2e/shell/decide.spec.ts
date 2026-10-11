@@ -145,7 +145,7 @@ test("a decision the core refuses is shown with its violations and decides nothi
   const view = await open(page, id, "#keys");
 
   await page.getByTestId("handover").click();
-  await expect(page.locator(".violations")).toContainText("/ok");
+  await expect(page.getByRole("list", { name: "Problems with the decision" })).toContainText("/ok");
   await expect(view.locator("#errors")).toContainText("/ok");
   expect((await review(page.request, id)).status).toBe("pending");
 });

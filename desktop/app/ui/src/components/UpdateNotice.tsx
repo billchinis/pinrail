@@ -12,7 +12,7 @@ export function UpdateNotice({ onDetails }: { onDetails: () => void }) {
   if (status.state !== "ready" && status.state !== "available") return null;
   const ready = status.state === "ready";
   return (
-    <div className="update-notice" data-update-notice>
+    <div className="update-notice">
       <button type="button" className="update-notice-text" onClick={onDetails} title={error ?? "Settings › About"}>
         <CircleArrowUp size={14} />
         <span>

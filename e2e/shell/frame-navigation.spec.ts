@@ -158,7 +158,7 @@ for (const [button, where] of [
 
     await page.getByRole("button", { name: "Reload the view" }).click();
     await expect(page.getByRole("alert")).toHaveCount(0);
-    await expect(page.locator(".plugin-loading")).toHaveCount(0);
+    await expect(page.getByText("Loading the view…")).toHaveCount(0);
     await expect(view.locator("#leave")).toBeVisible();
   });
 }

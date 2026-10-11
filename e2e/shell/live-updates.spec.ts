@@ -38,7 +38,7 @@ test("the history and the Plugins section fetch again only for what they show", 
 
   // a review that arrives is not in the history
   const review = await createReview(page.request, { title: "Live: not history yet" });
-  await expect(page.locator("[data-waiting-review]", { hasText: "Live: not history yet" })).toBeVisible();
+  await expect(page.getByTestId("waiting-review").filter({ hasText: "Live: not history yet" })).toBeVisible();
   expect(history).toEqual([]);
   // once it ends, it is
   await decide(page.request, review.id, decideNothing);
@@ -48,6 +48,6 @@ test("the history and the Plugins section fetch again only for what they show", 
   await expect(page.getByTestId("plugin-row-list")).toBeVisible();
   const plugins = requests(page, /^\/api\/v1\/plugins$/);
   await createReview(page.request, { title: "Live: not a plugin" });
-  await expect(page.locator("[data-waiting-review]", { hasText: "Live: not a plugin" })).toBeVisible();
+  await expect(page.getByTestId("waiting-review").filter({ hasText: "Live: not a plugin" })).toBeVisible();
   expect(plugins).toEqual([]);
 });

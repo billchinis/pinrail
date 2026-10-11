@@ -105,7 +105,7 @@ export function ShortcutsDialog({ plugin, onClose }: { plugin?: OpenPlugin; onCl
                 <PluginIcon icon={plugin.icon} size={14} />
                 In {plugin.title}
               </h3>
-              <dl className="shortcut-list" data-plugin-shortcuts>
+              <dl className="shortcut-list">
                 {own.map((s, i) => (
                   <Fragment key={i}>
                     <dt className={s.shadowed ? "is-shadowed" : ""}>

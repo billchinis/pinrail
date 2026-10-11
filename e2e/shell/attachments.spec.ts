@@ -70,7 +70,7 @@ test("a view gets the bytes of a file its review carries from the app, and only 
   await expect(row.getByTestId("files-count")).toHaveText("1");
   await expect(row.getByTestId("files-count")).toHaveAttribute("aria-label", "1 file · 488 KB");
   await row.getByTestId("files-count").hover();
-  await expect(page.locator(".tooltip")).toHaveText("1 file · 488 KB");
+  await expect(page.getByRole("tooltip")).toHaveText("1 file · 488 KB");
   if (process.env.PINRAIL_SHOTS)
     await page.screenshot({
       path: path.join(process.env.PINRAIL_SHOTS, "inbox.png"),

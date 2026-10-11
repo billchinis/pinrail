@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test";
 // trackpad and the system's web view, so this checks what it depends on.
 test("the page does not bounce when a pane is scrolled past its end", async ({ page }) => {
   await page.goto("/");
-  await page.locator(".app-main").waitFor();
+  await page.getByRole("main").waitFor();
   const overscroll = await page.evaluate(() =>
     [document.documentElement, document.body].map((el) => getComputedStyle(el).overscrollBehaviorY),
   );

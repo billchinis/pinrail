@@ -10,7 +10,7 @@ async function windowButtonsEndAt(page: Page, end: number) {
   }, end);
 }
 
-const toggle = (page: Page) => page.locator("button.bar-button[aria-label$='sidebar']");
+const toggle = (page: Page) => page.getByRole("button", { name: /^(Hide|Show) sidebar$/ });
 
 for (const end of [66, 76]) {
   test(`the sidebar toggle keeps clear of window buttons that end at ${end}px`, async ({ page }) => {
@@ -38,10 +38,10 @@ test("the sidebar toggle stays in place when the sidebar scrolls", async ({ page
   await page.goto("/#/history");
   await expect(toggle(page)).toHaveAttribute("aria-label", "Hide sidebar");
   const before = (await toggle(page).boundingBox())!;
-  const sidebar = page.locator(".sidebar-scroll");
+  const sidebar = page.getByTestId("sidebar-scroll");
   // outside what scrolls: inside, it would move as the scrolling bounces
   // at either end, which a headless browser does not do
-  await expect(sidebar.locator("button.bar-button[aria-label$='sidebar']")).toHaveCount(0);
+  await expect(sidebar.getByRole("button", { name: /^(Hide|Show) sidebar$/ })).toHaveCount(0);
   expect(await sidebar.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
 
   await sidebar.evaluate((el) => el.scrollTo(0, el.scrollHeight));

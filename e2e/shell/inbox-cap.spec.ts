@@ -12,5 +12,5 @@ test("an inbox with more pending reviews than it loads says how many there are",
   );
   await page.goto("/");
   await expect(page.getByTestId("inbox-capped")).toContainText("700");
-  await expect(page.locator(".nav-count").first()).toHaveText("700");
+  await expect(page.getByTestId("inbox-count")).toHaveText("700");
 });

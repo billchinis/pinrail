@@ -59,6 +59,10 @@ export const settingsDialog = (page: Page) => page.getByRole("dialog", { name: "
 export const settingsSection = (page: Page, name: string) =>
   page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name, exact: true });
 
+/** A notification the app shows in the corner, found by its text. */
+export const toast = (page: Page, text: string) =>
+  page.getByRole("region", { name: "Notifications" }).getByRole("status").filter({ hasText: text });
+
 /** Installs a plugin folder as a link, ready for reviews. */
 export async function linkPlugin(request: APIRequestContext, source: string, name: string) {
   const installed = await request.post(`${core}/api/v1/plugins/install`, { data: { source, link: true } });

@@ -9,9 +9,9 @@ export function Toasts() {
   const { toasts, dismiss } = useToasts();
   if (toasts.length === 0) return null;
   return (
-    <div className="toasts" role="region" aria-label="Notifications" data-toasts>
+    <div className="toasts" role="region" aria-label="Notifications">
       {toasts.map((toast) => (
-        <output key={toast.id} className={`toast toast-${toast.tone}`} data-toast>
+        <output key={toast.id} className={`toast toast-${toast.tone}`}>
           {toast.tone === "danger" ? <CircleAlert size={15} /> : <CircleCheck size={15} />}
           <span className="toast-text">{toast.text}</span>
           <button type="button" className="toast-close" onClick={() => dismiss(toast.id)} aria-label="Dismiss">

@@ -318,7 +318,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="sidebar-bar" data-tauri-drag-region>
             {sidebarButton}
           </div>
-          <div className="sidebar-scroll">
+          <div className="sidebar-scroll" data-testid="sidebar-scroll">
             <nav className="app-nav" aria-label="Main">
               {NAV.map(({ key, label, to, Icon, keys }) => (
                 <Fragment key={key}>
@@ -328,7 +328,11 @@ export function Layout({ children }: { children: ReactNode }) {
                         <Icon size={15} strokeWidth={1.75} />
                         {label}
                       </span>
-                      {key === "inbox" ? <span className="nav-count">{live.pendingCount}</span> : null}
+                      {key === "inbox" ? (
+                        <span className="nav-count" data-testid="inbox-count">
+                          {live.pendingCount}
+                        </span>
+                      ) : null}
                     </NavLink>
                   </Tooltip>
                   {key === "history" ? (
@@ -347,7 +351,7 @@ export function Layout({ children }: { children: ReactNode }) {
               ))}
             </nav>
             {waiting.length > 0 ? (
-              <section className="sidebar-waiting" aria-label="Waiting" data-waiting>
+              <section className="sidebar-waiting" aria-label="Waiting">
                 <h2>Waiting</h2>
                 {waiting.slice(0, WAITING_SHOWN).map((r) => (
                   <Tooltip
@@ -355,7 +359,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     label={[r.origin.repo, r.origin.workflow].filter(Boolean).join(" · ") || r.plugin}
                     side="top"
                   >
-                    <NavLink to={`/reviews/${r.id}`} className="sidebar-review" data-waiting-review={r.id}>
+                    <NavLink to={`/reviews/${r.id}`} className="sidebar-review" data-testid="waiting-review">
                       <PluginIcon icon={live.pluginIcon(r.plugin)} size={14} strokeWidth={1.75} />
                       <span className="sidebar-review-title">{r.title}</span>
                     </NavLink>
@@ -369,22 +373,17 @@ export function Layout({ children }: { children: ReactNode }) {
               </section>
             ) : null}
             {live.projects.length > 0 || live.unassigned > 0 ? (
-              <section className="sidebar-repositories" aria-label="Projects" data-projects>
+              <section className="sidebar-repositories" aria-label="Projects">
                 <h2>Projects</h2>
                 {live.projects.map((project) => (
-                  <NavLink
-                    key={project}
-                    to={`/?repo=${encodeURIComponent(project)}`}
-                    className="sidebar-repo"
-                    data-project={project}
-                  >
+                  <NavLink key={project} to={`/?repo=${encodeURIComponent(project)}`} className="sidebar-repo">
                     <FolderGit2 size={14} strokeWidth={1.75} />
                     <span className="sidebar-review-title">{project}</span>
                     <span className="nav-count">{perProject.get(project) ?? 0}</span>
                   </NavLink>
                 ))}
                 {live.unassigned > 0 ? (
-                  <NavLink to={`/?repo=${NO_PROJECT}`} className="sidebar-repo" data-project={NO_PROJECT}>
+                  <NavLink to={`/?repo=${NO_PROJECT}`} className="sidebar-repo">
                     <FolderGit2 size={14} strokeWidth={1.75} className="is-faint" />
                     <span className="sidebar-review-title">No project</span>
                     <span className="nav-count">{live.unassigned}</span>
@@ -415,7 +414,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </aside>
       ) : null}
       <div className="app-shell">
-        <header className="app-topbar" data-tauri-drag-region>
+        <header className="app-topbar" data-tauri-drag-region data-testid="top-bar">
           {sidebar ? null : sidebarButton}
           <span className="topbar-history">
             <Tooltip label="Back" keys={[MOD, "["]}>
