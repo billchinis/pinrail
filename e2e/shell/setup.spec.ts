@@ -24,36 +24,36 @@ test("Try it opens once a plugin is installed, and lists a prompt and a sample f
   try {
     await page.goto("/");
     const setup = await openSetup(page);
-    const tryIt = setup.locator('[data-welcome-step="Try it"]');
+    const tryIt = setup.getByRole("button", { name: /Try it/ });
     await expect(tryIt).toBeDisabled();
     await expect(tryIt).toContainText("Install a plugin first");
 
-    await setup.locator("[data-welcome-next]").click();
-    const plugins = setup.locator("[data-welcome-plugins]");
+    await setup.getByRole("button", { name: "Next", exact: true }).click();
+    const plugin = (name: string) => setup.getByTestId(`welcome-plugin-${name}`);
     for (const name of ["list", "feedback"]) {
-      await expect(plugins.locator(`[data-welcome-plugin="${name}"]`)).toContainText("Recommended");
-      await expect(plugins.locator(`[data-welcome-plugin="${name}"] input`)).toBeChecked();
+      await expect(plugin(name)).toContainText("Recommended");
+      await expect(plugin(name).getByRole("checkbox")).toBeChecked();
     }
     // the others are offered, not chosen
-    await expect(plugins.locator('[data-welcome-plugin="notes"] input')).not.toBeChecked();
-    await expect(setup.locator("[data-welcome-install]")).toHaveText("Install 2 plugins");
+    await expect(plugin("notes").getByRole("checkbox")).not.toBeChecked();
+    await expect(setup.getByRole("button", { name: /^Install \d+ plugins?$/ })).toHaveText("Install 2 plugins");
 
     // with nothing chosen and nothing installed, there is no way on
-    for (const name of ["list", "feedback"]) await plugins.locator(`[data-welcome-plugin="${name}"] input`).uncheck();
-    await expect(setup.locator("[data-welcome-install]")).toHaveCount(0);
-    await expect(setup.locator("[data-welcome-next]")).toBeDisabled();
+    for (const name of ["list", "feedback"]) await plugin(name).getByRole("checkbox").uncheck();
+    await expect(setup.getByRole("button", { name: /^Install \d+ plugins?$/ })).toHaveCount(0);
+    await expect(setup.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
 
     // installing moves on to Try it, which lists what was installed
-    for (const name of ["list", "feedback"]) await plugins.locator(`[data-welcome-plugin="${name}"] input`).check();
-    await setup.locator("[data-welcome-install]").click();
+    for (const name of ["list", "feedback"]) await plugin(name).getByRole("checkbox").check();
+    await setup.getByRole("button", { name: /^Install \d+ plugins?$/ }).click();
     await expect(setup.getByRole("heading", { name: "Try it" })).toBeVisible();
     await expect(tryIt).toBeEnabled();
-    await expect(setup.locator("[data-welcome-try]")).toHaveCount(2);
-    await expect(setup.locator('[data-welcome-try="list"]')).toContainText("which TODOs in this repository");
+    await expect(setup.getByTestId(/^welcome-try-/)).toHaveCount(2);
+    await expect(setup.getByTestId("welcome-try-list")).toContainText("which TODOs in this repository");
     await expect(setup.getByText("Waiting for a review to arrive")).toBeVisible();
 
     // a sample is a first review like any other
-    await setup.locator('[data-welcome-try="feedback"]').getByRole("button", { name: "Sample" }).click();
+    await setup.getByTestId("welcome-try-feedback").getByRole("button", { name: "Sample" }).click();
     await expect(setup.getByRole("status")).toContainText("Arrived:");
     await setup.getByRole("button", { name: "Open the review" }).click();
     await expect(page).toHaveURL(/#\/reviews\/r_/);
@@ -113,21 +113,21 @@ test("Connect lists only the agents found, and connects the ones chosen", async 
     ],
   );
   const setup = await openSetup(page);
-  const agents = setup.locator('[data-welcome-section="agents"]');
-  await expect(agents.locator("[data-welcome-agent]")).toHaveCount(4);
-  await expect(agents.locator('[data-welcome-agent="grok"]')).toHaveCount(0);
+  const agents = setup.getByRole("region", { name: "Your agents" });
+  await expect(agents.getByTestId(/^welcome-agent-/)).toHaveCount(4);
+  await expect(agents.getByTestId("welcome-agent-grok")).toHaveCount(0);
 
   // connected ones stay ticked; the others found are chosen to begin with
-  await expect(agents.locator('[data-welcome-agent="claude"] input')).toBeChecked();
-  await expect(agents.locator('[data-welcome-agent="claude"] input')).toBeDisabled();
-  await expect(agents.locator('[data-welcome-agent="opencode"]')).toContainText("Uses Claude Code's skill");
-  await expect(agents.locator("[data-welcome-connect]")).toHaveText("Connect 2 agents");
+  await expect(agents.getByTestId("welcome-agent-claude").getByRole("checkbox")).toBeChecked();
+  await expect(agents.getByTestId("welcome-agent-claude").getByRole("checkbox")).toBeDisabled();
+  await expect(agents.getByTestId("welcome-agent-opencode")).toContainText("Uses Claude Code's skill");
+  await expect(agents.getByRole("button", { name: /^Connect \d+ agents?$/ })).toHaveText("Connect 2 agents");
 
-  await agents.locator('[data-welcome-agent="cursor"] input').uncheck();
-  await agents.locator("[data-welcome-connect]").click();
-  await expect(agents.locator('[data-welcome-agent="codex"]')).toContainText("Connected");
-  await expect(agents.locator('[data-welcome-agent="cursor"]')).not.toContainText("Connected");
+  await agents.getByTestId("welcome-agent-cursor").getByRole("checkbox").uncheck();
+  await agents.getByRole("button", { name: /^Connect \d+ agents?$/ }).click();
+  await expect(agents.getByTestId("welcome-agent-codex")).toContainText("Connected");
+  await expect(agents.getByTestId("welcome-agent-cursor")).not.toContainText("Connected");
   expect(await page.evaluate(() => (window as unknown as { __connected: string[] }).__connected)).toEqual(["codex"]);
-  await expect(agents.locator("[data-welcome-connect]")).toHaveCount(0);
+  await expect(agents.getByRole("button", { name: /^Connect \d+ agents?$/ })).toHaveCount(0);
   await page.keyboard.press("Escape");
 });

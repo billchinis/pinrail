@@ -101,17 +101,15 @@ function Section({
   detail,
   side,
   children,
-  name,
 }: {
   icon: ReactNode;
   title: string;
   detail: ReactNode;
   side?: ReactNode;
   children?: ReactNode;
-  name: string;
 }) {
   return (
-    <section className="welcome-section" data-welcome-section={name}>
+    <section className="welcome-section" aria-label={title}>
       <div className="welcome-section-head">
         <span className="welcome-section-icon">{icon}</span>
         <span className="welcome-section-text">
@@ -141,7 +139,6 @@ function CommandSection({ cli }: { cli: ReturnType<typeof useCli> }) {
   if (!inTauri()) {
     return (
       <Section
-        name="command"
         icon={icon}
         title="The command"
         detail="The desktop app installs it and checks that a terminal finds it"
@@ -234,7 +231,7 @@ function CommandSection({ cli }: { cli: ReturnType<typeof useCli> }) {
   }
 
   return (
-    <Section name="command" icon={icon} title="The command" detail={detail} side={side}>
+    <Section icon={icon} title="The command" detail={detail} side={side}>
       {body || cli.error ? (
         <div className="welcome-section-body">
           {body}
@@ -261,17 +258,10 @@ function AgentsSection() {
   }, [agents, chosen]);
 
   if (!inTauri()) {
-    return (
-      <Section
-        name="agents"
-        icon={icon}
-        title="Your agents"
-        detail="The desktop app finds your agents and connects them"
-      />
-    );
+    return <Section icon={icon} title="Your agents" detail="The desktop app finds your agents and connects them" />;
   }
   if (!agents) {
-    return <Section name="agents" icon={icon} title="Your agents" detail={error?.message ?? "Looking for agents…"} />;
+    return <Section icon={icon} title="Your agents" detail={error?.message ?? "Looking for agents…"} />;
   }
 
   const shown = agents.filter((a) => a.found);
@@ -292,7 +282,6 @@ function AgentsSection() {
   if (shown.length === 0) {
     return (
       <Section
-        name="agents"
         icon={icon}
         title="Your agents"
         detail="Pinrail found no agents on this computer. Settings › Agents has the skill to give an agent yourself."
@@ -302,19 +291,12 @@ function AgentsSection() {
 
   return (
     <Section
-      name="agents"
       icon={icon}
       title="Your agents"
       detail="Choose the agents to connect. These are the ones Pinrail found on this computer."
       side={
         toConnect.length > 0 ? (
-          <button
-            type="button"
-            className="chrome-button button-primary"
-            onClick={connect}
-            disabled={connecting}
-            data-welcome-connect
-          >
+          <button type="button" className="chrome-button button-primary" onClick={connect} disabled={connecting}>
             {connecting
               ? "Connecting…"
               : toConnect.length === 1
@@ -343,8 +325,7 @@ function AgentsSection() {
             <label
               key={a.id}
               className={`welcome-agent ${connectable(a) ? "" : "is-fixed"}`}
-              data-welcome-agent={a.id}
-              data-agent-state={a.state}
+              data-testid={`welcome-agent-${a.id}`}
             >
               <input
                 type="checkbox"
@@ -386,7 +367,6 @@ function NotificationsSection({ system, request, openSystemSettings }: ReturnTyp
   const blocked = native && on && status && !status.shows && status.authorization !== "not_determined";
   return (
     <Section
-      name="notifications"
       icon={<Bell size={16} />}
       title="Notifications"
       detail="When an agent asks, even with Pinrail in the background"
@@ -463,7 +443,7 @@ function PluginsStep({
         Each plugin is one kind of review an agent can ask you for. Start with the recommended ones, and add others in
         Settings › Plugins whenever an agent needs them.
       </p>
-      <div className="welcome-plugins" data-welcome-plugins>
+      <div className="welcome-plugins">
         {[...(catalog ?? [])]
           .sort((a, b) => Number(b.recommended) - Number(a.recommended))
           .map((e) => {
@@ -472,7 +452,7 @@ function PluginsStep({
               <label
                 key={e.id}
                 className={`welcome-plugin ${e.needs ? "is-unavailable" : ""}`}
-                data-welcome-plugin={e.name}
+                data-testid={`welcome-plugin-${e.name}`}
               >
                 <input
                   type="checkbox"
@@ -535,7 +515,7 @@ function TryRow({ plugin, onSent }: { plugin: Plugin; onSent: (id: string) => vo
     }
   };
   return (
-    <div className="welcome-try" data-welcome-try={plugin.name}>
+    <div className="welcome-try" data-testid={`welcome-try-${plugin.name}`}>
       <span className="welcome-section-icon">
         <PluginIcon icon={plugin.icon} size={16} />
       </span>
@@ -624,13 +604,7 @@ export function WelcomeDialog({
   if (step === 1 && choice.toInstall.length > 0) {
     const n = choice.toInstall.length;
     next = (
-      <button
-        type="button"
-        className="chrome-button button-primary"
-        onClick={installAndGo}
-        disabled={choice.busy}
-        data-welcome-install
-      >
+      <button type="button" className="chrome-button button-primary" onClick={installAndGo} disabled={choice.busy}>
         {choice.busy ? "Installing…" : n === 1 ? "Install 1 plugin" : `Install ${n} plugins`}
       </button>
     );
@@ -641,7 +615,6 @@ export function WelcomeDialog({
         className="chrome-button button-primary"
         onClick={() => (last ? onClose() : setStep(step + 1))}
         disabled={!last && locked[step + 1]}
-        data-welcome-next
       >
         {last ? "Done" : "Next"}
       </button>
@@ -664,7 +637,6 @@ export function WelcomeDialog({
                   aria-current={i === step ? "step" : undefined}
                   disabled={locked[i]}
                   onClick={() => setStep(i)}
-                  data-welcome-step={label}
                 >
                   <span className={`welcome-dot ${done[i] ? "is-done" : ""} ${locked[i] ? "is-locked" : ""}`}>
                     {done[i] ? (
