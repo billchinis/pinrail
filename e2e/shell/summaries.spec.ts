@@ -27,12 +27,12 @@ test("the inbox row and the header say what a review asks, in its plugin's tones
   const { id } = await createReview(page.request, { title: `${tag} tickets`, payload });
 
   await page.goto("/#/");
-  const row = page.locator("[data-review-row]", { hasText: tag });
-  await expect(row.locator(".summary-count")).toHaveText(["2 major", "1 nit"]);
-  await expect(row.locator(".summary-count", { hasText: "2 major" })).toHaveClass(/tone-warning/);
+  const row = page.getByTestId("review-row").filter({ hasText: tag });
+  await expect(row.getByTestId("summary-count")).toHaveText(["2 major", "1 nit"]);
+  await expect(row.getByTestId("summary-count").filter({ hasText: "2 major" })).toHaveClass(/tone-warning/);
 
   await page.goto(`/#/reviews/${id}`);
-  await expect(page.locator(".review-strip .summary-count")).toHaveText(["2 major", "1 nit"]);
+  await expect(page.locator(".review-strip").getByTestId("summary-count")).toHaveText(["2 major", "1 nit"]);
 });
 
 test("once decided, the header and history say what was decided", async ({ page }) => {
@@ -48,11 +48,11 @@ test("once decided, the header and history say what was decided", async ({ page 
   });
 
   await page.goto(`/#/reviews/${id}`);
-  await expect(page.locator(".review-strip .summary-count")).toHaveText(["2 accepted", "1 rejected"]);
+  await expect(page.locator(".review-strip").getByTestId("summary-count")).toHaveText(["2 accepted", "1 rejected"]);
 
   await page.goto(`/#/history?q=${tag}`);
   const row = page.locator("[data-history-row]", { hasText: tag });
-  await expect(row.locator(".summary-count")).toHaveText(["2 accepted", "1 rejected"]);
+  await expect(row.getByTestId("summary-count")).toHaveText(["2 accepted", "1 rejected"]);
   // the list plugin declares no verdict, so the badge keeps the status
   await expect(row.locator(".status-badge")).toHaveText("decided");
 });

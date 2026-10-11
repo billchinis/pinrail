@@ -7,7 +7,7 @@ test("handing over a decision returns to the inbox", async ({ page }) => {
   await createReview(page.request, { title: "Still waiting" });
 
   await page.goto("/#/");
-  await page.locator("[data-review-row]", { hasText: "Hand over and go back" }).click();
+  await page.getByTestId("review-row").filter({ hasText: "Hand over and go back" }).click();
   await expect(page).toHaveURL(new RegExp(`/reviews/${review.id}$`));
   const frame = page.frameLocator("#plugin-frame");
   await expect(frame.locator("body")).toContainText("One proposal.");
@@ -17,7 +17,7 @@ test("handing over a decision returns to the inbox", async ({ page }) => {
 
   await expect(page).toHaveURL(/#\/$/);
   await expect(page.getByText("Decision recorded")).toBeVisible();
-  const rows = page.locator("[data-review-row]");
+  const rows = page.getByTestId("review-row");
   await expect(rows).toHaveCount(1);
   await expect(rows).toContainText("Still waiting");
 });

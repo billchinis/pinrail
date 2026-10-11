@@ -40,7 +40,7 @@ test("the sidebar lists what is waiting on every page, oldest first, and ⌥↓ 
   await expect(page.locator('[data-project="-"]')).toContainText("1");
   await page.locator('[data-project="-"]').click();
   await expect(page).toHaveURL(/repo=-/);
-  await expect(page.locator(".inbox-repo summary strong")).toHaveText(["No project"]);
+  await expect(page.getByTestId("inbox-group-name")).toHaveText(["No project"]);
   await expect(page.locator("#inbox-repo")).toContainText("No project");
   await decideNothing(page.request, loose.id);
   await expect(page.locator('[data-project="-"]')).toHaveCount(0);

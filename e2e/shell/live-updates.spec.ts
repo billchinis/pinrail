@@ -19,11 +19,11 @@ const decideNothing = { decisions: [], undecided: [1, 2] };
 test("a review that arrives or ends updates the inbox without fetching the pending list again", async ({ page }) => {
   await clearInbox(page.request);
   await page.goto("/#/");
-  await expect(page.locator(".inbox-total")).toHaveText("0");
+  await expect(page.getByTestId("inbox-total")).toHaveText("0");
   const fetched = requests(page, pendingList);
 
   const review = await createReview(page.request, { title: "Live: arrives" });
-  const row = page.locator("[data-review-row]", { hasText: "Live: arrives" });
+  const row = page.getByTestId("review-row").filter({ hasText: "Live: arrives" });
   await expect(row).toBeVisible();
   await decide(page.request, review.id, decideNothing);
   await expect(row).toHaveCount(0);

@@ -41,7 +41,7 @@ export function SummaryCounts({ summary }: { summary: Summary | null | undefined
   return (
     <span className="summary-counts">
       {counts.map(({ label, count, tone }) => (
-        <span key={label} className={`summary-count tone-${tone}`}>
+        <span key={label} className={`summary-count tone-${tone}`} data-testid="summary-count">
           {count} {label}
         </span>
       ))}
@@ -56,7 +56,7 @@ export function FilesCount({ total }: { total?: { count: number; bytes: number }
   const label = `${total.count} file${total.count === 1 ? "" : "s"} · ${size(total.bytes)}`;
   return (
     <Tooltip label={label} side="top">
-      <span className="files-count" aria-label={label} data-files-count={total.count}>
+      <span className="files-count" aria-label={label} data-testid="files-count">
         <Paperclip size={11} />
         {total.count}
       </span>

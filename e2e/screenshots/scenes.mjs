@@ -60,7 +60,7 @@ export const scenes = [
     name: "inbox",
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
-      await page.locator(".inbox-repo").first().waitFor();
+      await page.getByTestId("inbox-group").first().waitFor();
       await settle(page);
       await shot("inbox", page, { site: true });
     },
@@ -426,7 +426,7 @@ export const scenes = [
     name: "palette",
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
-      await page.locator(".inbox-repo").first().waitFor();
+      await page.getByTestId("inbox-group").first().waitFor();
       await page.keyboard.press("Meta+k");
       const input = page.getByPlaceholder("Search reviews, plugins, actions…");
       await input.waitFor();
@@ -440,7 +440,7 @@ export const scenes = [
     name: "shortcuts",
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
-      await page.locator(".inbox-repo").first().waitFor();
+      await page.getByTestId("inbox-group").first().waitFor();
       await page.keyboard.press("?");
       await settle(page, 500);
       await shot("shortcuts");
@@ -464,7 +464,7 @@ export const scenes = [
       const manifest = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8"));
       fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ ...manifest, icon: "ticket" }, null, 2));
       await page.goto(`${app.ui}/#/`);
-      await page.locator(".inbox-repo").first().waitFor();
+      await page.getByTestId("inbox-group").first().waitFor();
       await page.keyboard.press("Meta+,");
       await page.locator('[data-section="plugins"]').click();
       await page.getByRole("textbox", { name: "Search official plugins, or give a source path" }).fill(dir);
@@ -479,7 +479,7 @@ export const scenes = [
     name: "settings-agents",
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
-      await page.locator(".inbox-repo").first().waitFor();
+      await page.getByTestId("inbox-group").first().waitFor();
       await page.evaluate((agents) => {
         window.__TAURI_INTERNALS__ = {
           invoke: async (command) => {
@@ -501,7 +501,7 @@ export const scenes = [
     name: "setup",
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
-      await page.locator(".inbox-repo").first().waitFor();
+      await page.getByTestId("inbox-group").first().waitFor();
       await page.evaluate((agents) => {
         window.__TAURI_INTERNALS__ = {
           invoke: async (command) => {
@@ -569,7 +569,7 @@ export const scenes = [
     name: `settings-${section}`,
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
-      await page.locator(".inbox-repo").first().waitFor();
+      await page.getByTestId("inbox-group").first().waitFor();
       await page.keyboard.press("Meta+,");
       await page.locator(`[data-section="${section}"]`).click();
       await settle(page, 500);

@@ -66,10 +66,10 @@ test("a view gets the bytes of a file its review carries from the app, and only 
 
   // the inbox row says the review came with files, before it is opened
   await page.goto("/#/");
-  const row = page.locator("[data-review-row]", { hasText: "A file for the view" });
-  await expect(row.locator("[data-files-count]")).toHaveText("1");
-  await expect(row.locator("[data-files-count]")).toHaveAttribute("aria-label", "1 file · 488 KB");
-  await row.locator("[data-files-count]").hover();
+  const row = page.getByTestId("review-row").filter({ hasText: "A file for the view" });
+  await expect(row.getByTestId("files-count")).toHaveText("1");
+  await expect(row.getByTestId("files-count")).toHaveAttribute("aria-label", "1 file · 488 KB");
+  await row.getByTestId("files-count").hover();
   await expect(page.locator(".tooltip")).toHaveText("1 file · 488 KB");
   if (process.env.PINRAIL_SHOTS)
     await page.screenshot({
@@ -112,7 +112,7 @@ test("a view gets the bytes of a file its review carries from the app, and only 
   // and so does its row in History once it has ended
   await page.goto("/#/history");
   await expect(
-    page.locator("[data-history-row]", { hasText: "A file for the view" }).locator("[data-files-count]"),
+    page.locator("[data-history-row]", { hasText: "A file for the view" }).getByTestId("files-count"),
   ).toHaveText("1");
   await page.request.delete(`${core}/api/v1/plugins/reader`);
 });

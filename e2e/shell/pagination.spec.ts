@@ -16,18 +16,18 @@ test("history shows 50 a page, pages through the rest, and starts again at page 
 
   await page.goto(`/#/history?q=${tag}`);
   const rows = page.locator("[data-history-row]");
-  const range = page.locator("[data-pager-range]");
+  const range = page.getByTestId("pager-range");
   await expect(rows).toHaveCount(50);
   await expect(range).toHaveText("1–50 of 60");
   await expect(rows.first()).toContainText(`${tag} history 60`);
-  await expect(page.locator("[data-pager-previous]")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Previous page" })).toBeDisabled();
 
-  await page.locator("[data-pager-next]").click();
+  await page.getByRole("button", { name: "Next page" }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(rows).toHaveCount(10);
   await expect(range).toHaveText("51–60 of 60");
   await expect(rows.last()).toContainText(`${tag} history 01`);
-  await expect(page.locator("[data-pager-next]")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Next page" })).toBeDisabled();
 
   // a filter narrows on the server and goes back to the first page
   await page.getByRole("searchbox", { name: "Search history" }).fill(`${tag} acme/odd`);
@@ -39,7 +39,7 @@ test("history shows 50 a page, pages through the rest, and starts again at page 
   await page.goto(`/#/history?q=${tag}%20acme/odd&per=25`);
   await expect(rows).toHaveCount(25);
   await expect(range).toHaveText("1–25 of 30");
-  await page.locator("[data-pager-next]").click();
+  await page.getByRole("button", { name: "Next page" }).click();
   await expect(rows).toHaveCount(5);
   await expect(range).toHaveText("26–30 of 30");
 
@@ -49,7 +49,7 @@ test("history shows 50 a page, pages through the rest, and starts again at page 
   await page.goto(`/#/history?q=${tag}&per=25&page=3`);
   await expect(range).toHaveText("51–60 of 60");
   await page.evaluate(() => {
-    const previous = document.querySelector<HTMLButtonElement>("[data-pager-previous]");
+    const previous = document.querySelector<HTMLButtonElement>('button[aria-label="Previous page"]');
     previous?.click();
     previous?.click();
   });
@@ -71,25 +71,25 @@ test("the inbox holds every pending review, 50 a page, and Enter opens the row t
   }
 
   await page.goto("/#/");
-  const rows = page.locator("[data-review-row]");
-  const range = page.locator("[data-pager-range]");
+  const rows = page.getByTestId("review-row");
+  const range = page.getByTestId("pager-range");
   await expect(rows).toHaveCount(50);
   await expect(range).toHaveText("1–50 of 105");
 
   // the project headers count the whole project, not the page
-  await expect(page.locator(".inbox-repo summary").filter({ hasText: "acme/api" })).toContainText("70");
+  await expect(page.getByTestId("inbox-group-heading").filter({ hasText: "acme/api" })).toContainText("70");
 
-  await page.locator("[data-pager-next]").click();
+  await page.getByRole("button", { name: "Next page" }).click();
   await expect(rows).toHaveCount(50);
   await expect(range).toHaveText("51–100 of 105");
-  await page.locator("[data-pager-next]").click();
+  await page.getByRole("button", { name: "Next page" }).click();
   await expect(rows).toHaveCount(5);
   await expect(range).toHaveText("101–105 of 105");
 
   // two clicks in one frame step two pages: the second lands before the pager
   // has been drawn again, so it must step from the page the URL is on
   await page.evaluate(() => {
-    const previous = document.querySelector<HTMLButtonElement>("[data-pager-previous]");
+    const previous = document.querySelector<HTMLButtonElement>('button[aria-label="Previous page"]');
     previous?.click();
     previous?.click();
   });
@@ -100,7 +100,7 @@ test("the inbox holds every pending review, 50 a page, and Enter opens the row t
   await page.mouse.move(0, 0);
   await page.locator("h1").click();
   for (let i = 0; i < 3; i++) await page.keyboard.press("j");
-  const lit = page.locator("[data-review-row].is-focused");
+  const lit = rows.and(page.locator(".is-focused"));
   await expect(lit).toHaveCount(1);
   const href = await lit.getAttribute("href");
   await page.keyboard.press("Enter");

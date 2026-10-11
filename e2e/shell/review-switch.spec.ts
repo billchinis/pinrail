@@ -167,7 +167,7 @@ test("discarding a review returns to the inbox, where the others wait", async ({
   // the review has ended: back to the inbox, where the other one waits
   await expect(page).toHaveURL(/#\/$/);
   await expect(page.getByText("Discarded. The agent was told to stop.")).toBeVisible();
-  const rows = page.locator("[data-review-row]");
+  const rows = page.getByTestId("review-row");
   await expect(rows).toHaveCount(1);
   await expect(rows).toContainText("Notice: the second");
 });

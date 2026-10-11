@@ -9,16 +9,16 @@ test("the inbox is grouped by project or one list, newest first, and remembers w
   await createReview(page.request, { title: "Layout three", origin: { repo: "zeta/app", workflow: "layout" } });
 
   await page.goto("/#/");
-  const rows = page.locator("[data-review-row]");
+  const rows = page.getByTestId("review-row");
   // grouped: the project with the newest review first, then newest within it
-  await expect(page.locator(".inbox-repo summary strong")).toHaveText(["zeta/app", "acme/api"]);
+  await expect(page.getByTestId("inbox-group-name")).toHaveText(["zeta/app", "acme/api"]);
   await expect(rows).toHaveText([/Layout three/, /Layout one/, /Layout two/]);
 
   await page.getByRole("radio", { name: "One list" }).click();
-  await expect(page.locator(".inbox-repo")).toHaveCount(0);
+  await expect(page.getByTestId("inbox-group")).toHaveCount(0);
   await expect(rows).toHaveText([/Layout three/, /Layout two/, /Layout one/]);
   // with no project headings, each row says its project
-  await expect(rows.nth(1).locator(".review-row-project")).toHaveText("acme/api");
+  await expect(rows.nth(1).getByTestId("review-row-project")).toHaveText("acme/api");
 
   // J walks the list as it is drawn
   await page.keyboard.press("j");
@@ -30,7 +30,7 @@ test("the inbox is grouped by project or one list, newest first, and remembers w
   await expect(rows).toHaveText([/Layout three/, /Layout two/, /Layout one/]);
 
   await page.getByRole("radio", { name: "Grouped by project" }).click();
-  await expect(page.locator(".inbox-repo")).toHaveCount(2);
+  await expect(page.getByTestId("inbox-group")).toHaveCount(2);
 });
 
 test("the inbox's keys stay quiet under a dialog, and with a modifier", async ({ page }) => {
@@ -40,7 +40,7 @@ test("the inbox's keys stay quiet under a dialog, and with a modifier", async ({
   const discard = page.locator(".discard-dialog");
 
   await page.goto("/#/");
-  await expect(page.locator("[data-review-row]")).toHaveCount(1);
+  await expect(page.getByTestId("review-row")).toHaveCount(1);
   await page.keyboard.press("ControlOrMeta+,");
   await expect(page.locator("[data-settings]")).toBeVisible();
   await page.keyboard.press("d");

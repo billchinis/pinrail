@@ -198,7 +198,7 @@ export function Inbox() {
       to={`/reviews/${review.id}`}
       className={`review-row ${here === focused ? "is-focused" : ""}`}
       onMouseEnter={() => !keyboard.current && setFocused(here)}
-      data-review-row
+      data-testid="review-row"
     >
       <span className="review-row-marker" aria-label="Pending" />
       <span className="review-row-main">
@@ -207,7 +207,11 @@ export function Inbox() {
           {review.origin.ref ? <span className="review-row-ref">{review.origin.ref}</span> : null}
         </span>
         <span className="review-row-meta">
-          {layout === "list" ? <span className="review-row-project">{review.origin.repo ?? "No project"}</span> : null}
+          {layout === "list" ? (
+            <span className="review-row-project" data-testid="review-row-project">
+              {review.origin.repo ?? "No project"}
+            </span>
+          ) : null}
           {layout === "list" && (review.requested_by || review.origin.workflow) ? <span>·</span> : null}
           {review.requested_by ? (
             <span className="requester">
@@ -259,7 +263,9 @@ export function Inbox() {
       <header className="page-head">
         <div className="heading-inline">
           <h1>Inbox</h1>
-          <span className="inbox-total">{live.pendingCount}</span>
+          <span className="inbox-total" data-testid="inbox-total">
+            {live.pendingCount}
+          </span>
         </div>
         <div className="inbox-controls">
           <Tooltip label="Search the inbox" keys={["/"]} hoverOnly>
@@ -346,7 +352,7 @@ export function Inbox() {
         </span>
       </nav>
       {live.pendingUnloaded > 0 ? (
-        <p className="notice" data-inbox-capped>
+        <p className="notice" data-testid="inbox-capped">
           The inbox shows the newest {live.pending.length} of {live.pendingCount} pending reviews. Decide or withdraw
           some to see the rest.
         </p>
@@ -383,9 +389,9 @@ export function Inbox() {
       ) : (
         <div className="inbox-groups">
           {groups.map(([repoName, items]) => (
-            <details key={repoName || "none"} className="inbox-repo" open>
-              <summary>
-                <strong>{repoName || "No project"}</strong>
+            <details key={repoName || "none"} className="inbox-repo" open data-testid="inbox-group">
+              <summary data-testid="inbox-group-heading">
+                <strong data-testid="inbox-group-name">{repoName || "No project"}</strong>
                 <span>{reviews.filter((r) => (r.origin.repo ?? "") === repoName).length}</span>
               </summary>
               {items.map((review) => {

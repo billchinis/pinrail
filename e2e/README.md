@@ -51,6 +51,40 @@ Each plugin's behaviour on its own is tested in the plugin's `tests/`
 folder, under the `pinrail-sdk` harness. Run those with
 `mise run test:plugins`.
 
+## Selecting elements
+
+The app suites find an element the way a person finds it. Use the first of
+these that works:
+
+1. Its role and accessible name, with `getByRole`, such as
+   `getByRole("button", { name: "Next page" })`.
+2. Its label, placeholder or visible text, with `getByLabel`,
+   `getByPlaceholder` or `getByText`.
+3. A test id, with `getByTestId`.
+
+A role query also checks accessibility. If a control cannot be found by its
+role and name, a screen reader cannot announce it properly either. Fix the
+markup in that case, for example with an `aria-label` or a `role`, rather
+than adding a test id.
+
+Use a test id only for an element that has no role or name to find it by.
+Examples are a row whose accessible name is all of its text, a container
+that a spec searches inside, and a block of text whose wording the spec
+checks. The app's element then carries a `data-testid` attribute whose
+value names what the element is, not how it looks, in kebab case, such as
+`review-row` or `inbox-group`.
+
+Test ids exist only for the tests. App code does not read them. Add a test
+id in the same change as the test that uses it, and remove it when no test
+uses it any more.
+
+A spec does not find an element by its class name or by the structure of
+the page, because those change with the styling. To check a state, prefer
+the ARIA attribute or the matcher that reads it, such as `aria-checked`,
+`aria-expanded` or `toBeDisabled()`. Where the app shows a state only
+through a class, a spec may check that class, such as
+`toHaveClass(/is-focused/)`.
+
 ## Running the tests
 
 ```sh
