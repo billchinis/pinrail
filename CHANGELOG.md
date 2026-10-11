@@ -9,6 +9,15 @@ wait for a release, and takes the version's name when it is tagged.
 
 The `pinrail` command ships inside the app and carries the app's version.
 
+## [Unreleased]
+
+### Changed
+
+- ⌘D (Ctrl+D on Linux) discards a review, from its row in the inbox or
+  from the review itself, including while the plugin's view has the
+  keyboard. It replaces D, which worked only in the inbox. A plugin that
+  declares ⌘D as one of its shortcuts no longer receives it.
+
 ## [0.1.3]
 
 ### Fixed

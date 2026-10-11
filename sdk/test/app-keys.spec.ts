@@ -43,3 +43,21 @@ test("the app's keys go up from a view, unless typed in a field or kept by the v
   await page.waitForTimeout(100);
   expect(await keys()).toEqual(["?", "["]);
 });
+
+test("⌘D or Ctrl+D goes up from anywhere in a view, a text field too", async ({ page }) => {
+  const plugin = await mountPlugin(page, view(), { review: { payload: {} } });
+  const f = plugin.frame;
+  await expect(f.locator("#ready")).toHaveText("ready");
+  const discards = async () =>
+    (await plugin.messages()).filter((m: any) => m.type === "key" && m.key === "d" && (m.metaKey || m.ctrlKey)).length;
+
+  await f.locator("#ready").click();
+  await page.keyboard.press("ControlOrMeta+d");
+  await f.locator("#field").click();
+  await page.keyboard.press("ControlOrMeta+d");
+  await expect.poll(discards).toBe(2);
+  // with another modifier it is not the app's
+  await page.keyboard.press("ControlOrMeta+Shift+d");
+  await page.waitForTimeout(100);
+  expect(await discards()).toBe(2);
+});

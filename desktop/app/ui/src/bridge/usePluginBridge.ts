@@ -30,8 +30,10 @@ import type { Decision, Review, Violation } from "../api/types";
 import { currentTheme } from "../lib/theme";
 import { modalOpen } from "../lib/keys";
 
-/** The app's review-screen keys a view may pass up: help, and the rounds. */
+/** The app's review-screen keys a view may pass up: help, and the rounds,
+ *  which come plain, and discarding, which comes with ⌘ or Ctrl. */
 const VIEW_APP_KEYS = ["?", "[", "]"];
+const VIEW_APP_MOD_KEYS = ["d"];
 
 const DRAFT_PREFIX = "pinrail:draft:";
 
@@ -182,12 +184,15 @@ export function usePluginBridge(options: Options): Bridge {
       // one of the app's own keys, pressed inside the view: the app acts on
       // it as if pressed in its window; nothing else is accepted
       appKey: (message) => {
-        if (!VIEW_APP_KEYS.includes(message.key)) return;
+        const mod = !!message.metaKey || !!message.ctrlKey;
+        if (!(mod ? VIEW_APP_MOD_KEYS : VIEW_APP_KEYS).includes(message.key)) return;
         window.dispatchEvent(
           new KeyboardEvent("keydown", {
             key: message.key,
             code: typeof message.code === "string" ? message.code : "",
-            shiftKey: !!message.shiftKey,
+            metaKey: !!message.metaKey,
+            ctrlKey: !!message.ctrlKey,
+            shiftKey: !mod && !!message.shiftKey,
             bubbles: true,
             cancelable: true,
           }),

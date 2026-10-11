@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
-import { clearInbox, core, createReview, linkPlugin } from "./helpers";
+import { clearInbox, core, createReview, decide, linkPlugin } from "./helpers";
 
 const hello = path.resolve(__dirname, "..", "..", "plugins", "hello");
 
@@ -170,6 +170,36 @@ test("discarding a review returns to the inbox, where the others wait", async ({
   const rows = page.getByTestId("review-row");
   await expect(rows).toHaveCount(1);
   await expect(rows).toContainText("Notice: the second");
+});
+
+test("⌘D opens the discard dialog on a waiting review, from the page or the view, and on no other", async ({
+  page,
+}) => {
+  await clearInbox(page.request);
+  const review = await createReview(page.request, { title: "Discard: from the page" });
+  const discard = page.getByRole("dialog", { name: "Discard this review?" });
+
+  await page.goto(`/#/reviews/${review.id}`);
+  await expect(page.getByTestId("handover")).toBeVisible();
+  await page.getByTestId("top-bar").click();
+  await page.keyboard.press("ControlOrMeta+d");
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "Keep it" }).click();
+  await expect(discard).toHaveCount(0);
+
+  // with the view holding the keyboard, the key goes up to the app
+  await page.frameLocator("#plugin-frame").locator("body").click();
+  await page.keyboard.press("ControlOrMeta+d");
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "Keep it" }).click();
+
+  // a decided review has nothing to discard
+  await decide(page.request, review.id, { decisions: [], undecided: [1] });
+  await page.reload();
+  await expect(page.getByTestId("review-strip").getByTestId("status-badge")).toHaveText(/decided/i);
+  await page.getByTestId("top-bar").click();
+  await page.keyboard.press("ControlOrMeta+d");
+  await expect(discard).toHaveCount(0);
 });
 
 test("a submit the app did not ask for decides nothing", async ({ page }) => {

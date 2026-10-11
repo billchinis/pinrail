@@ -338,6 +338,9 @@ export function ReviewScreen() {
     onOpen,
   });
 
+  // only a review that is still waiting can be discarded
+  const pending = review?.status === "pending";
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // a dialog in front of the review has the keys
@@ -349,6 +352,12 @@ export function ReviewScreen() {
       if (hasMod(event) && event.shiftKey && !event.altKey && (event.key === "m" || event.key === "M")) {
         event.preventDefault();
         if (plugin) setMaximized((m) => !m);
+        return;
+      }
+      if (hasMod(event) && !event.shiftKey && !event.altKey && (event.key === "d" || event.key === "D")) {
+        // the key must not land in the reason field that opens
+        event.preventDefault();
+        if (pending) setDiscarding(true);
         return;
       }
       const el = event.target as HTMLElement | null;
@@ -395,7 +404,7 @@ export function ReviewScreen() {
       window.removeEventListener("pinrail:command", onCommand);
       window.removeEventListener("pinrail:discard", onDiscard);
     };
-  }, [previous, revisedBy, navigate, maximized, plugin]);
+  }, [previous, revisedBy, navigate, maximized, plugin, pending]);
 
   // the view leaves with the review
   // what was said and opened for the last review stays with it: the screen
@@ -446,7 +455,7 @@ export function ReviewScreen() {
       review ? (
         <>
           {review.status === "pending" ? (
-            <Tooltip label="Discard: the agent is told to stop" side="bottom">
+            <Tooltip label="Discard: the agent is told to stop" keys={[MOD, "D"]} side="bottom">
               <button
                 type="button"
                 className="bar-button"

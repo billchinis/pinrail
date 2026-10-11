@@ -594,8 +594,11 @@
       },
       // ? for the keys, [ and ] for the rounds: the app's, so a press the
       // view left alone, outside a text field, goes up to it. ⌘/Ctrl+Enter
-      // goes up from anywhere, a text field too: it is the hand-over.
+      // goes up from anywhere, a text field too: it is the hand-over. So
+      // does ⌘D, Ctrl+D off macOS, which discards the review; on macOS,
+      // Ctrl+D in a text field deletes forward, and stays in the view.
       onAppKey: (fn) => {
+        const mac = /Mac/i.test((win.navigator && win.navigator.platform) || "");
         const listener = (e) => {
           if (e.defaultPrevented || e.pinrailForwarded) return;
           if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key === "Enter") {
@@ -603,6 +606,18 @@
             fn({
               key: "Enter",
               code: e.code || "Enter",
+              metaKey: e.metaKey,
+              ctrlKey: e.ctrlKey,
+              altKey: false,
+              shiftKey: false,
+            });
+            return;
+          }
+          if ((mac ? e.metaKey : e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === "d" || e.key === "D")) {
+            e.preventDefault();
+            fn({
+              key: "d",
+              code: e.code || "KeyD",
               metaKey: e.metaKey,
               ctrlKey: e.ctrlKey,
               altKey: false,

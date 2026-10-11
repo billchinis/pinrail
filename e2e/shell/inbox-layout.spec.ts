@@ -33,8 +33,7 @@ test("the inbox is grouped by project or one list, newest first, and remembers w
   await expect(page.getByTestId("inbox-group")).toHaveCount(2);
 });
 
-test("the inbox's keys stay quiet under a dialog, and with a modifier", async ({ page }) => {
-  // d discards the focused review: not from behind Settings, and not as ⌘D
+test("⌘D discards the focused review, but not from behind a dialog, and D alone does not", async ({ page }) => {
   await clearInbox(page.request);
   await createReview(page.request, { title: "Quiet keys" });
   const discard = page.getByRole("dialog", { name: "Discard this review?" });
@@ -43,14 +42,14 @@ test("the inbox's keys stay quiet under a dialog, and with a modifier", async ({
   await expect(page.getByTestId("review-row")).toHaveCount(1);
   await page.keyboard.press("ControlOrMeta+,");
   await expect(settingsDialog(page)).toBeVisible();
-  await page.keyboard.press("d");
-  await expect(discard, "d reached the inbox behind Settings").toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+d");
+  await expect(discard, "⌘D reached the inbox behind Settings").toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(settingsDialog(page)).toHaveCount(0);
 
-  await page.keyboard.press("ControlOrMeta+d");
-  await expect(discard, "⌘D opened the discard dialog").toHaveCount(0);
-  // d alone still does
   await page.keyboard.press("d");
+  await expect(discard, "D alone opened the discard dialog").toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+d");
   await expect(discard).toBeVisible();
+  await expect(discard).toContainText("Quiet keys");
 });

@@ -11,7 +11,7 @@ export const SHORTCUTS: { what: string; keys: string[][] }[] = [
       [ALT, "↑"],
     ],
   },
-  { what: "Discard the focused review", keys: [["D"]] },
+  { what: "Discard the focused or open review", keys: [[MOD, "D"]] },
   { what: "Search the inbox or the history", keys: [["/"]] },
   { what: "Search everything", keys: [[MOD, "K"]] },
   { what: "Inbox", keys: [[MOD, "I"]] },
@@ -147,7 +147,7 @@ const PRIMARY = isMac ? "cmd" : "ctrl";
  * receives it; every other declared key is forwarded to its view.
  */
 export const APP_KEYS = new Set([
-  ...["k", ",", "i", "b", "[", "]", "q", "w", "m", "z", "x", "c", "v", "a"].map((k) => combo(k, PRIMARY)),
+  ...["k", ",", "i", "b", "d", "[", "]", "q", "w", "m", "z", "x", "c", "v", "a"].map((k) => combo(k, PRIMARY)),
   ...["h", "p", "m", "l", "z"].map((k) => combo(k, PRIMARY, "shift")),
   ...(isMac ? [combo("h", "cmd"), combo("h", "alt", "cmd"), combo("f", "ctrl", "cmd")] : []),
   // the review screen: help, rounds, closing, and handing over

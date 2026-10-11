@@ -14,7 +14,7 @@ import { age } from "../lib/format";
 import { clearAll, useUrlParams } from "../lib/url";
 import { useLive } from "../state/live";
 import { NO_PROJECT, inProject } from "../lib/url";
-import { modalOpen } from "../lib/keys";
+import { MOD, hasMod, modalOpen } from "../lib/keys";
 
 /** How the inbox is laid out, remembered on this machine. */
 type Layout = "projects" | "list";
@@ -163,8 +163,15 @@ export function Inbox() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      // the inbox's keys are plain ones, and not for a dialog in front of it
-      if (event.metaKey || event.ctrlKey || event.altKey || modalOpen()) return;
+      // the inbox's keys are not for a dialog in front of it
+      if (modalOpen()) return;
+      if (hasMod(event) && !event.altKey && !event.shiftKey && (event.key === "d" || event.key === "D")) {
+        // the key must not land in the reason field that opens
+        event.preventDefault();
+        if (!discarding && shown[focused]) setDiscarding(shown[focused]);
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       const el = event.target as HTMLElement | null;
       const typing = !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT");
       if (event.key === "/" && !typing) {
@@ -181,11 +188,6 @@ export function Inbox() {
       if (event.key === "j") setFocused((f) => Math.min(f + 1, shown.length - 1));
       if (event.key === "k") setFocused((f) => Math.max(f - 1, 0));
       if (event.key === "Enter" && shown[focused]) navigate(`/reviews/${shown[focused].id}`);
-      if (event.key === "d" && shown[focused]) {
-        // the key must not land in the reason field that opens
-        event.preventDefault();
-        setDiscarding(shown[focused]);
-      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -236,7 +238,7 @@ export function Inbox() {
         <time className="review-row-time" dateTime={review.created_at}>
           {age(review.created_at, now)}
         </time>
-        <Tooltip label="Discard: the agent is told to stop" keys={["D"]} side="top">
+        <Tooltip label="Discard: the agent is told to stop" keys={[MOD, "D"]} side="top">
           <button
             type="button"
             className="bar-button"

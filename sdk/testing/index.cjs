@@ -43,7 +43,7 @@ function normalizeKeys(keys) {
  *  same as APP_KEYS in desktop/app/ui/src/lib/shortcuts.ts. */
 const PRIMARY = MAC ? "cmd" : "ctrl";
 const APP_KEYS = new Set([
-  ...["k", ",", "i", "b", "[", "]", "q", "w", "m", "z", "x", "c", "v", "a"].map((k) =>
+  ...["k", ",", "i", "b", "d", "[", "]", "q", "w", "m", "z", "x", "c", "v", "a"].map((k) =>
     normalizeKeys(`${PRIMARY}+${k}`),
   ),
   ...["h", "p", "m", "l", "z"].map((k) => normalizeKeys(`${PRIMARY}+shift+${k}`)),

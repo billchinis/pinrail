@@ -32,7 +32,7 @@ Quitting, restarting or updating Pinrail loses your drafts and any note to the a
 
 A review that includes attachments lists them above the view. Click *N files* to list each attachment with its name, size and type, and choose *Save…* to save one.
 
-If the whole review is wrong, **discard** it with the *Discard* button at the right of the review's header, or with <kbd>D</kbd> on it in the inbox list. The agent is told to stop and is given your reason. From the review's header, Pinrail then returns to the inbox. See [Deciding and discarding](/docs/concepts/reviews/#deciding-and-discarding).
+If the whole review is wrong, **discard** it with the *Discard* button at the right of the review's header, or press <kbd>⌘D</kbd> on the review or on its row in the inbox list. The agent is told to stop and is given your reason. From the review's header, Pinrail then returns to the inbox. See [Deciding and discarding](/docs/concepts/reviews/#deciding-and-discarding).
 
 ![The discard dialog, with a reason for the agent typed in.](screenshot:discard "When you discard a review, nothing is decided, and the agent is told to stop and is given your reason.")
 
@@ -73,7 +73,7 @@ Press <kbd>?</kbd> anywhere in the app to see these. On Linux, use <kbd>Ctrl</kb
 | <kbd>J</kbd> / <kbd>K</kbd> | Next / previous review |
 | <kbd>Enter</kbd> | Open the focused review |
 | <kbd>⌥↓</kbd> / <kbd>⌥↑</kbd> | Next / previous waiting review |
-| <kbd>D</kbd> | Discard the focused review |
+| <kbd>⌘D</kbd> | Discard the focused or open review |
 | <kbd>/</kbd> | Search the inbox or the history |
 | <kbd>⌘K</kbd> | Search everything |
 | <kbd>⌘I</kbd> | Inbox |

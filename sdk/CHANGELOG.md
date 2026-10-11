@@ -4,6 +4,16 @@ The package's version is the SDK's, and its major is the protocol's:
 `1.x` speaks protocol 1, served by the app at `/sdk/v1`. A breaking
 change to the protocol is a new major and a new path.
 
+## [Unreleased]
+
+### Changed
+
+- ⌘D (Ctrl+D on Linux) is one of the keys the app keeps for itself, as
+  the app now discards a review with it. Pressed anywhere in a view, a
+  text field included, it goes up to the app as a `key` message, as ⌘↵
+  does, unless the view called `preventDefault()` on it. In the test
+  harness, `sendKey` refuses it, as it refuses the app's other keys.
+
 ## [1.0.0]
 
 The first release of the plugin SDK, `pinrail-sdk`. It

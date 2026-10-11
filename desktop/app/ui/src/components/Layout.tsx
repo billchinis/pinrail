@@ -136,6 +136,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {
             id: "discard",
             label: "Discard this review",
+            keys: [MOD, "D"],
             icon: Ban,
             run: () => window.dispatchEvent(new Event("pinrail:discard")),
           },
