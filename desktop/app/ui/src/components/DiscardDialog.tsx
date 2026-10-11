@@ -82,13 +82,7 @@ export function DiscardDialog({
           <button type="button" className="chrome-button" onClick={onClose} disabled={busy}>
             Keep it
           </button>
-          <button
-            type="button"
-            className="chrome-button button-danger"
-            onClick={confirm}
-            disabled={busy}
-            data-discard-confirm
-          >
+          <button type="button" className="chrome-button button-danger" onClick={confirm} disabled={busy}>
             {busy ? "Discarding…" : "Discard"}
           </button>
         </div>

@@ -93,7 +93,6 @@ export function AttachmentsChip({ reviewId, attachments }: Props) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        data-attachments-chip
       >
         <FileBox size={13} /> {count} · {size(total)}
       </button>
@@ -105,7 +104,6 @@ export function AttachmentsChip({ reviewId, attachments }: Props) {
               role="dialog"
               aria-label={`Files this review carries: ${count}`}
               style={pos ? { top: pos.top, left: pos.left } : { visibility: "hidden" }}
-              data-attachments-panel
             >
               <div className="attachments-head">
                 <span>Sent with this review</span>
@@ -113,7 +111,7 @@ export function AttachmentsChip({ reviewId, attachments }: Props) {
               </div>
               <ul className="attachments-list">
                 {attachments.map((a) => (
-                  <li key={a.name} data-attachment={a.name}>
+                  <li key={a.name}>
                     <div className="attachment-text">
                       <span className="attachment-name">{a.name}</span>
                       <span className="attachment-meta">
@@ -127,7 +125,7 @@ export function AttachmentsChip({ reviewId, attachments }: Props) {
                       type="button"
                       className="chrome-button attachment-save"
                       onClick={() => void save(a.name)}
-                      data-attachment-save={a.name}
+                      aria-label={`Save ${a.name}`}
                     >
                       <Download size={13} /> Save…
                     </button>

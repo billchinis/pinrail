@@ -96,7 +96,7 @@ test("the app hosts a view as the protocol says", async ({ page }) => {
   expect((await (await page.request.get(`${core}/api/v1/reviews/${id}`)).json()).status).toBe("pending");
 
   // a decision the schema refuses gets violations; one it accepts, submitted
-  const handover = () => page.locator("[data-handover]").click();
+  const handover = () => page.getByTestId("handover").click();
   await answer(page, frame, handover, { ok: "yes" });
   await expect.poll(async () => conformance.violationsProblems(await received(frame))).toEqual([]);
   // the app closes the view as it returns to the inbox, so what the view
@@ -145,10 +145,10 @@ test("a decision that lands after moving to another review stays with its own", 
     await held;
     await route.continue();
   });
-  await answer(page, frame, () => page.locator("[data-handover]").click(), { ok: true });
+  await answer(page, frame, () => page.getByTestId("handover").click(), { ok: true });
   await sent;
   await page.evaluate((id) => (location.hash = `#/reviews/${id}`), second);
-  await expect(page.locator(".crumb-title")).toHaveText("Conformance: second");
+  await expect(page.getByTestId("review-title")).toHaveText("Conformance: second");
   frame = await viewFrame(page, frame);
   const answered = page.waitForResponse(`${core}/api/v1/reviews/${first}/decision`);
   released();
@@ -164,11 +164,11 @@ test("a decision that lands after moving to another review stays with its own", 
     .poll(async () => (await received(frame)).some((m) => m.type === "attachment" && m.req === 11))
     .toBe(true);
   // the screen still shows the second review, and its view was told nothing
-  await expect(page.locator(".crumb-title")).toHaveText("Conformance: second");
+  await expect(page.getByTestId("review-title")).toHaveText("Conformance: second");
   expect((await received(frame)).filter((m) => m.type === "submitted")).toEqual([]);
   expect(await draftOf(second)).not.toBeNull();
   await expect(page).toHaveURL(new RegExp(`/reviews/${second}$`));
-  await expect(page.locator(".review-strip .status-badge")).toHaveText(/pending/i);
+  await expect(page.getByTestId("review-strip").getByTestId("status-badge")).toHaveText(/pending/i);
   await expect(page.getByText("Decision recorded")).toHaveCount(0);
 });
 

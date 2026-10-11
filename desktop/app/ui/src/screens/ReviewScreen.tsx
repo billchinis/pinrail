@@ -421,7 +421,7 @@ export function ReviewScreen() {
             {back.label}
           </Link>
           <span className="crumb-sep">›</span>
-          <span className="crumb-title copyable" title={review.title}>
+          <span className="crumb-title copyable" title={review.title} data-testid="review-title">
             {review.title}
           </span>
           {originUrl ? (
@@ -452,7 +452,6 @@ export function ReviewScreen() {
                 className="bar-button"
                 onClick={() => setDiscarding(true)}
                 aria-label="Discard this review"
-                data-discard
               >
                 <Ban size={15} />
               </button>
@@ -467,7 +466,6 @@ export function ReviewScreen() {
               className={`bar-button copy-button ${copied === "done" ? "ok" : copied === "failed" ? "danger" : ""}`}
               onClick={copyMarkdown}
               aria-label="Copy the decision as markdown"
-              data-copy-markdown
             >
               {copied === "done" ? (
                 <ClipboardCheck size={15} className="copy-done" />
@@ -485,7 +483,6 @@ export function ReviewScreen() {
                 className="bar-button"
                 onClick={() => setMaximized(true)}
                 aria-label="Maximize the view"
-                data-maximize
               >
                 <Maximize2 size={15} />
               </button>
@@ -534,7 +531,7 @@ export function ReviewScreen() {
 
   return (
     <div className="review-page">
-      <div className="review-strip">
+      <div className="review-strip" data-testid="review-strip">
         <div className="strip-info">
           <OutcomeBadge review={review} />
           {/* what it asks while it waits, what was decided once it is */}
@@ -561,7 +558,9 @@ export function ReviewScreen() {
             </span>
           ) : null}
           <span className="strip-id">
-            <span className="mono faint copyable">{review.id}</span>
+            <span className="mono faint copyable" data-testid="review-id">
+              {review.id}
+            </span>
             <Tooltip
               label={copiedId === "done" ? "Copied" : copiedId === "failed" ? "Could not copy" : "Copy the id"}
               side="bottom"
@@ -571,7 +570,6 @@ export function ReviewScreen() {
                 className={`id-copy ${copiedId === "done" ? "ok" : copiedId === "failed" ? "danger" : ""}`}
                 onClick={copyId}
                 aria-label="Copy the review id"
-                data-copy-id
               >
                 {copiedId === "done" ? (
                   <ClipboardCheck size={14} />
@@ -598,7 +596,6 @@ export function ReviewScreen() {
                       state={location.state}
                       className={`round-pill round-${outcome.tone}${current ? " is-current" : unopened.has(r.id) ? " is-waiting" : ""}`}
                       aria-current={current ? "page" : undefined}
-                      data-outcome={outcome.tone}
                     >
                       <span>{i + 1}</span>
                     </Link>
@@ -613,16 +610,16 @@ export function ReviewScreen() {
 
       {flash ? <p className="notice">{flash}</p> : null}
       {newerInstalled ? (
-        <div className="notice notice-warning" role="status" data-plugin-newer>
+        <div className="notice notice-warning" role="status">
           <TriangleAlert size={16} aria-hidden />
           <span>The plugin changed since this review was opened. Reload to see the review with the new version.</span>
-          <button type="button" className="chrome-button" onClick={reopen} data-plugin-reload>
+          <button type="button" className="chrome-button" onClick={reopen}>
             <RefreshCw size={13} /> Reload
           </button>
         </div>
       ) : null}
       {current?.refused && review.status === "pending" ? (
-        <p className="notice" data-plugin-refused>
+        <p className="notice">
           The installed version of this plugin does not take this review, so it opens with the version it was submitted
           to. {current.refused}
         </p>
@@ -634,7 +631,7 @@ export function ReviewScreen() {
         </p>
       ) : null}
       {waiting ? (
-        <p className="notice notice-round" data-new-round>
+        <p className="notice notice-round">
           Round {waiting.number} is waiting for you.{" "}
           <Link to={`/reviews/${waiting.round.id}`} state={location.state}>
             Open it
@@ -685,7 +682,7 @@ export function ReviewScreen() {
         </section>
       ) : null}
       {plugin === null ? (
-        <div className="notice notice-danger plugin-missing" data-plugin-missing>
+        <div className="notice notice-danger plugin-missing">
           <p>
             <b>
               {review.plugin} {review.plugin_version}
@@ -715,7 +712,6 @@ export function ReviewScreen() {
                   className="bar-button"
                   onClick={() => setMaximized(false)}
                   aria-label="Restore the view"
-                  data-restore
                 >
                   <Minimize2 size={15} />
                 </button>
@@ -723,7 +719,7 @@ export function ReviewScreen() {
             </div>
           ) : null}
           {bridge.left ? (
-            <div className="notice notice-danger view-left" role="alert" data-view-left>
+            <div className="notice notice-danger view-left" role="alert">
               <span>This plugin's view went to another page, so Pinrail stopped exchanging messages with it.</span>
               <button type="button" className="chrome-button" onClick={bridge.reload}>
                 Reload the view
@@ -786,7 +782,7 @@ export function ReviewScreen() {
               <button
                 type="button"
                 className="handover-button with-icon"
-                data-handover
+                data-testid="handover"
                 disabled={bridge.submitting || !live.connected}
                 onClick={bridge.collect}
               >

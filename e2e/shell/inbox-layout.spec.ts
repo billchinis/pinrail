@@ -37,7 +37,7 @@ test("the inbox's keys stay quiet under a dialog, and with a modifier", async ({
   // d discards the focused review: not from behind Settings, and not as ⌘D
   await clearInbox(page.request);
   await createReview(page.request, { title: "Quiet keys" });
-  const discard = page.locator(".discard-dialog");
+  const discard = page.getByRole("dialog", { name: "Discard this review?" });
 
   await page.goto("/#/");
   await expect(page.getByTestId("review-row")).toHaveCount(1);

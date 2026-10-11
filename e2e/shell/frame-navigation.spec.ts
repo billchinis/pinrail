@@ -45,7 +45,7 @@ test("a view that leaves its page is no longer answered", async ({ page }) => {
 
   await page.goto(`/#/reviews/${id}`);
   // the app notices, and hides the page the view went to
-  await expect(page.locator("[data-view-left]")).toBeVisible();
+  await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.locator("#plugin-frame")).toBeHidden();
   const other = page.frameLocator("#plugin-frame").locator("#got");
   await expect(other).toHaveText("nothing");
@@ -55,8 +55,8 @@ test("a view that leaves its page is no longer answered", async ({ page }) => {
   expect(review.status, "the other page's hand-over was not taken").toBe("pending");
 
   // reloading brings the view's own page back, which here leaves again
-  await page.locator("[data-view-left] button").click();
-  await expect(page.locator("[data-view-left]")).toBeVisible();
+  await page.getByRole("button", { name: "Reload the view" }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
   await expect(other).toHaveText("nothing");
 });
 
@@ -154,10 +154,10 @@ for (const [button, where] of [
     await page.goto(`/#/reviews/${id}`);
     const view = page.frameLocator("#plugin-frame");
     await view.locator(button).click();
-    await expect(page.locator("[data-view-left]")).toBeVisible();
+    await expect(page.getByRole("alert")).toBeVisible();
 
-    await page.locator("[data-view-left] button").click();
-    await expect(page.locator("[data-view-left]")).toHaveCount(0);
+    await page.getByRole("button", { name: "Reload the view" }).click();
+    await expect(page.getByRole("alert")).toHaveCount(0);
     await expect(page.locator(".plugin-loading")).toHaveCount(0);
     await expect(view.locator("#leave")).toBeVisible();
   });

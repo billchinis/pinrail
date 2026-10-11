@@ -13,7 +13,7 @@ test("handing over a decision returns to the inbox", async ({ page }) => {
   await expect(frame.locator("body")).toContainText("One proposal.");
   // the person decides the proposal and hands over
   await frame.locator('button[data-act="accept"]').first().click();
-  await page.locator("[data-handover]").click();
+  await page.getByTestId("handover").click();
 
   await expect(page).toHaveURL(/#\/$/);
   await expect(page.getByText("Decision recorded")).toBeVisible();
@@ -41,7 +41,7 @@ test("the frame fills the panel: a short view's hand-over sits where a tall one'
   await clearInbox(page.request);
   const short = await createReview(page.request, listOf("Short view", 1));
   const tall = await createReview(page.request, listOf("Tall view", 60));
-  const handover = page.locator("[data-handover]");
+  const handover = page.getByTestId("handover");
   const frame = page.frameLocator("#plugin-frame");
 
   await page.goto(`/#/reviews/${short.id}`);

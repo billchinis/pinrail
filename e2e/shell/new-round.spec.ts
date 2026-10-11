@@ -18,29 +18,29 @@ test("a new round of the open review shows in the switcher and says it is waitin
 
   // round 1 is open when round 3 arrives: it revises round 2, not the open one
   await page.goto(`/#/reviews/${first}`);
-  const pills = page.locator(".rounds .round-pill");
+  const pills = page.getByRole("navigation", { name: "Rounds" }).getByRole("link");
   await expect(pills).toHaveCount(2);
-  await expect(page.locator("[data-new-round]")).toHaveCount(0);
+  await expect(page.getByText(/Round \d+ is waiting for you/)).toHaveCount(0);
 
   const third = await submit(page.request, "Rounds: three", second);
   await expect(pills).toHaveCount(3);
   await expect(pills.nth(2)).toHaveClass(/is-waiting/);
   // each round in the colour of its outcome
-  await expect(pills.nth(0)).toHaveAttribute("data-outcome", "decided");
-  await expect(pills.nth(2)).toHaveAttribute("data-outcome", "pending");
-  const banner = page.locator("[data-new-round]");
+  await expect(pills.nth(0)).toHaveClass(/\bround-decided\b/);
+  await expect(pills.nth(2)).toHaveClass(/\bround-pending\b/);
+  const banner = page.getByText(/Round \d+ is waiting for you/);
   await expect(banner).toContainText("Round 3 is waiting for you.");
 
   await banner.getByRole("link", { name: "Open it" }).click();
   await expect(page).toHaveURL(new RegExp(`/reviews/${third}$`));
-  await expect(page.locator("[data-new-round]")).toHaveCount(0);
+  await expect(page.getByText(/Round \d+ is waiting for you/)).toHaveCount(0);
   await expect(pills.nth(2)).toHaveClass(/is-current/);
 
   // once opened it is no longer news: going back to round 1 says nothing
   await pills.nth(0).click();
   await expect(page).toHaveURL(new RegExp(`/reviews/${first}$`));
   await expect(pills.nth(0)).toHaveClass(/is-current/);
-  await expect(page.locator("[data-new-round]")).toHaveCount(0);
+  await expect(page.getByText(/Round \d+ is waiting for you/)).toHaveCount(0);
   await expect(pills.nth(2)).not.toHaveClass(/is-waiting/);
 });
 
@@ -52,7 +52,7 @@ test("⌘[ goes back, even on a round that has an earlier one", async ({ page })
 
   await page.goto("/#/history");
   await page.goto(`/#/reviews/${second}`);
-  await expect(page.locator(".rounds .round-pill")).toHaveCount(2);
+  await expect(page.getByRole("navigation", { name: "Rounds" }).getByRole("link")).toHaveCount(2);
   await page.locator("body").click({ position: { x: 5, y: 5 } });
   const seen: string[] = [];
   page.on("framenavigated", (f) => f === page.mainFrame() && seen.push(new URL(f.url()).hash));

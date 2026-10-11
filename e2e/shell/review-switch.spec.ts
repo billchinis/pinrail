@@ -136,7 +136,7 @@ test("Copy as markdown copies the review on screen, after moving from another", 
   await expect(page.frameLocator("#plugin-frame").locator("body")).toContainText("The second review.");
 
   const asked = page.waitForRequest((r) => new URL(r.url()).searchParams.get("format") === "markdown");
-  await page.locator("[data-copy-markdown]").click();
+  await page.getByRole("button", { name: "Copy the decision as markdown" }).click();
   expect(new URL((await asked).url()).pathname, "the markdown asked for is the review on screen").toBe(
     `/api/v1/reviews/${second.id}`,
   );
@@ -161,8 +161,8 @@ test("discarding a review returns to the inbox, where the others wait", async ({
 
   await page.goto(`/#/reviews/${first.id}`);
   await expect(page.frameLocator("#plugin-frame").locator("body")).toContainText("The first review.");
-  await page.locator("[data-discard]").click();
-  await page.locator("[data-discard-confirm]").click();
+  await page.getByRole("button", { name: "Discard this review" }).click();
+  await page.getByRole("button", { name: "Discard", exact: true }).click();
 
   // the review has ended: back to the inbox, where the other one waits
   await expect(page).toHaveURL(/#\/$/);
@@ -230,7 +230,7 @@ test("a view that answers one request twice decides the review once", async ({ p
       setTimeout(() => parent.postMessage({ pinrail: 1, type: "submit", req, data }, "*"), 0);
     });
   });
-  await page.locator("[data-handover]").click();
+  await page.getByTestId("handover").click();
   await expect(page.getByText("Decision recorded")).toBeVisible();
   await page.waitForTimeout(500);
   expect(decisions, "the hand-over was sent twice").toHaveLength(1);

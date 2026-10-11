@@ -77,16 +77,16 @@ test.beforeEach(async ({ page }) => {
 });
 
 const view = (page: Page) => page.frameLocator("#plugin-frame");
-const dialog = (page: Page) => page.locator("[data-link-dialog]");
+const dialog = (page: Page) => page.getByRole("dialog", { name: /^(Open a link|Write an email)\?$/ });
 
 test("a link opens only when the person agrees, and requests made while asking are dropped", async ({ page }) => {
   await view(page).locator("#burst").click();
   await expect(dialog(page)).toBeVisible();
-  await expect(dialog(page).locator("[data-link-target]")).toHaveText("example.com");
+  await expect(dialog(page).getByTestId("link-target")).toHaveText("example.com");
   await expect(dialog(page)).toContainText("Opener");
   expect(await opened(page)).toEqual([]);
 
-  await dialog(page).locator("[data-link-cancel]").click();
+  await dialog(page).getByRole("button", { name: "Don't open" }).click();
   await expect(dialog(page)).toHaveCount(0);
   await page.waitForTimeout(300);
   expect(await opened(page)).toEqual([]);
@@ -94,7 +94,7 @@ test("a link opens only when the person agrees, and requests made while asking a
 
 test("Open once opens it, and the next request is asked about again", async ({ page }) => {
   await view(page).locator("#web").click();
-  await dialog(page).locator("[data-link-once]").click();
+  await dialog(page).getByRole("button", { name: "Open once" }).click();
   await expect.poll(() => opened(page)).toEqual([WEB]);
 
   await view(page).locator("#web").click();
@@ -104,7 +104,9 @@ test("Open once opens it, and the next request is asked about again", async ({ p
 
 test("Always allows that origin for that plugin, and only that origin", async ({ page }) => {
   await view(page).locator("#web").click();
-  await dialog(page).locator("[data-link-always]").click();
+  await dialog(page)
+    .getByRole("button", { name: /^Always allow/ })
+    .click();
   await expect.poll(() => opened(page)).toEqual([WEB]);
   await expect.poll(async () => (await links(page)).opener?.origins).toEqual(["https://example.com"]);
 
@@ -115,21 +117,21 @@ test("Always allows that origin for that plugin, and only that origin", async ({
 
   // another origin is asked about
   await view(page).locator("#other").click();
-  await expect(dialog(page).locator("[data-link-target]")).toHaveText("other.example");
-  await dialog(page).locator("[data-link-cancel]").click();
+  await expect(dialog(page).getByTestId("link-target")).toHaveText("other.example");
+  await dialog(page).getByRole("button", { name: "Don't open" }).click();
 
   // a very long address is asked about even on an allowed origin, and cannot be allowed for good
   await view(page).locator("#long").click();
   await expect(dialog(page)).toBeVisible();
-  await expect(dialog(page).locator("[data-link-always]")).toHaveCount(0);
+  await expect(dialog(page).getByRole("button", { name: /^Always allow/ })).toHaveCount(0);
 });
 
 test("an email is always asked about, and cannot be allowed for good", async ({ page }) => {
   await view(page).locator("#mail").click();
   await expect(dialog(page)).toContainText("Write an email?");
-  await expect(dialog(page).locator("[data-link-target]")).toHaveText("someone@example.com");
-  await expect(dialog(page).locator("[data-link-always]")).toHaveCount(0);
-  await dialog(page).locator("[data-link-once]").click();
+  await expect(dialog(page).getByTestId("link-target")).toHaveText("someone@example.com");
+  await expect(dialog(page).getByRole("button", { name: /^Always allow/ })).toHaveCount(0);
+  await dialog(page).getByRole("button", { name: "Write it" }).click();
   await expect.poll(() => opened(page)).toEqual(["mailto:someone@example.com?body=hello"]);
 });
 
@@ -143,7 +145,9 @@ test("a view cannot allow its own links", async ({ page }) => {
 
 test("Settings lists the origins a plugin opens without asking, and one can be removed", async ({ page }) => {
   await view(page).locator("#web").click();
-  await dialog(page).locator("[data-link-always]").click();
+  await dialog(page)
+    .getByRole("button", { name: /^Always allow/ })
+    .click();
   await expect.poll(async () => (await links(page)).opener?.origins).toEqual(["https://example.com"]);
 
   await page.goto("/#/plugins");

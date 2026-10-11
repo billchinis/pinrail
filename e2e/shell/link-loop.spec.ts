@@ -46,13 +46,13 @@ test("a pending review follows its linked folder, and keeps what was decided", a
 
   // the folder changes: the app offers the new version, and Reload opens it
   edit(dir, "Edited view");
-  await expect(page.locator("[data-plugin-newer]")).toBeVisible({ timeout: 10_000 });
-  await page.locator("[data-plugin-reload]").click();
+  await expect(page.getByText("The plugin changed since this review was opened")).toBeVisible({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
   await expect(view.locator("#edited")).toHaveText("Edited view");
-  await expect(page.locator("[data-plugin-newer]")).toHaveCount(0);
+  await expect(page.getByText("The plugin changed since this review was opened")).toHaveCount(0);
 
   await view.locator("#yes").click();
-  await page.locator("[data-handover]").click();
+  await page.getByTestId("handover").click();
   await expect.poll(() => status(page, id)).toBe("decided");
 
   // the link and the folder go; the review shows what was decided with
@@ -93,14 +93,14 @@ test("a review another window moved follows it here, and a conflict at hand-over
     });
   });
   await view.locator("#yes").click();
-  await page.locator("[data-handover]").click();
-  await expect(page.locator(".notice", { hasText: "opened again" })).toBeVisible();
+  await page.getByTestId("handover").click();
+  await expect(page.getByText("opened again")).toBeVisible();
   expect(await status(page, id)).toBe("pending");
 
   // decided again, once the view has opened again
   await expect(async () => {
     await view.locator("#yes").click();
-    await page.locator("[data-handover]").click();
+    await page.getByTestId("handover").click();
     await expect.poll(() => status(page, id), { timeout: 3_000 }).toBe("decided");
   }).toPass({ timeout: 15_000 });
   const decided = await (await page.request.get(`${core}/api/v1/reviews/${id}`)).json();

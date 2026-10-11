@@ -95,7 +95,7 @@ test("the answer chosen in the view is handed over and becomes the decision", as
   const view = await open(page, id, "#yes");
 
   await view.locator("#yes").click();
-  const handover = page.locator("[data-handover]");
+  const handover = page.getByTestId("handover");
   await expect(handover).toContainText("Hand over: yes");
   await handover.click();
 
@@ -144,7 +144,7 @@ test("a decision the core refuses is shown with its violations and decides nothi
   const { id } = await createReview(page.request, { plugin: "probe", title: "Decide: refused", payload: {} });
   const view = await open(page, id, "#keys");
 
-  await page.locator("[data-handover]").click();
+  await page.getByTestId("handover").click();
   await expect(page.locator(".violations")).toContainText("/ok");
   await expect(view.locator("#errors")).toContainText("/ok");
   expect((await review(page.request, id)).status).toBe("pending");
@@ -197,7 +197,7 @@ test("a review withdrawn elsewhere turns the open view read-only", async ({ page
   expect(withdrawn.status(), await withdrawn.text()).toBe(200);
   await expect(view.locator("p").last()).toContainText("Closed without a decision (withdrawn)");
   await expect(view.locator("#yes")).toHaveCount(0);
-  await expect(page.locator("[data-handover]")).toHaveCount(0);
+  await expect(page.getByTestId("handover")).toHaveCount(0);
 });
 
 test("an agent waiting in the CLI wakes with what the person decided in the app", async ({ page }) => {
@@ -218,7 +218,7 @@ test("an agent waiting in the CLI wakes with what the person decided in the app"
   const id = stderr.match(/review (r_[0-9A-Z]+) submitted/)![1];
   const view = await open(page, id, "#yes");
   await view.locator("#yes").click();
-  await page.locator("[data-handover]").click();
+  await page.getByTestId("handover").click();
 
   expect(await exited, stderr).toBe(0);
   expect(JSON.parse(stdout).decision.data).toEqual({ ok: true });

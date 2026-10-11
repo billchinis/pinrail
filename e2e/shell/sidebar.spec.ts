@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Locator } from "@playwright/test";
 import { clearInbox, core, createReview, decide, settingsDialog } from "./helpers";
 
 const payload = {
@@ -139,20 +139,17 @@ test("a quick second ⌘B is not undone by the reload the first one caused", asy
 
 test("the app's own text cannot be selected, as in a desktop app, but fields and messages can", async ({ page }) => {
   await page.goto("/");
-  const selectable = (selector: string) =>
-    page
-      .locator(selector)
-      .first()
-      .evaluate((el) => getComputedStyle(el).webkitUserSelect || getComputedStyle(el).userSelect);
+  const selectable = (locator: Locator) =>
+    locator.first().evaluate((el) => getComputedStyle(el).webkitUserSelect || getComputedStyle(el).userSelect);
   await expect(page.locator(".nav-count").first()).toBeVisible();
-  expect(await selectable(".nav-count")).toBe("none");
-  expect(await selectable("h1")).toBe("none");
-  expect(await selectable("input[type=search]")).not.toBe("none");
+  expect(await selectable(page.locator(".nav-count"))).toBe("none");
+  expect(await selectable(page.locator("h1"))).toBe("none");
+  expect(await selectable(page.locator("input[type=search]"))).not.toBe("none");
 
   // a review's title and id are there to be copied
   const review = await createReview(page.request, { title: "Copy my title", payload });
   await page.goto(`/#/reviews/${review.id}`);
-  await expect(page.locator(".crumb-title")).toHaveText("Copy my title");
-  expect(await selectable(".crumb-title")).not.toBe("none");
-  expect(await selectable(".strip-id .mono")).not.toBe("none");
+  await expect(page.getByTestId("review-title")).toHaveText("Copy my title");
+  expect(await selectable(page.getByTestId("review-title"))).not.toBe("none");
+  expect(await selectable(page.getByTestId("review-id"))).not.toBe("none");
 });

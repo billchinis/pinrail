@@ -91,6 +91,11 @@ the ARIA attribute or the matcher that reads it, such as `aria-checked`,
 through a class, a spec may check that class, such as
 `toHaveClass(/is-focused/)`.
 
+A plugin's view is the exception. A spec finds it with
+`page.frameLocator("#plugin-frame")`, the same frame id that the SDK's test
+harness uses, and finds the elements inside the view by the selectors of
+the plugin that draws it.
+
 A locator that several specs need belongs in `shell/helpers.ts`, such as
 `settingsDialog(page)` for the settings dialog and
 `settingsSection(page, "Data")` for a section's button in its rail.

@@ -39,7 +39,6 @@ export function LinkDialog({
         aria-modal="true"
         aria-labelledby="link-title"
         onMouseDown={(e) => e.stopPropagation()}
-        data-link-dialog
       >
         <div className="dialog-head">
           <h2 id="link-title">{request.kind === "mail" ? "Write an email?" : "Open a link?"}</h2>
@@ -48,12 +47,10 @@ export function LinkDialog({
           <span className="text">{plugin}</span> wants to{" "}
           {request.kind === "mail" ? "start an email to" : "open a page on"}
         </p>
-        <p className="link-target" data-link-target>
+        <p className="link-target" data-testid="link-target">
           {request.target}
         </p>
-        <pre className="link-url mono" data-link-url>
-          {request.url}
-        </pre>
+        <pre className="link-url mono">{request.url}</pre>
         {request.long ? (
           <p className="notice">
             This address is unusually long, so it can carry a lot of information to the site. Open it only if you
@@ -61,20 +58,14 @@ export function LinkDialog({
           </p>
         ) : null}
         <div className="dialog-actions">
-          <button
-            ref={cancel}
-            type="button"
-            className="chrome-button"
-            onClick={() => onClose("cancel")}
-            data-link-cancel
-          >
+          <button ref={cancel} type="button" className="chrome-button" onClick={() => onClose("cancel")}>
             Don't open
           </button>
-          <button type="button" className="chrome-button" onClick={() => onClose("once")} data-link-once>
+          <button type="button" className="chrome-button" onClick={() => onClose("once")}>
             {request.kind === "mail" ? "Write it" : "Open once"}
           </button>
           {canAlways ? (
-            <button type="button" className="chrome-button" onClick={() => onClose("always")} data-link-always>
+            <button type="button" className="chrome-button" onClick={() => onClose("always")}>
               Always allow {request.target}
             </button>
           ) : null}

@@ -83,7 +83,7 @@ test("a view gets the bytes of a file its review carries from the app, and only 
   await expect(out).toHaveAttribute("data-refusal", 'no attachment "not-listed.bin" on this review');
 
   // the strip says what came with the review, for every plugin alike
-  const chip = page.locator("[data-attachments-chip]");
+  const chip = page.getByRole("button", { name: /\bfiles? ·/ });
   await expect(chip).toHaveText("1 file · 488 KB");
   if (process.env.PINRAIL_SHOTS)
     await page.screenshot({
@@ -91,8 +91,8 @@ test("a view gets the bytes of a file its review carries from the app, and only 
       clip: { x: 0, y: 0, width: 1280, height: 160 },
     });
   await chip.click();
-  const panel = page.locator("[data-attachments-panel]");
-  await expect(panel.locator("[data-attachment]")).toHaveText([
+  const panel = page.getByRole("dialog", { name: /^Files this review carries/ });
+  await expect(panel.getByRole("listitem")).toHaveText([
     new RegExp(`data\\.bin.*488 KB · application/octet-stream · ${sha256.slice(0, 12)}`),
   ]);
   if (process.env.PINRAIL_SHOTS)
@@ -102,7 +102,7 @@ test("a view gets the bytes of a file its review carries from the app, and only 
     });
   // outside the app, Save… is the core's attachment, downloaded
   const download = page.waitForEvent("download");
-  await panel.locator('[data-attachment-save="data.bin"]').click();
+  await panel.getByRole("button", { name: "Save data.bin" }).click();
   const saved = await (await download).path();
   expect(fs.readFileSync(saved!).equals(bytes)).toBe(true);
   await page.keyboard.press("Escape");

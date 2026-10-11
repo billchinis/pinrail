@@ -18,7 +18,11 @@ export function outcomeOf(review: Pick<Review, "status" | "decision">): { label:
 
 export function OutcomeBadge({ review }: { review: Pick<Review, "status" | "decision"> }) {
   const { label, tone } = outcomeOf(review);
-  return <span className={`status-badge status-${tone}`}>{label}</span>;
+  return (
+    <span className={`status-badge status-${tone}`} data-testid="status-badge">
+      {label}
+    </span>
+  );
 }
 
 /** A plugin by its name, its full name on hover, and the version a review
