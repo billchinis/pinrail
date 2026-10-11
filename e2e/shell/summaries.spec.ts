@@ -51,7 +51,7 @@ test("once decided, the header and history say what was decided", async ({ page 
   await expect(page.getByTestId("review-strip").getByTestId("summary-count")).toHaveText(["2 accepted", "1 rejected"]);
 
   await page.goto(`/#/history?q=${tag}`);
-  const row = page.locator("[data-history-row]", { hasText: tag });
+  const row = page.getByTestId("history-row").filter({ hasText: tag });
   await expect(row.getByTestId("summary-count")).toHaveText(["2 accepted", "1 rejected"]);
   // the list plugin declares no verdict, so the badge keeps the status
   await expect(row.getByTestId("status-badge")).toHaveText("decided");
@@ -69,7 +69,7 @@ test("a plugin's declared verdict names how the review ended", async ({ page }) 
   await decide(page.request, id, { verdict: "approve" });
 
   await page.goto(`/#/history?q=${tag}`);
-  const badge = page.locator("[data-history-row]", { hasText: tag }).getByTestId("status-badge");
+  const badge = page.getByTestId("history-row").filter({ hasText: tag }).getByTestId("status-badge");
   await expect(badge).toHaveText("approved");
   await expect(badge).toHaveClass(/status-success/);
 });

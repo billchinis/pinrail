@@ -112,7 +112,7 @@ test("a view gets the bytes of a file its review carries from the app, and only 
   // and so does its row in History once it has ended
   await page.goto("/#/history");
   await expect(
-    page.locator("[data-history-row]", { hasText: "A file for the view" }).getByTestId("files-count"),
+    page.getByTestId("history-row").filter({ hasText: "A file for the view" }).getByTestId("files-count"),
   ).toHaveText("1");
   await page.request.delete(`${core}/api/v1/plugins/reader`);
 });

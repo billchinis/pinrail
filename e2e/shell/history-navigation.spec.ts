@@ -8,7 +8,7 @@ test("a review opened from its title in the history is one step back from it", a
 
   await page.goto("/#/");
   await page.goto("/#/history");
-  await page.locator(".history-title", { hasText: "History: back once" }).click();
+  await page.getByTestId("history-row").getByRole("link", { name: "History: back once" }).click();
   await expect(page).toHaveURL(new RegExp(`/reviews/${review.id}$`));
   await page.goBack();
   await expect(page).toHaveURL(/#\/history$/);

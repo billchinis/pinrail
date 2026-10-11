@@ -33,7 +33,7 @@ test("a review that arrives or ends updates the inbox without fetching the pendi
 test("the history and the Plugins section fetch again only for what they show", async ({ page }) => {
   await clearInbox(page.request);
   await page.goto("/#/history");
-  await expect(page.locator(".history")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
   const history = requests(page, /^\/api\/v1\/reviews\?.*status=decided/);
 
   // a review that arrives is not in the history
@@ -42,7 +42,7 @@ test("the history and the Plugins section fetch again only for what they show", 
   expect(history).toEqual([]);
   // once it ends, it is
   await decide(page.request, review.id, decideNothing);
-  await expect(page.locator(".history-title", { hasText: "Live: not history yet" })).toBeVisible();
+  await expect(page.getByTestId("history-row").getByRole("link", { name: "Live: not history yet" })).toBeVisible();
 
   await page.goto("/#/plugins");
   await expect(page.getByTestId("plugin-row-list")).toBeVisible();

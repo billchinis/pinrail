@@ -265,6 +265,7 @@ export function History() {
                   key={r.id}
                   className={i === focused ? "is-focused" : ""}
                   data-history-row={i}
+                  data-testid="history-row"
                   onMouseEnter={() => !keyboard.current && setFocused(i)}
                   onClick={(event) => {
                     // the title is a link of its own, which has already gone there

@@ -15,7 +15,7 @@ test("history shows 50 a page, pages through the rest, and starts again at page 
   }
 
   await page.goto(`/#/history?q=${tag}`);
-  const rows = page.locator("[data-history-row]");
+  const rows = page.getByTestId("history-row");
   const range = page.getByTestId("pager-range");
   await expect(rows).toHaveCount(50);
   await expect(range).toHaveText("1–50 of 60");
