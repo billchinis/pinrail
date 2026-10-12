@@ -251,13 +251,13 @@ fn same_contents(a: &Path, b: &Path) -> bool {
 /// Whether `path` is some version of the pinrail CLI: it says `pinrail <version>`
 /// when asked. Anything that does not answer in time is not.
 fn is_pinrail_cli(path: &Path) -> bool {
-    let Ok(mut child) = Command::new(path)
-        .arg("--version")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-    else {
+    let Ok(mut child) = spawn(
+        Command::new(path)
+            .arg("--version")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null()),
+    ) else {
         return false;
     };
     let Some(stdout) = child.stdout.take() else {
@@ -269,6 +269,24 @@ fn is_pinrail_cli(path: &Path) -> bool {
     }
     let _ = child.wait();
     text.is_some_and(|t| t.starts_with(&format!("{COMMAND} ")))
+}
+
+/// Starts `command`, and tries again for up to half a second while Linux
+/// reports that the program file is busy (ETXTBSY). A file that was
+/// written a moment ago stays open for writing in any process that another
+/// thread of this one starts at that moment, until that process runs its
+/// own program, and Linux refuses to run a file that is open for writing.
+fn spawn(command: &mut Command) -> std::io::Result<std::process::Child> {
+    let mut tries = 0;
+    loop {
+        match command.spawn() {
+            Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy && tries < 10 => {
+                tries += 1;
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            result => return result,
+        }
+    }
 }
 
 /// What `out` says within `timeout`: up to its end, or up to and
@@ -550,6 +568,24 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, format!("#!/bin/sh\necho 'pinrail {version}'\n")).unwrap();
         executable(path).unwrap();
+    }
+
+    /// A copy of the CLI that is still open for writing when it is asked its
+    /// version, as when another thread starts a process just after the
+    /// copy was written, is still recognised once the file is closed.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_cli_that_is_briefly_busy_is_still_recognised() {
+        let dir = tempfile::tempdir().unwrap();
+        let cli = dir.path().join(COMMAND);
+        script(&cli, "0.1.0");
+        let open = std::fs::OpenOptions::new().append(true).open(&cli).unwrap();
+        let closing = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(100));
+            drop(open);
+        });
+        assert!(is_pinrail_cli(&cli));
+        closing.join().unwrap();
     }
 
     /// After an update, the AppImage's copy of the CLI is brought up to the

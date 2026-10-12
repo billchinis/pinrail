@@ -9,6 +9,14 @@ wait for a release, and takes the version's name when it is tagged.
 
 The `pinrail` command ships inside the app and carries the app's version.
 
+## [Unreleased]
+
+### Fixed
+
+- On Linux, an update of the AppImage reliably updates the copy of the
+  `pinrail` command it installed. The check that the copy is the
+  `pinrail` command could fail when the file had just been written.
+
 ## [0.2.0]
 
 ### Added
