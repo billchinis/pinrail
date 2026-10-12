@@ -9,7 +9,7 @@ wait for a release, and takes the version's name when it is tagged.
 
 The `pinrail` command ships inside the app and carries the app's version.
 
-## [Unreleased]
+## [0.2.0]
 
 ### Added
 
@@ -18,7 +18,8 @@ The `pinrail` command ships inside the app and carries the app's version.
   Shift+Enter move between the matches, and Esc closes the bar. It works
   in every view that uses the plugin SDK, with no change to the plugin.
 - The code review view highlights the syntax of the diff, of suggested
-  changes and of code blocks, in the language of each file.
+  changes and of code blocks, in the language of each file. If you
+  installed code review, update it to 1.1.0 in *Settings › Plugins*.
 
 ### Changed
 
@@ -73,6 +74,7 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 Initial version of Pinrail.
 
+[0.2.0]: https://github.com/forgeplane/pinrail/releases/tag/v0.2.0
 [0.1.3]: https://github.com/forgeplane/pinrail/releases/tag/v0.1.3
 [0.1.2]: https://github.com/forgeplane/pinrail/releases/tag/v0.1.2
 [0.1.1]: https://github.com/forgeplane/pinrail/releases/tag/v0.1.1
