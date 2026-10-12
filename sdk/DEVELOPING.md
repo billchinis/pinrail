@@ -8,16 +8,16 @@ is the package's own, for a plugin's author.
 
 | Path | What it is | In the package |
 |---|---|---|
-| `src/` | The SDK a view loads: `pinrail-plugin.js`, `pinrail-plugin.css`, `tokens.css` and `markdown.js` | yes |
+| `src/` | The SDK a view loads: `pinrail-plugin.js`, `pinrail-plugin.css`, `tokens.css`, `markdown.js` and `highlight.js` | yes |
 | `host/` | The app's side of the protocol, which every host of a view runs: the app's window, its preview page, the dev shell and the harness | yes |
 | `schemas/` | The JSON Schemas of a plugin's manifest and of a reference to an attached file | yes |
 | `types.d.ts` | The protocol and the manifest as TypeScript types | yes |
 | `shell/` | The dev shell: its server, its page, and the script that lets *Select* pick a part of the view | yes |
 | `testing/` | The test harness, exported as `pinrail-sdk/testing` | yes |
 | `bin/` | The `pinrail-sdk` command | yes |
-| `lib/` | What the dev shell and the harness share. `paths.cjs` finds the package's files and builds `markdown.js`, for the app's build as well. `schemas.cjs` checks a value against a plugin's schema as the app does. `attachments.cjs` lists a fixture's files as the app does. | yes |
-| `dist/` | `markdown.js` with its parser bundled, built when the package is packed; not versioned | yes |
-| `scripts/` | The build of `dist/markdown.js` | no |
+| `lib/` | What the dev shell and the harness share. `paths.cjs` finds the package's files and builds `markdown.js` and `highlight.js`, for the app's build as well. `schemas.cjs` checks a value against a plugin's schema as the app does. `attachments.cjs` lists a fixture's files as the app does. | yes |
+| `dist/` | `markdown.js` with its parser bundled and `highlight.js` with highlight.js bundled, built when the package is packed; not versioned | yes |
+| `scripts/` | The build of `dist/markdown.js` and `dist/highlight.js` | no |
 | `test/` | The package's own tests | no |
 
 `npm pack` shows exactly what the package carries: the `files` list in
@@ -31,12 +31,13 @@ one, and each user of the SDK takes it from here:
 - **The app.** Its build, `desktop/app/scripts/build-sdk.mjs`, run by
   `npm run dev` and `npm run build`, copies `src/` into
   `desktop/app/sdk/v1/`, which is not versioned. It also bundles the
-  Markdown parser into `markdown.js`, and adds the typeface the stylesheet
+  Markdown parser into `markdown.js` and highlight.js into `highlight.js`,
+  and adds the typeface the stylesheet
   uses. The app carries that folder and serves it at `/sdk/v1/`.
 - **The dev shell and the harness** serve `src/` itself, at the same
   paths, so a view behaves in them as in the app.
-- **The npm package** carries `src/`, with `markdown.js` bundled into
-  `dist/` when it is packed.
+- **The npm package** carries `src/`, with `markdown.js` and
+  `highlight.js` bundled into `dist/` when it is packed.
 
 The other shared files are used in the same way. The app bundles
 `host/host.js` into its window and embeds it in its preview page. The

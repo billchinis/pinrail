@@ -385,7 +385,10 @@ test("window.Pinrail has the members a view uses, and no others", () => {
     "confirmationBar",
     "connect",
     "escape",
+    "highlight",
+    "highlightLines",
     "icon",
+    "languageOf",
     "layout",
     "markdown",
     "markdownInline",
@@ -628,6 +631,70 @@ test("without the Markdown script, Pinrail.markdown says which script it needs",
   assert.throws(() => context.Pinrail.markdownInline("a"), /\/sdk\/v1\/markdown\.js/);
   // and the SDK alone leaves no parser behind
   assert.equal(context.markdownit, undefined);
+});
+
+test("highlight marks up a known language's tokens, and escapes what it does not know", () => {
+  assert.equal(
+    Pinrail.highlight("def x, do: 1", "elixir"),
+    '<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">x</span></span>, <span class="hljs-symbol">do:</span> <span class="hljs-number">1</span>',
+  );
+  // the text is escaped inside the spans
+  assert.equal(Pinrail.highlight('"<b>"', "javascript"), '<span class="hljs-string">&quot;&lt;b&gt;&quot;</span>');
+  // no guessing: an unknown language, or none, is plain escaped text
+  assert.equal(Pinrail.highlight("<b> & 'x'", "klingon"), "&lt;b&gt; &amp; &#39;x&#39;");
+  assert.equal(Pinrail.highlight("def x", null), "def x");
+  assert.equal(Pinrail.highlight(null, "elixir"), "");
+});
+
+test("highlightLines closes each line's spans and opens them again on the next", () => {
+  const lines = Pinrail.highlightLines("/* one\ntwo */\nlet a = 1;", "javascript");
+  assert.deepEqual(lines, [
+    '<span class="hljs-comment">/* one</span>',
+    '<span class="hljs-comment">two */</span>',
+    '<span class="hljs-keyword">let</span> a = <span class="hljs-number">1</span>;',
+  ]);
+  // one string per line, an empty last line too
+  assert.deepEqual(Pinrail.highlightLines("a\n\nb\n", null), ["a", "", "b", ""]);
+});
+
+test("languageOf names a file's language from its name or extension", () => {
+  const cases = {
+    "lib/acme/tickets.ex": "elixir",
+    "test/tickets_test.exs": "elixir",
+    "src/App.tsx": "typescript",
+    "web/index.mjs": "javascript",
+    Dockerfile: "dockerfile",
+    "deploy/api.Dockerfile": "dockerfile",
+    Makefile: "makefile",
+    "Cargo.toml": "ini",
+    "index.html": "xml",
+    "config/app.yml": "yaml",
+    "include/x.h": "c",
+    "src\\windows\\main.rs": "rust",
+    README: null,
+    "package-lock.lock": null,
+    "notes.unknownext": null,
+  };
+  for (const [file, language] of Object.entries(cases)) assert.equal(Pinrail.languageOf(file), language, file);
+});
+
+test("without the highlighting script, Pinrail.highlight says which script it needs", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const vm = require("node:vm");
+  const context = vm.createContext({});
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "src", "pinrail-plugin.js"), "utf8"), context);
+  for (const call of [() => context.Pinrail.highlight("x", "js"), () => context.Pinrail.languageOf("a.ex")])
+    assert.throws(call, /\/sdk\/v1\/highlight\.js/);
+});
+
+test("the highlighting script leaves no global but the highlighter", () => {
+  const path = require("node:path");
+  const vm = require("node:vm");
+  const { highlightScript } = require("../lib/paths.cjs");
+  const context = vm.createContext({});
+  vm.runInContext(highlightScript(path.resolve(__dirname, "..")), context);
+  assert.deepEqual(Object.keys(context), []);
 });
 
 test("the app's own keys, pressed in the view, go up to the app", () => {

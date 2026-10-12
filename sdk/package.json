@@ -26,6 +26,7 @@
     },
     "./sdk/v1/pinrail-plugin.js": "./src/pinrail-plugin.js",
     "./sdk/v1/markdown.js": "./dist/markdown.js",
+    "./sdk/v1/highlight.js": "./dist/highlight.js",
     "./package.json": "./package.json",
     "./schemas/manifest.schema.json": "./schemas/manifest.schema.json",
     "./schemas/attachment.schema.json": "./schemas/attachment.schema.json"
@@ -49,10 +50,11 @@
   },
   "scripts": {
     "test": "node --test test/*.test.cjs test/*.test.mjs && playwright test",
-    "prepack": "node scripts/build-markdown.cjs"
+    "prepack": "node scripts/build-scripts.cjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
+    "@highlightjs/cdn-assets": "^11.12.0",
     "ajv": "^8.20.0",
     "markdown-it": "^15.0.2"
   },

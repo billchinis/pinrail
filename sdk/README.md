@@ -28,6 +28,7 @@ You need this package only while you write a plugin.
 | `pinrail-sdk/host` | The app's side of the protocol, which the dev shell and the harness run |
 | `pinrail-sdk/sdk/v1/pinrail-plugin.js` | The SDK a view loads, with `pinrail-plugin.css` and `tokens.css` beside it in `src/` |
 | `pinrail-sdk/sdk/v1/markdown.js` | The Markdown renderer, with its parser bundled |
+| `pinrail-sdk/sdk/v1/highlight.js` | The syntax highlighter, with highlight.js and its languages bundled |
 | `pinrail-sdk/schemas/manifest.schema.json` | The JSON Schema every plugin's manifest is checked against |
 | `pinrail-sdk/schemas/attachment.schema.json` | The JSON Schema of a reference to an attached file, to copy into a payload schema |
 
@@ -94,6 +95,7 @@ describes every call.
 <link rel="stylesheet" href="/sdk/v1/pinrail-plugin.css">
 <script src="/sdk/v1/pinrail-plugin.js"></script>
 <script src="/sdk/v1/markdown.js"></script> <!-- only to render Markdown -->
+<script src="/sdk/v1/highlight.js"></script> <!-- only to highlight code -->
 <script>
   const plugin = Pinrail.connect({
     onInit({ review, previous, readonly, draft, settings }) { render(); },

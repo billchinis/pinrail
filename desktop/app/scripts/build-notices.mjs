@@ -99,6 +99,8 @@ const entries = [
   // the markdown parser the app serves inside /sdk/v1/pinrail-plugin.js, which
   // every plugin view renders markdown with
   shipped("markdown-it", { name: "MIT License", id: "MIT" }),
+  // the highlighter the app serves as /sdk/v1/highlight.js, for code in views
+  shipped("@highlightjs/cdn-assets", { name: "BSD 3-Clause License", id: "BSD-3-Clause" }),
 ];
 
 // one section per distinct text, the packages sorted and without repeats

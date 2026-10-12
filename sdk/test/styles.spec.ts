@@ -112,3 +112,31 @@ test.describe("with motion reduced", () => {
     expect(size).toBe("40px");
   });
 });
+
+test("highlighted code takes the code tokens' colours, in either theme", async ({ page }) => {
+  const dir = viewOf(`<script src="/sdk/v1/highlight.js"></script>
+<pre id="code"></pre>
+<script>document.getElementById("code").innerHTML = Pinrail.highlight("def x, do: 1 # why", "elixir");</script>`);
+  const colours: Record<string, string[]> = {};
+  for (const theme of ["dark", "light"] as const) {
+    const plugin = await mountPlugin(page, dir, { review: review(), theme });
+    const f = plugin.frame;
+    const token = async (cls: string) => style(f, `#code .${cls}`, "color");
+    const expected = async (name: string) =>
+      f.locator("body").evaluate((body, n) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--pinrail-code-${n})`;
+        body.append(probe);
+        const value = getComputedStyle(probe).color;
+        probe.remove();
+        return value;
+      }, name);
+    expect(await token("hljs-keyword")).toBe(await expected("keyword"));
+    expect(await token("hljs-number")).toBe(await expected("number"));
+    expect(await token("hljs-comment")).toBe(await expected("comment"));
+    expect(await style(f, "#code .hljs-comment", "font-style")).toBe("italic");
+    colours[theme] = [await token("hljs-keyword"), await token("hljs-number")];
+  }
+  // the light theme has colours of its own
+  expect(colours.light).not.toEqual(colours.dark);
+});

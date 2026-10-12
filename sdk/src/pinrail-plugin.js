@@ -76,6 +76,24 @@
   const markdown = (src) => render("render", src);
   const markdownInline = (src) => render("renderInline", src);
 
+  /* Code is highlighted by the SDK's third script, /sdk/v1/highlight.js,
+     loaded the same way and looked up on each call too. */
+  const HIGHLIGHT = Symbol.for("pinrail.highlight");
+
+  function highlighter() {
+    const hl = root[HIGHLIGHT];
+    if (!hl) {
+      throw new Error(
+        'Pinrail.highlight needs the SDK\'s highlighting script: add <script src="/sdk/v1/highlight.js"></script> to the view',
+      );
+    }
+    return hl;
+  }
+
+  const highlight = (code, language) => highlighter().highlight(code, language);
+  const highlightLines = (code, language) => highlighter().highlightLines(code, language);
+  const languageOf = (path) => highlighter().languageOf(path);
+
   /* A file a review carries is named in its payload as
      { "$attachment": "pivot.glb" }. attachmentName reads the name back out,
      or gives null for anything else. The package's
@@ -883,6 +901,9 @@
     escape,
     markdown,
     markdownInline,
+    highlight,
+    highlightLines,
+    languageOf,
     attachmentName,
     // the client with an environment of the caller's, for the package's
     // own tests in Node; no view needs it

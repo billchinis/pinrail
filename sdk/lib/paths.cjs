@@ -40,4 +40,50 @@ function markdownScript(from, src = path.join(from, "src")) {
   ].join("\n");
 }
 
-module.exports = { packageRoot, markdownScript };
+/** The languages served beside highlight.js's common ones, which leave out
+ *  some that agents often work in. Each adds a few kilobytes. */
+const EXTRA_LANGUAGES = [
+  "clojure",
+  "cmake",
+  "dart",
+  "dockerfile",
+  "elixir",
+  "elm",
+  "erlang",
+  "fsharp",
+  "groovy",
+  "haskell",
+  "julia",
+  "latex",
+  "nginx",
+  "nix",
+  "ocaml",
+  "powershell",
+  "properties",
+  "protobuf",
+  "scala",
+];
+
+/**
+ * What the app serves at `/sdk/v1/highlight.js`: highlight.js's browser
+ * build with its common languages, the extra languages above, then the
+ * SDK's use of it in `src/highlight.js`, in a scope of their own so the
+ * highlighter leaves no global behind. Built the same way for the app, the
+ * harness, the development shell and the package, as `markdownScript` is.
+ */
+function highlightScript(from, src = path.join(from, "src")) {
+  const resolve = createRequire(path.join(from, "package.json")).resolve;
+  const dir = path.dirname(resolve("@highlightjs/cdn-assets/package.json"));
+  const read = (file) => fs.readFileSync(path.join(dir, file), "utf8");
+  return [
+    "(function () {",
+    "var module = undefined, exports = undefined;",
+    read("highlight.min.js"),
+    ...EXTRA_LANGUAGES.map((name) => read(path.join("languages", `${name}.min.js`))),
+    fs.readFileSync(path.join(src, "highlight.js"), "utf8"),
+    "})();",
+    "",
+  ].join("\n");
+}
+
+module.exports = { packageRoot, markdownScript, highlightScript };

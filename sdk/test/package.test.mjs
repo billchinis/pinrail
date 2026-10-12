@@ -28,9 +28,10 @@ test("every export names a file the package ships, and the scripts work on their
 
   // a page's globals that the parser uses
   const context = vm.createContext({ atob });
-  for (const name of ["./sdk/v1/pinrail-plugin.js", "./sdk/v1/markdown.js"]) {
+  for (const name of ["./sdk/v1/pinrail-plugin.js", "./sdk/v1/markdown.js", "./sdk/v1/highlight.js"]) {
     assert.ok(exports[name], `the package exports ${name}`);
     vm.runInContext(fs.readFileSync(path.join(pkg, exports[name]), "utf8"), context);
   }
   assert.equal(context.Pinrail.markdown("# Title"), "<h1>Title</h1>\n");
+  assert.equal(context.Pinrail.languageOf("lib/acme.ex"), "elixir");
 });

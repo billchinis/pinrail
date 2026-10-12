@@ -115,6 +115,9 @@ plugin.handOverLabel("Hand over: yes"); // the words on the hand-over button
 - Rendering: `Pinrail.escape(text)`, `Pinrail.icon(name)`, and
   `Pinrail.markdown(text)` once the page also loads
   `<script src="/sdk/v1/markdown.js"></script>` after the SDK.
+- Code: `Pinrail.highlight(code, language)`, `Pinrail.highlightLines(code,
+  language)` for one string per line, and `Pinrail.languageOf(path)`, once
+  the page also loads `<script src="/sdk/v1/highlight.js"></script>`.
 - Layout: the view fills the review panel's height and scrolls inside its
   frame. `Pinrail.layout()` keeps a header in place over a body that
   scrolls.

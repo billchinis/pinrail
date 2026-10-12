@@ -328,6 +328,13 @@ export type PinrailSdk = {
   markdown(source: string): string;
   /** the same, for one line: no paragraph around it */
   markdownInline(source: string): string;
+  /** code as HTML, escaped, with its tokens in `<span class="hljs-…">`; a language it does not know, or none,
+   *  gives the code escaped and nothing more; needs `/sdk/v1/highlight.js` loaded beside the SDK */
+  highlight(code: string, language?: string | null): string;
+  /** the same, one string per line of the code, each line's spans closed and opened again */
+  highlightLines(code: string, language?: string | null): string[];
+  /** the language of a file, from its name or extension, as `highlight` takes it; null when unknown */
+  languageOf(path: string): string | null;
   /** the name in `{ "$attachment": name }`, or null for anything else */
   attachmentName(ref: unknown): string | null;
 };

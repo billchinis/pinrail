@@ -85,6 +85,70 @@
     font-size: inherit;
   }
 
+  /* the classes /sdk/v1/highlight.js writes, in the code tokens' colours;
+     anything unlisted keeps the text's colour */
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-name,
+  .hljs-section,
+  .hljs-doctag {
+    color: var(--pinrail-code-keyword);
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-addition,
+  .hljs-selector-attr,
+  .hljs-template-tag {
+    color: var(--pinrail-code-string);
+  }
+  .hljs-number,
+  .hljs-literal,
+  .hljs-bullet {
+    color: var(--pinrail-code-number);
+  }
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--pinrail-code-comment);
+    font-style: italic;
+  }
+  .hljs-title,
+  .hljs-title.function_,
+  .hljs-selector-id {
+    color: var(--pinrail-code-title);
+  }
+  .hljs-type,
+  .hljs-built_in,
+  .hljs-title.class_,
+  .hljs-selector-class {
+    color: var(--pinrail-code-type);
+  }
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-property,
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-deletion {
+    color: var(--pinrail-code-attr);
+  }
+  .hljs-symbol,
+  .hljs-link,
+  .hljs-selector-pseudo {
+    color: var(--pinrail-code-symbol);
+  }
+  .hljs-meta,
+  .hljs-meta .hljs-keyword {
+    color: var(--pinrail-code-meta);
+  }
+  .hljs-meta .hljs-string {
+    color: var(--pinrail-code-string);
+  }
+  .hljs-emphasis {
+    font-style: italic;
+  }
+  .hljs-strong {
+    font-weight: 600;
+  }
+
   h1,
   h2,
   h3,

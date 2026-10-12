@@ -71,6 +71,20 @@ const GROUPS = [
       ["--pinrail-del-gut", "Its gutter"],
     ],
   ],
+  [
+    "Code",
+    [
+      ["--pinrail-code-keyword", "Keywords and tag names"],
+      ["--pinrail-code-string", "Strings"],
+      ["--pinrail-code-number", "Numbers and literals"],
+      ["--pinrail-code-comment", "Comments"],
+      ["--pinrail-code-title", "Names of functions"],
+      ["--pinrail-code-type", "Types and built-ins"],
+      ["--pinrail-code-attr", "Attributes, properties and variables"],
+      ["--pinrail-code-symbol", "Symbols and atoms"],
+      ["--pinrail-code-meta", "Annotations and directives"],
+    ],
+  ],
 ];
 
 /** The tokens a block of the stylesheet sets, `--name: value;` each. A

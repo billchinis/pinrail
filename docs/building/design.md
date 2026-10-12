@@ -78,7 +78,7 @@ Style with the tokens rather than with colours, and your view follows the app in
 }
 ```
 
-The five tones are the ones the manifest's summary uses: `--pinrail-danger`, `--pinrail-warning`, `--pinrail-info`, `--pinrail-success` and `--pinrail-neutral`. `--pinrail-sans` is the app's typeface stack, Inter first, and `--pinrail-mono` its monospace one.
+The five tones are the ones the manifest's summary uses: `--pinrail-danger`, `--pinrail-warning`, `--pinrail-info`, `--pinrail-success` and `--pinrail-neutral`. `--pinrail-sans` is the app's typeface stack, Inter first, and `--pinrail-mono` its monospace one. The `--pinrail-code-*` tokens colour [highlighted code](#code).
 
 ### Layout
 
@@ -188,6 +188,28 @@ To render Markdown, load the SDK's Markdown script after the SDK:
 ```
 
 `Pinrail.markdown(text)` returns CommonMark as HTML, with headings, tables, block quotes, nested lists and code, and `Pinrail.markdownInline(text)` renders one line without a paragraph around it. Raw HTML in the source is escaped rather than passed through, because a view's frame runs inline scripts. A link whose scheme is not `http`, `https` or `mailto` keeps its text but loses its address, and the app asks the person before it opens any other link in their browser. The output has no classes, and the stylesheet styles its plain elements.
+
+## Code
+
+To highlight code, load the SDK's highlighting script after the SDK:
+
+```html
+<script src="/sdk/v1/pinrail-plugin.js"></script>
+<script src="/sdk/v1/highlight.js"></script>
+```
+
+`Pinrail.highlight(code, language)` returns the code as HTML, with each token in a `<span class="hljs-…">` element, and the SDK's stylesheet colours those classes in both themes. `Pinrail.highlightLines(code, language)` returns the same markup as one string per line, so a view that numbers its lines, such as a diff, can place each line on its own. A token that spans several lines, such as a block comment, is closed at the end of each line and opened again at the start of the next.
+
+`Pinrail.languageOf(path)` names the language of a file from its name or its extension, such as `elixir` for `lib/acme.ex` and `dockerfile` for `Dockerfile`, or returns `null`. A language the highlighter does not know, or none, gives the code escaped and without spans: the language is never guessed, because a guess on a few lines is often wrong.
+
+The script is [highlight.js](https://highlightjs.org/) 11 with its common languages and a few more: Clojure, CMake, Dart, Dockerfile, Elixir, Elm, Erlang, F#, Groovy, Haskell, Julia, LaTeX, nginx, Nix, OCaml, PowerShell, Java properties, Protocol Buffers and Scala. The output is escaped text in spans and nothing else, so a view can put it in the page as it is.
+
+```js
+const language = Pinrail.languageOf(file.path);
+pre.innerHTML = Pinrail.highlight(file.source, language);
+```
+
+A view that uses its own stylesheet instead of the SDK's colours the `hljs-` classes itself, with the `--pinrail-code-*` tokens from `tokens.css` if it links that file.
 
 ## Size
 

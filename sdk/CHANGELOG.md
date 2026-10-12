@@ -14,6 +14,12 @@ change to the protocol is a new major and a new path.
   and scrolls to the current one. ⌘F (Ctrl+F on Linux) pressed in a view
   goes up to the app as a `key` message, and the test harness's `sendKey`
   refuses it. The host module gains `find()` and an `onFound` callback.
+- `/sdk/v1/highlight.js`, a third optional script, highlights code with
+  highlight.js 11 and its common languages, plus Elixir, Erlang, Scala,
+  Haskell and a few more. It adds `Pinrail.highlight(code, language)`,
+  `Pinrail.highlightLines(code, language)`, which gives one string per
+  line, and `Pinrail.languageOf(path)`. The stylesheet colours the tokens
+  in both themes with new `--pinrail-code-*` tokens.
 
 ### Changed
 

@@ -1,5 +1,5 @@
 // Assembles the directory the server serves at /sdk/v1/: the plugin SDK from
-// sdk/src, the optional markdown module, and the font the window
+// sdk/src, the optional Markdown and highlighting scripts, and the font the window
 // itself is drawn in. Plugins bring their own icons. The font comes from the same
 // package the shell bundles, so a plugin panel and the window around it are
 // set in one typeface. The app carries the files so it draws the same with no
@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { markdownScript } from "../../../sdk/lib/paths.cjs";
+import { highlightScript, markdownScript } from "../../../sdk/lib/paths.cjs";
 
 const app = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const sdkSrc = path.resolve(app, "..", "..", "sdk", "src");
@@ -17,9 +17,11 @@ const out = path.join(app, "sdk", "v1");
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
-// markdown.js is built below rather than copied: it carries a parser
+// markdown.js and highlight.js are built below rather than copied: they
+// carry a parser and a highlighter
+const built = ["markdown.js", "highlight.js"];
 for (const file of fs.readdirSync(sdkSrc)) {
-  if (file === "markdown.js") continue;
+  if (built.includes(file)) continue;
   fs.copyFileSync(path.join(sdkSrc, file), path.join(out, file));
 }
 // the weight axis, every script, normal only: what the shell imports
@@ -35,6 +37,8 @@ fs.copyFileSync(path.join(font, "wght.css"), path.join(out, "fonts.css"));
 // The Markdown renderer with its parser. The parser comes from the app's own
 // dependencies: a release installs no others.
 fs.writeFileSync(path.join(out, "markdown.js"), markdownScript(app, sdkSrc));
+// The highlighter with its languages, from the app's dependencies too.
+fs.writeFileSync(path.join(out, "highlight.js"), highlightScript(app, sdkSrc));
 
 console.log(
   `sdk: ${fs.readdirSync(sdkSrc).length} SDK files and ${faces.length} font files in ${path.relative(app, out)}`,

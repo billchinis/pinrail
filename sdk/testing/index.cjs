@@ -7,7 +7,7 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
-const { packageRoot, markdownScript } = require("../lib/paths.cjs");
+const { packageRoot, markdownScript, highlightScript } = require("../lib/paths.cjs");
 const { resolveAttachments } = require("../lib/attachments.cjs");
 const { checker, schemaChecker } = require("../lib/schemas.cjs");
 
@@ -145,6 +145,7 @@ const checkers = new WeakMap();
 async function mountPlugin(page, pluginDir, opts) {
   const sdk = fs.readFileSync(path.join(root, "src", "pinrail-plugin.js"), "utf8");
   const sdkMarkdown = markdownScript(root);
+  const sdkHighlight = highlightScript(root);
   const sdkCss = fs.readFileSync(path.join(root, "src", "pinrail-plugin.css"), "utf8");
   const sdkTokens = fs.readFileSync(path.join(root, "src", "tokens.css"), "utf8");
   const harness = fs.readFileSync(path.join(__dirname, "harness.html"), "utf8");
@@ -179,6 +180,7 @@ async function mountPlugin(page, pluginDir, opts) {
     }
     if (p === "/sdk/v1/pinrail-plugin.js") return route.fulfill({ contentType: mime[".js"], body: sdk });
     if (p === "/sdk/v1/markdown.js") return route.fulfill({ contentType: mime[".js"], body: sdkMarkdown });
+    if (p === "/sdk/v1/highlight.js") return route.fulfill({ contentType: mime[".js"], body: sdkHighlight });
     if (p === "/sdk/v1/pinrail-plugin.css") return route.fulfill({ contentType: mime[".css"], body: sdkCss });
     if (p === "/sdk/v1/tokens.css") return route.fulfill({ contentType: mime[".css"], body: sdkTokens });
     // the stylesheet imports a typeface; tests run offline and in the system font
