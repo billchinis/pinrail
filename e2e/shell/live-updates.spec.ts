@@ -30,6 +30,36 @@ test("a review that arrives or ends updates the inbox without fetching the pendi
   expect(fetched).toEqual([]);
 });
 
+test("a review created while the pending list is loading stays in the inbox", async ({ page }) => {
+  await clearInbox(page.request);
+  // Delay every pending-list response: fetch it from the core at once,
+  // before the review exists, and pass it to the app only after the
+  // review's event has arrived.
+  const held: Array<() => Promise<void>> = [];
+  await page.route(
+    (url) => url.origin === core && pendingList.test(url.pathname + url.search),
+    async (route) => {
+      const response = await route.fetch();
+      const body = await response.body();
+      held.push(() => route.fulfill({ response, body }));
+    },
+  );
+  await page.goto("/#/");
+  // Wait until the event stream is connected and its request for the
+  // pending list is being held.
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect.poll(() => held.length).toBeGreaterThanOrEqual(2);
+
+  await createReview(page.request, { title: "Live: arrives mid-fetch" });
+  const row = page.getByTestId("review-row").filter({ hasText: "Live: arrives mid-fetch" });
+  await expect(row).toBeVisible();
+
+  for (const release of held.splice(0)) await release();
+  await expect(page.getByTestId("inbox-total")).toHaveText("1");
+  await page.waitForTimeout(300);
+  await expect(row).toBeVisible();
+});
+
 test("the history and the Plugins section fetch again only for what they show", async ({ page }) => {
   await clearInbox(page.request);
   await page.goto("/#/history");

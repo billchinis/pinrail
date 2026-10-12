@@ -2,7 +2,7 @@
 // server's events, the connection state, the last event for screens that
 // follow one review, and the installed plugins.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, subscribe } from "../api/client";
 import type { Notice, Plugin, Review } from "../api/types";
 import { ENDINGS, applyNotice } from "./pending";
@@ -55,15 +55,30 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // A review created while a request for the pending list is in progress
+  // is missing from the response. Each request therefore records the
+  // events that arrive while it waits and applies them to the response
+  // before showing it. When requests overlap, the response to an earlier
+  // request is discarded if a later one has already been shown.
+  const fetching = useRef(new Set<Notice[]>());
+  const asked = useRef(0);
+  const shown = useRef(0);
   const refresh = useCallback(async () => {
+    const missed: Notice[] = [];
+    const turn = ++asked.current;
+    fetching.current.add(missed);
     try {
       // every pending review, up to the server's maximum: the sidebar, the
       // project counts and the inbox's pages are all drawn from this list
       const listing = await api.listReviews({ status: "pending", limit: String(PENDING_LOADED) });
-      setPending(listing.reviews);
+      if (turn < shown.current) return;
+      shown.current = turn;
+      setPending(missed.reduce(applyNotice, listing.reviews));
       setUnloaded(Math.max(0, (listing.total ?? listing.reviews.length) - listing.reviews.length));
     } catch {
       // the connection indicator reports the outage; the next event retries
+    } finally {
+      fetching.current.delete(missed);
     }
   }, []);
 
@@ -79,6 +94,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       onError: () => setConnected(false),
       onNotice: (notice) => {
         setLastNotice(notice);
+        for (const missed of fetching.current) missed.push(notice);
         if (notice.review_id) setPending((pending) => applyNotice(pending, notice));
         if (ENDINGS.has(notice.kind) || notice.kind === "history_swept") setHistoryVersion((v) => v + 1);
         // a review that moved may have taken a linked folder as it is now

@@ -27,6 +27,11 @@ The `pinrail` command ships inside the app and carries the app's version.
   keyboard. It replaces D, which worked only in the inbox. A plugin that
   declares ⌘D as one of its shortcuts no longer receives it.
 
+### Fixed
+
+- A review created while the app was loading the inbox no longer
+  disappears from the inbox until the app is reloaded.
+
 ## [0.1.3]
 
 ### Fixed
