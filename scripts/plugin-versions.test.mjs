@@ -6,7 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { unbumped } from "./plugin-versions.mjs";
+import { stampChangelogs, unbumped, unlogged } from "./plugin-versions.mjs";
 
 function repository() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "plugin-versions-"));
@@ -58,4 +58,44 @@ test("a plugin new since the release, or no release yet, needs nothing", () => {
   r.write("plugins/markdown/src/view.js", "x");
   r.commit("a new plugin");
   assert.deepEqual(unbumped(r.root, ["list", "markdown"]), []);
+});
+
+test("a plugin's changelog must have a section for the version in its manifest", () => {
+  const r = repository();
+  r.manifest("list", "1.1.0");
+  r.manifest("image", "1.0.0");
+  r.manifest("markdown", "1.0.0");
+  r.write(
+    "plugins/list/CHANGELOG.md",
+    "# Changelog\n\n## [1.1.0] - Unreleased\n\n- New.\n\n## [1.0.0] - Pinrail 0.1.0\n",
+  );
+  // a section for the version before, but not this one
+  r.manifest("image", "1.0.1");
+  r.write("plugins/image/CHANGELOG.md", "# Changelog\n\n## [1.0.0] - Pinrail 0.1.0\n");
+  // no changelog at all
+  assert.deepEqual(unlogged(r.root, ["list", "image", "markdown"]), [
+    { name: "image", version: "1.0.1" },
+    { name: "markdown", version: "1.0.0" },
+  ]);
+  // a version that only starts like this one is not it
+  r.manifest("list", "1.1.0");
+  r.write("plugins/list/CHANGELOG.md", "## [1.1.01] - Unreleased\n");
+  assert.deepEqual(unlogged(r.root, ["list"]), [{ name: "list", version: "1.1.0" }]);
+});
+
+test("a release names itself in the plugins' unreleased sections, and leaves the rest", () => {
+  const r = repository();
+  r.manifest("list", "1.1.0");
+  r.manifest("image", "1.0.0");
+  r.write("plugins/list/CHANGELOG.md", "## [1.1.0] - Unreleased\n\n- New.\n\n## [1.0.0] - Pinrail 0.1.0\n");
+  r.write("plugins/image/CHANGELOG.md", "## [1.0.0] - Pinrail 0.1.0\n");
+  assert.deepEqual(stampChangelogs(r.root, ["list", "image", "markdown"], "0.2.0"), ["plugins/list/CHANGELOG.md"]);
+  assert.equal(
+    fs.readFileSync(path.join(r.root, "plugins/list/CHANGELOG.md"), "utf8"),
+    "## [1.1.0] - Pinrail 0.2.0\n\n- New.\n\n## [1.0.0] - Pinrail 0.1.0\n",
+  );
+  assert.equal(
+    fs.readFileSync(path.join(r.root, "plugins/image/CHANGELOG.md"), "utf8"),
+    "## [1.0.0] - Pinrail 0.1.0\n",
+  );
 });

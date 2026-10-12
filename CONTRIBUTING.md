@@ -26,6 +26,14 @@ official plugins the app carries, `list`, `feedback`, `code-review`, `image`
 and `markdown`, and `hello` and `sampler`, which the tests use. To write your own, see
 [Writing a plugin](https://pinrail.dev/docs/building/writing/).
 
+When you change what an official plugin ships, such as its view, schemas,
+templates or README, raise the version in its `manifest.json` and add a
+section for that version to its `CHANGELOG.md`, headed
+`## [1.1.0] - Unreleased`. An installed copy of the plugin is updated only
+to a higher version. CI checks both (`node scripts/plugin-versions.mjs`),
+and the release script replaces `Unreleased` with the release of the app
+that first carries the version.
+
 The sample plugins are developed in
 [forgeplane/pinrail-plugins](https://github.com/forgeplane/pinrail-plugins).
 To work on one's view in the running app, link its folder from a checkout of

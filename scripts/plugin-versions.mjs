@@ -1,5 +1,6 @@
 // Checks that each official plugin the app carries raised its version if
-// what it ships changed since the last release of the app:
+// what it ships changed since the last release of the app, and that its
+// changelog has a section for the version its manifest gives:
 //
 //   node scripts/plugin-versions.mjs
 //
@@ -72,8 +73,52 @@ export function unbumped(root, names) {
   return found;
 }
 
+/** A changelog's heading for one version: `## [1.1.0] - …`. */
+const heading = (version) => new RegExp(`^## \\[${version.replace(/\./g, "\\.")}\\]`, "m");
+
+/**
+ * The plugins among `names` whose CHANGELOG.md has no section for the
+ * version in their manifest, each with that version.
+ */
+export function unlogged(root, names) {
+  const found = [];
+  for (const name of names) {
+    const dir = path.join(root, "plugins", name);
+    const version = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8")).version;
+    let changelog = "";
+    try {
+      changelog = fs.readFileSync(path.join(dir, "CHANGELOG.md"), "utf8");
+    } catch {
+      // no changelog at all
+    }
+    if (!heading(version).test(changelog)) found.push({ name, version });
+  }
+  return found;
+}
+
+/**
+ * Names the app release in each plugin's changelog: a section headed
+ * `## [1.1.0] - Unreleased` becomes `## [1.1.0] - Pinrail 0.2.0`. Returns
+ * the changelogs it changed, relative to `root`.
+ */
+export function stampChangelogs(root, names, appVersion) {
+  const changed = [];
+  for (const name of names) {
+    const file = path.join("plugins", name, "CHANGELOG.md");
+    const full = path.join(root, file);
+    if (!fs.existsSync(full)) continue;
+    const before = fs.readFileSync(full, "utf8");
+    const after = before.replace(/^(## \[[^\]]+\]) - Unreleased$/gm, `$1 - Pinrail ${appVersion}`);
+    if (after !== before) {
+      fs.writeFileSync(full, after);
+      changed.push(file);
+    }
+  }
+  return changed;
+}
+
 /** The plugins the app's catalog carries, as desktop/core/build.rs lists them. */
-function catalog(root) {
+export function catalog(root) {
   const build = fs.readFileSync(path.join(root, "desktop/core/build.rs"), "utf8");
   const list = /const CATALOG: &\[&str\] = &\[([^\]]*)\]/.exec(build);
   if (!list) throw new Error("no CATALOG in desktop/core/build.rs");
@@ -82,11 +127,18 @@ function catalog(root) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const found = unbumped(root, catalog(root));
+  const names = catalog(root);
+  const found = unbumped(root, names);
   for (const { name, version, since } of found) {
     console.error(
       `plugins/${name} changed since ${since} but is still at ${version}: raise its version in its manifest.json`,
     );
   }
-  process.exit(found.length ? 1 : 0);
+  const missing = unlogged(root, names);
+  for (const { name, version } of missing) {
+    console.error(
+      `plugins/${name}/CHANGELOG.md has no section for ${version}: add "## [${version}] - Unreleased" with what changed`,
+    );
+  }
+  process.exit(found.length || missing.length ? 1 : 0);
 }

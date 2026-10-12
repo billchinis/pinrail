@@ -1,4 +1,6 @@
-// Sets the version everywhere it is written, before a release is tagged.
+// Sets the version everywhere it is written, before a release is tagged,
+// and names the release in each official plugin's changelog: a section
+// headed "## [1.1.0] - Unreleased" becomes "## [1.1.0] - Pinrail 0.2.0".
 //
 //   node scripts/set-version.mjs 0.2.0
 //   node scripts/set-version.mjs 0.2.0 --tag   # also commits and tags v0.2.0
@@ -9,6 +11,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { catalog, stampChangelogs } from "./plugin-versions.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const run = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: "inherit" });
@@ -32,6 +35,11 @@ const released = [
   "desktop/app/package-lock.json",
   "CHANGELOG.md",
 ];
+// the official plugins' changelogs, whose unreleased sections this release
+// names; a prerelease names none, so the release after it still can
+const plugins = catalog(root);
+const stamping = !version.includes("-");
+if (stamping) released.push(...plugins.map((name) => `plugins/${name}/CHANGELOG.md`));
 
 if (alsoTag) {
   // anything else changed would be tagged and built with the release
@@ -66,6 +74,8 @@ write("cli/Cargo.toml", /^version = "[^"]*"$/m, `version = "${version}"`);
 write("desktop/app/src-tauri/tauri.conf.json", /("version":\s*)"[^"]*"/, `$1"${version}"`);
 // npm writes the package's version and its lock file's two copies of it
 run("npm", ["version", version, "--no-git-tag-version", "--allow-same-version"], path.join(root, "desktop", "app"));
+
+for (const file of stamping ? stampChangelogs(root, plugins, version) : []) console.log(`named ${version} in ${file}`);
 
 // cargo writes the lock files, so a release still builds --locked
 run("cargo", ["update", "--workspace", "--offline", "--quiet"], path.join(root, "desktop"));
