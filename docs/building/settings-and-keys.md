@@ -134,12 +134,12 @@ Only declared keys are forwarded. A view that declares none receives none.
 :::caution[Keys the app keeps]
 Some keys belong to the app and are never forwarded:
 
-- on the review screen: <kbd>?</kbd>, <kbd>[</kbd>, <kbd>]</kbd>, <kbd>esc</kbd>, <kbd>⌘↵</kbd> and <kbd>⌘D</kbd>;
+- on the review screen: <kbd>?</kbd>, <kbd>[</kbd>, <kbd>]</kbd>, <kbd>esc</kbd>, <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> and <kbd>⌘F</kbd>;
 - in the app's menus: <kbd>⌘K</kbd>, <kbd>⌘,</kbd>, <kbd>⌘I</kbd>, <kbd>⌘B</kbd>, <kbd>⌘[</kbd>, <kbd>⌘]</kbd>, <kbd>⌘⇧H</kbd>, <kbd>⌘⇧P</kbd>, <kbd>⌘⇧M</kbd>, <kbd>⌘⇧L</kbd>, <kbd>⌘W</kbd>, <kbd>⌘M</kbd> and <kbd>⌘Q</kbd>;
 - the standard editing keys: <kbd>⌘Z</kbd>, <kbd>⌘⇧Z</kbd>, <kbd>⌘X</kbd>, <kbd>⌘C</kbd>, <kbd>⌘V</kbd> and <kbd>⌘A</kbd>;
 - on macOS only: <kbd>⌘H</kbd>, <kbd>⌥⌘H</kbd> and <kbd>⌃⌘F</kbd>.
 
 On Linux, read <kbd>Ctrl</kbd> for <kbd>⌘</kbd>. Every other combination you declare, including other <kbd>⌘</kbd> combinations, is forwarded. If you declare one of the app's keys, the keyboard help marks it as taken by the app.
 
-They work while your view has the keyboard too. Pressed outside a text field, <kbd>?</kbd>, <kbd>[</kbd> and <kbd>]</kbd> go up to the app. <kbd>⌘↵</kbd> and <kbd>⌘D</kbd> go up from anywhere in the view, a text field included. In every case, a key your view handled first and called `preventDefault()` on stays in the view.
+They work while your view has the keyboard too. Pressed outside a text field, <kbd>?</kbd>, <kbd>[</kbd> and <kbd>]</kbd> go up to the app. <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> and <kbd>⌘F</kbd> go up from anywhere in the view, a text field included. In every case, a key your view handled first and called `preventDefault()` on stays in the view.
 :::

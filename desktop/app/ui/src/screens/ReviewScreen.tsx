@@ -21,6 +21,7 @@ import { AgentIcon } from "../components/AgentIcon";
 import { AttachmentsChip } from "../components/AttachmentsChip";
 import { OutcomeBadge, PluginBadge, SummaryCounts, outcomeOf } from "../components/Badges";
 import { DiscardDialog } from "../components/DiscardDialog";
+import { FindBar } from "../components/FindBar";
 import { WaitMark } from "../components/WaitMark";
 import { LinkDialog, type LinkChoice } from "../components/LinkDialog";
 import { allowedWithoutAsking, allowing, linkRequest, sourceOf, type LinkRequest } from "../lib/links";
@@ -110,6 +111,10 @@ export function ReviewScreen() {
   const [discarding, setDiscarding] = useState(false);
   const [note, setNote] = useState("");
   const [maximized, setMaximized] = useState(false);
+  // the find bar, and a count that focuses it each time it is asked for
+  const [finding, setFinding] = useState(false);
+  const [findFocus, setFindFocus] = useState(0);
+  const [findQuery, setFindQuery] = useState("");
   const frame = useRef<HTMLIFrameElement>(null);
   const noteRef = useRef(note);
   noteRef.current = note;
@@ -338,6 +343,15 @@ export function ReviewScreen() {
     onOpen,
   });
 
+  // closing the find bar clears what it highlighted, and the keys go back
+  // to the view
+  const findInView = bridge.find;
+  const closeFind = useCallback(() => {
+    setFinding(false);
+    findInView("");
+    frame.current?.focus();
+  }, [findInView]);
+
   // only a review that is still waiting can be discarded
   const pending = review?.status === "pending";
 
@@ -358,6 +372,14 @@ export function ReviewScreen() {
         // the key must not land in the reason field that opens
         event.preventDefault();
         if (pending) setDiscarding(true);
+        return;
+      }
+      if (hasMod(event) && !event.shiftKey && !event.altKey && (event.key === "f" || event.key === "F")) {
+        event.preventDefault();
+        if (plugin) {
+          setFinding(true);
+          setFindFocus((n) => n + 1);
+        }
         return;
       }
       const el = event.target as HTMLElement | null;
@@ -411,6 +433,7 @@ export function ReviewScreen() {
   // outlives a change of review
   useEffect(() => {
     setMaximized(false);
+    setFinding(false);
     setFlash(null);
     setViolations([]);
     setDiscarding(false);
@@ -739,6 +762,16 @@ export function ReviewScreen() {
               <WaitMark />
               <span>Loading the view…</span>
             </div>
+          ) : null}
+          {finding && bridge.loaded && !bridge.left ? (
+            <FindBar
+              query={findQuery}
+              onQuery={setFindQuery}
+              found={bridge.found}
+              onFind={bridge.find}
+              onClose={closeFind}
+              focus={findFocus}
+            />
           ) : null}
           <iframe
             key={`${review.id}:${bridge.reloads}`}

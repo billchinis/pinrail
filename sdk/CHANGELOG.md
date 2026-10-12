@@ -6,6 +6,15 @@ change to the protocol is a new major and a new path.
 
 ## [Unreleased]
 
+### Added
+
+- The app's find bar searches a view's text. The app sends a `find`
+  message, and the SDK answers it with `found`: it searches the text the
+  view shows, highlights the matches with the CSS Custom Highlight API,
+  and scrolls to the current one. ⌘F (Ctrl+F on Linux) pressed in a view
+  goes up to the app as a `key` message, and the test harness's `sendKey`
+  refuses it. The host module gains `find()` and an `onFound` callback.
+
 ### Changed
 
 - ⌘D (Ctrl+D on Linux) is one of the keys the app keeps for itself, as

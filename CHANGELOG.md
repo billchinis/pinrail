@@ -11,6 +11,13 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ## [Unreleased]
 
+### Added
+
+- ⌘F (Ctrl+F on Linux) opens a find bar on a review that searches the
+  text of the plugin's view and highlights every match. Enter and
+  Shift+Enter move between the matches, and Esc closes the bar. It works
+  in every view that uses the plugin SDK, with no change to the plugin.
+
 ### Changed
 
 - ⌘D (Ctrl+D on Linux) discards a review, from its row in the inbox or

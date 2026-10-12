@@ -242,6 +242,17 @@
             );
           break;
         }
+        case "find": {
+          // The app's find bar: the view's text searched for the query, the
+          // next match on each repeat, and nothing highlighted for an empty
+          // query. The count goes back at once, and again whenever the
+          // view's content changes while the bar is open.
+          if (typeof data.req !== "number" || typeof data.query !== "string") break;
+          const req = data.req;
+          const answer = (found) => post({ type: "found", req, count: found.count, current: found.current });
+          answer(env.find ? env.find(data.query, !!data.backwards, answer) : { count: 0, current: 0 });
+          break;
+        }
         case "key":
           // One of the manifest's shortcuts, pressed while the app rather
           // than the frame had focus. It lands as a keydown on the document,
@@ -543,6 +554,208 @@
     return `<span class="pinrail-icon${extra}" data-icon="${safe}" style="--pinrail-icon:url(&quot;${escape(url)}&quot;);${size}"${described}></span>`;
   }
 
+  /* Find in the view, for the app's find bar. The text the view shows is
+     searched, ignoring case, as one string per block, so a match may cross
+     inline elements such as a link or a highlighted token. Text that is
+     hidden, collapsed or scrolled out of an overflow box's reach still
+     counts when it takes up space; text with no box at all does not. The
+     matches are painted with the CSS Custom Highlight API where the webview
+     has it, and the current one is selected where it does not. */
+  const FIND_LIMIT = 1000;
+  const FIND_SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "OPTION"]);
+  const FIND_STYLE = `::highlight(pinrail-find) { background-color: rgba(255, 210, 0, 0.45); }
+::highlight(pinrail-find-current) { background-color: #ff9632; color: #1c1a17; }`;
+
+  function finder(win) {
+    const doc = win.document;
+    const highlights = win.CSS && win.CSS.highlights && typeof win.Highlight === "function" ? win.CSS.highlights : null;
+    let query = "";
+    let backwards = false;
+    let matches = [];
+    let current = -1;
+    let update = null;
+    let observer = null;
+    let timer = null;
+    let selected = false;
+    // registered once and changed in place: the system WebKit repaints a
+    // highlight whose ranges change, but not the ranges of one replaced or
+    // removed in the registry
+    let all = null;
+    let now = null;
+
+    const result = () => ({ count: matches.length, current: current + 1 });
+
+    function search() {
+      const found = [];
+      if (!query || !doc.body) return found;
+      const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "giu");
+      const display = new Map();
+      const shown = new Map();
+      const displayOf = (el) => {
+        let value = display.get(el);
+        if (value === undefined) display.set(el, (value = win.getComputedStyle(el).display));
+        return value;
+      };
+      // the nearest ancestor that is not inline: text inside one is read as
+      // one string
+      const blockOf = (el) => {
+        for (let node = el; node && node !== doc.body; node = node.parentElement) {
+          const value = displayOf(node);
+          if (value !== "inline" && value !== "contents") return node;
+        }
+        return doc.body;
+      };
+      const isShown = (el) => {
+        let value = shown.get(el);
+        if (value === undefined) shown.set(el, (value = win.getComputedStyle(el).visibility === "visible"));
+        return value;
+      };
+      let block = null;
+      let text = "";
+      let pieces = [];
+      const flush = () => {
+        pattern.lastIndex = 0;
+        let at = 0;
+        let hit;
+        while (found.length < FIND_LIMIT && (hit = pattern.exec(text))) {
+          if (!hit[0]) break;
+          const start = hit.index;
+          const end = start + hit[0].length;
+          while (at + 1 < pieces.length && pieces[at + 1].start <= start) at += 1;
+          let last = at;
+          while (last + 1 < pieces.length && pieces[last + 1].start < end) last += 1;
+          const range = doc.createRange();
+          range.setStart(pieces[at].node, start - pieces[at].start);
+          range.setEnd(pieces[last].node, end - pieces[last].start);
+          if (range.getClientRects().length > 0) found.push(range);
+        }
+        text = "";
+        pieces = [];
+      };
+      const walker = doc.createTreeWalker(doc.body, win.NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const parent = node.parentElement;
+        if (!parent || FIND_SKIP.has(parent.tagName) || !node.data.trim() || !isShown(parent)) continue;
+        const here = blockOf(parent);
+        if (here !== block) {
+          flush();
+          block = here;
+        }
+        pieces.push({ node, start: text.length });
+        text += node.data;
+      }
+      flush();
+      return found;
+    }
+
+    function paint() {
+      if (highlights) {
+        if (!doc.getElementById("pinrail-find-style")) {
+          const style = doc.createElement("style");
+          style.id = "pinrail-find-style";
+          style.textContent = FIND_STYLE;
+          (doc.head || doc.documentElement).append(style);
+        }
+        if (!all) {
+          all = new win.Highlight();
+          now = new win.Highlight();
+          now.priority = 1;
+          highlights.set("pinrail-find", all);
+          highlights.set("pinrail-find-current", now);
+        }
+        for (const range of matches) all.add(range);
+        if (current >= 0) now.add(matches[current]);
+      } else if (current >= 0) {
+        const selection = win.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(matches[current].cloneRange());
+        selected = true;
+      }
+    }
+
+    function clear() {
+      if (all) {
+        all.clear();
+        now.clear();
+      } else if (selected) {
+        win.getSelection().removeAllRanges();
+      }
+      selected = false;
+    }
+
+    // the current match, scrolled into the middle of its box unless every
+    // box around it shows it already
+    function reveal(range) {
+      const rect = range.getBoundingClientRect();
+      const inside = (box) =>
+        rect.top >= box.top && rect.bottom <= box.bottom && rect.left >= box.left && rect.right <= box.right;
+      let visible = inside({ top: 0, left: 0, bottom: win.innerHeight, right: win.innerWidth });
+      for (let el = range.startContainer.parentElement; visible && el && el !== doc.body; el = el.parentElement) {
+        const style = win.getComputedStyle(el);
+        if (style.overflowX !== "visible" || style.overflowY !== "visible")
+          visible = inside(el.getBoundingClientRect());
+      }
+      if (!visible) range.startContainer.parentElement.scrollIntoView({ block: "center", inline: "nearest" });
+    }
+
+    // the first match from the top of what shows, or the last before it
+    // when going backwards
+    function nearest() {
+      if (!matches.length) return -1;
+      const below = matches.findIndex((range) => range.getBoundingClientRect().bottom > 0);
+      if (below === -1) return backwards ? matches.length - 1 : 0;
+      return backwards ? (below === 0 ? matches.length - 1 : below - 1) : below;
+    }
+
+    // the view's content changed while the bar is open: the matches are
+    // found again, and the count goes back, without scrolling
+    function watch() {
+      if (observer || typeof win.MutationObserver !== "function" || !doc.body) return;
+      observer = new win.MutationObserver(() => {
+        win.clearTimeout(timer);
+        timer = win.setTimeout(() => {
+          if (!query) return;
+          matches = search();
+          current = matches.length ? Math.min(Math.max(current, 0), matches.length - 1) : -1;
+          clear();
+          paint();
+          if (update) update(result());
+        }, 150);
+      });
+      observer.observe(doc.body, { childList: true, subtree: true, characterData: true });
+    }
+
+    function stop() {
+      if (observer) observer.disconnect();
+      observer = null;
+      win.clearTimeout(timer);
+    }
+
+    return (text, back, onUpdate) => {
+      update = onUpdate || null;
+      backwards = back;
+      if (!text) {
+        query = "";
+        matches = [];
+        current = -1;
+        stop();
+        clear();
+        return result();
+      }
+      const again = text === query && matches.length > 0;
+      query = text;
+      matches = search();
+      if (!matches.length) current = -1;
+      else if (again) current = (Math.max(current, 0) + (back ? matches.length - 1 : 1)) % matches.length;
+      else current = nearest();
+      clear();
+      paint();
+      if (current >= 0) reveal(matches[current]);
+      watch();
+      return result();
+    };
+  }
+
   function browserEnv(win) {
     const doc = win.document;
     return {
@@ -595,8 +808,9 @@
       // ? for the keys, [ and ] for the rounds: the app's, so a press the
       // view left alone, outside a text field, goes up to it. ⌘/Ctrl+Enter
       // goes up from anywhere, a text field too: it is the hand-over. So
-      // does ⌘D, Ctrl+D off macOS, which discards the review; on macOS,
-      // Ctrl+D in a text field deletes forward, and stays in the view.
+      // does ⌘D, Ctrl+D off macOS, which discards the review, and ⌘F or
+      // Ctrl+F, which opens the find bar; on macOS, Ctrl+D in a text field
+      // deletes forward, and stays in the view.
       onAppKey: (fn) => {
         const mac = /Mac/i.test((win.navigator && win.navigator.platform) || "");
         const listener = (e) => {
@@ -613,11 +827,13 @@
             });
             return;
           }
-          if ((mac ? e.metaKey : e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === "d" || e.key === "D")) {
+          const mod = (mac ? e.metaKey : e.ctrlKey) && !e.altKey && !e.shiftKey;
+          if (mod && (e.key === "d" || e.key === "D" || e.key === "f" || e.key === "F")) {
             e.preventDefault();
+            const key = e.key.toLowerCase();
             fn({
-              key: "d",
-              code: e.code || "KeyD",
+              key,
+              code: e.code || (key === "d" ? "KeyD" : "KeyF"),
               metaKey: e.metaKey,
               ctrlKey: e.ctrlKey,
               altKey: false,
@@ -634,6 +850,7 @@
         win.addEventListener("keydown", listener);
         return () => win.removeEventListener("keydown", listener);
       },
+      find: finder(win),
       logError: (error) => win.console.error(error),
       objectUrl: (bytes, type) => win.URL.createObjectURL(new win.Blob([bytes], { type })),
     };

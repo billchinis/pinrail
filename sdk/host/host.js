@@ -76,6 +76,7 @@ export function createHost(options) {
     label,
     appKey,
     handOverKey,
+    onFound,
     onDefer,
     onReady,
     onLeft,
@@ -103,6 +104,8 @@ export function createHost(options) {
   let handingOver = false;
   let handedOver = false;
   let wasReadonly = readonly();
+  // the latest search of the find bar: only its answers count
+  let finding = 0;
 
   const send = (msg, transfer = []) => {
     if (disposed || left) return;
@@ -265,6 +268,12 @@ export function createHost(options) {
           else collect();
         } else if (appKey) appKey(msg);
         break;
+      case "found":
+        // the matches of the latest search, as the view counts them: at
+        // once, and again when its content changes
+        if (msg.req === finding && onFound && Number.isInteger(msg.count) && Number.isInteger(msg.current))
+          onFound({ count: msg.count, current: msg.current });
+        break;
       case "settings_set":
         void answerSettings(msg);
         break;
@@ -293,6 +302,15 @@ export function createHost(options) {
     /** The plugin's settings changed elsewhere: the values as they stand. */
     settings(values) {
       if (ready) send({ type: "settings", settings: values });
+    },
+    /** Searches the view's text for the find bar: the next match when the
+     *  query is the one before, the previous one with `backwards`, and no
+     *  search for an empty query. The view answers through `onFound`. */
+    find(query, { backwards = false } = {}) {
+      if (!ready) return false;
+      finding += 1;
+      send({ type: "find", req: finding, query: String(query), backwards: !!backwards });
+      return true;
     },
     /** A declared shortcut pressed while the host had the focus. */
     key(fields) {

@@ -284,6 +284,25 @@ test("⌘/Ctrl+Enter inside the view starts the hand-over, and goes to the host 
   assert.equal(own.last("collect"), undefined);
 });
 
+test("a search goes to a ready view, and only the answers to the latest one count", () => {
+  const found = [];
+  const t = host({ options: { onFound: (f) => found.push(f) } });
+  assert.equal(t.h.find("pivot"), false);
+  t.from({ type: "ready" });
+  assert.equal(t.h.find("piv"), true);
+  t.h.find("pivot", { backwards: true });
+  assert.deepEqual(t.last("find"), { pinrail: PROTOCOL, type: "find", req: 2, query: "pivot", backwards: true });
+  // the answer to the first search came late, and is not the count now
+  t.from({ type: "found", req: 1, count: 9, current: 1 });
+  t.from({ type: "found", req: 2, count: 3, current: 3 });
+  t.from({ type: "found", req: 2, count: 4, current: 3 });
+  t.from({ type: "found", req: 2, count: "many", current: 1 });
+  assert.deepEqual(found, [
+    { count: 3, current: 3 },
+    { count: 4, current: 3 },
+  ]);
+});
+
 test("a review that becomes read-only from elsewhere is sent init again, but not one the view handed over", async () => {
   const withdrawn = host();
   withdrawn.from({ type: "ready" });

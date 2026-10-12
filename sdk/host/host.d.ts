@@ -47,6 +47,8 @@ export type HostOptions = {
   /** ⌘/Ctrl+Enter pressed inside the view; without it, the host asks for
    *  the decision itself */
   handOverKey?: () => void;
+  /** the matches of the find bar's latest search, as the view counts them */
+  onFound?: (found: { count: number; current: number }) => void;
   /** the view has nothing to hand over for the open request yet */
   onDefer?: () => void;
   /** how long the view has to answer a request, in milliseconds */
@@ -71,6 +73,8 @@ export type Host = {
   collect(): boolean;
   appearance(theme: Theme): void;
   settings(values: Record<string, unknown>): void;
+  /** searches the view for the find bar; false before the view is ready */
+  find(query: string, options?: { backwards?: boolean }): boolean;
   key(fields: Omit<Extract<AppMessage, { type: "key" }>, "pinrail" | "type">): void;
   send(message: Outgoing, transfer?: Transferable[]): void;
   /** the review or its state changed */

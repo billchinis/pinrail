@@ -47,6 +47,7 @@ sequenceDiagram
 | `appearance` | `theme: "dark" \| "light"` | Before `init`, and whenever the app's theme changes. |
 | `settings` | `settings`; or `req`, `ok`, and `errors` when not `ok` | The plugin's own settings changed, in the app or from a view. With `req`, the answer to the view's `settings_set`: `ok: true` when the app kept the change, or `ok: false` and the errors when the settings schema refused it. |
 | `key` | `key`, `code`, `metaKey`, `ctrlKey`, `altKey`, `shiftKey` | A shortcut the manifest declares, pressed while the app, not the frame, had focus. |
+| `find` | `req`, `query`, `backwards` | The person searched the view from the app's find bar. The view answers with `found` and the same `req`. |
 
 ### `init`
 
@@ -122,6 +123,12 @@ Show them next to the fields they name, and let the person hand over again.
 
 A shortcut you declare in the manifest reaches your view even when the person pressed it with the app in focus. The SDK dispatches it as a `keydown` on your document, marked `pinrailForwarded: true`, so the listener you already have handles both. See [Settings and keys](/docs/building/settings-and-keys/#keyboard-shortcuts).
 
+### `find`
+
+The app's find bar searches the view's text, which only the view can reach. Each `find` carries a new `req`. When `query` is the same as in the previous `find`, the view moves to the next match, or to the previous one when `backwards` is `true`; otherwise it starts over from the first match in sight. An empty `query` closes the search and removes the highlights.
+
+The SDK answers `find` for you. It searches the text the view shows, ignoring case, highlights every match with the CSS Custom Highlight API, and scrolls the current match into view. It answers again whenever the view's content changes while the search is open. It does not search text in form fields, in images or on a canvas, or in parts of the view that take up no space, such as a collapsed section.
+
 ## From your view to the app
 
 | Type | Fields | Effect |
@@ -132,7 +139,8 @@ A shortcut you declare in the manifest reaches your view even when the person pr
 | `submit` | `req`, `data` | The decision, in answer to the `collect` with the same `req`. Validated against the decision schema. |
 | `defer` | `req` | Nothing to hand over for the `collect` with the same `req` yet. |
 | `settings_set` | `req`, `patch` | Writes the plugin's own settings. The app answers with `settings` and the same `req`, and everyone hears the values as they now stand as `settings`. With the SDK, `plugin.setSetting` returns a promise of the settings. |
-| `key` | `key`, `code`, `metaKey`, `ctrlKey`, `altKey`, `shiftKey` | One of the app's own keys on the review screen, <kbd>?</kbd>, <kbd>[</kbd> or <kbd>]</kbd>, pressed in the view outside a text field and left alone by it, or <kbd>⌘↵</kbd> or <kbd>⌘D</kbd> pressed anywhere in the view and left alone by it. The SDK sends it; the app acts on it as if pressed in its window: <kbd>⌘↵</kbd> starts the hand-over, and <kbd>⌘D</kbd> asks to discard the review. |
+| `key` | `key`, `code`, `metaKey`, `ctrlKey`, `altKey`, `shiftKey` | One of the app's own keys on the review screen, <kbd>?</kbd>, <kbd>[</kbd> or <kbd>]</kbd>, pressed in the view outside a text field and left alone by it, or <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> or <kbd>⌘F</kbd> pressed anywhere in the view and left alone by it. The SDK sends it; the app acts on it as if pressed in its window: <kbd>⌘↵</kbd> starts the hand-over, <kbd>⌘D</kbd> asks to discard the review, and <kbd>⌘F</kbd> opens the find bar. |
+| `found` | `req`, `count`, `current` | The answer to the `find` with the same `req`: how many matches there are, at most 1,000, and which one is current, counted from 1, or 0 when there are none. The view sends it again when its content changes. |
 | `open` | `url` | Asks the app to open a link in the person's browser. Only `http`, `https` and `mailto` addresses are considered. The app asks the person first, unless they allowed the address's origin for this plugin. It always asks about a `mailto` address and an address longer than 2,000 characters, and it ignores `open` messages that arrive while it is asking. |
 | `attachment` | `req`, `name`, and `round: "previous"` for a file of the round this one revises | Asks for the bytes of a file the review carries. The app answers with `attachment` and the same `req`. |
 
@@ -209,7 +217,7 @@ const post = (msg) => parent.postMessage({ pinrail: 1, ...msg }, shell ?? "*");
 post({ type: "ready" });
 ```
 
-Without the SDK, your view must also do the following: apply the theme before the first paint, forward links with `open`, and forward <kbd>⌘↵</kbd> and <kbd>⌘D</kbd> to the app as `key`.
+Without the SDK, your view must also do the following: apply the theme before the first paint, forward links with `open`, forward <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> and <kbd>⌘F</kbd> to the app as `key`, and answer `find` with `found`, or the find bar finds nothing in it.
 
 ## Versions
 

@@ -34,6 +34,7 @@ export const SHORTCUTS: { what: string; keys: string[][] }[] = [
   },
   { what: "Hand over to the agent", keys: [[MOD, "Enter"]] },
   { what: "Maximize / restore the view", keys: [[MOD, SHIFT, "M"]] },
+  { what: "Find in the view", keys: [[MOD, "F"]] },
   { what: "Previous / next round", keys: [["["], ["]"]] },
   { what: "Keyboard shortcuts", keys: [["?"]] },
 ];
@@ -147,7 +148,7 @@ const PRIMARY = isMac ? "cmd" : "ctrl";
  * receives it; every other declared key is forwarded to its view.
  */
 export const APP_KEYS = new Set([
-  ...["k", ",", "i", "b", "d", "[", "]", "q", "w", "m", "z", "x", "c", "v", "a"].map((k) => combo(k, PRIMARY)),
+  ...["k", ",", "i", "b", "d", "f", "[", "]", "q", "w", "m", "z", "x", "c", "v", "a"].map((k) => combo(k, PRIMARY)),
   ...["h", "p", "m", "l", "z"].map((k) => combo(k, PRIMARY, "shift")),
   ...(isMac ? [combo("h", "cmd"), combo("h", "alt", "cmd"), combo("f", "ctrl", "cmd")] : []),
   // the review screen: help, rounds, closing, and handing over

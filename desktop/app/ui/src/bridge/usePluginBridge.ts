@@ -9,12 +9,14 @@
 //   plugin -> shell: ready | draft {data} | submit {req, data} |
 //                    defer {req} | status {label} | settings_set {patch} |
 //                    key {key, code, metaKey, ctrlKey, shiftKey} |
-//                    attachment {req, name, round?: "previous"}
+//                    attachment {req, name, round?: "previous"} |
+//                    found {req, count, current}
 //   shell -> plugin: init {review, previous, readonly, draft, settings, app_origin,
 //                          capabilities} |
 //                    violations {errors} | submitted {decision} | collect {req} |
 //                    appearance {theme} | settings {settings} |
-//                    attachment {req, ok, name, media_type, size, bytes} | {req, ok: false, error}
+//                    attachment {req, ok, name, media_type, size, bytes} | {req, ok: false, error} |
+//                    find {req, query, backwards}
 //
 // A view cannot fetch anything, so a file its review carries comes this way:
 // the view asks by name, the shell fetches it from the core (only names the
@@ -31,11 +33,15 @@ import { currentTheme } from "../lib/theme";
 import { modalOpen } from "../lib/keys";
 
 /** The app's review-screen keys a view may pass up: help, and the rounds,
- *  which come plain, and discarding, which comes with ⌘ or Ctrl. */
+ *  which come plain, and discarding and finding, which come with ⌘ or Ctrl. */
 const VIEW_APP_KEYS = ["?", "[", "]"];
-const VIEW_APP_MOD_KEYS = ["d"];
+const VIEW_APP_MOD_KEYS = ["d", "f"];
 
 const DRAFT_PREFIX = "pinrail:draft:";
+
+/** The matches of the find bar's search: how many, and which is current,
+ *  from 1, or 0 when there are none. */
+export type Found = { count: number; current: number };
 
 export type SubmitResult = { ok: true; decision: Decision } | { ok: false; violations: Violation[] };
 
@@ -72,6 +78,11 @@ export type Bridge = {
    *  reload gets a new frame. Setting a frame's src to the address it already
    *  has does not always load it again, in WebKit after a blocked navigation. */
   reloads: number;
+  /** searches the view's text: the next match when the query is the one
+   *  before, the previous with `backwards`; an empty query clears it */
+  find: (query: string, backwards?: boolean) => void;
+  /** what the view found for the latest search; null before it answers */
+  found: Found | null;
 };
 
 export function usePluginBridge(options: Options): Bridge {
@@ -83,6 +94,7 @@ export function usePluginBridge(options: Options): Bridge {
   // the frame went to another page, which gets nothing from here on
   const [left, setLeft] = useState(false);
   const [reloads, setReloads] = useState(0);
+  const [found, setFound] = useState<Found | null>(null);
   const reload = useCallback(() => setReloads((n) => n + 1), []);
   const host = useRef<(Host & { disconnect(): void }) | null>(null);
   const latest = useRef({ review, previous, readonly, connected, onSubmit, settings, onSetSetting, onOpen });
@@ -120,6 +132,11 @@ export function usePluginBridge(options: Options): Bridge {
     if (latest.current.connected && !modalOpen()) host.current?.collect();
   }, []);
 
+  const find = useCallback((query: string, backwards = false) => {
+    if (!query) setFound(null);
+    host.current?.find(query, { backwards });
+  }, []);
+
   // Listen first, then load the bundle: the plugin's "ready" can never be
   // posted before the app can hear it. Runs once per review and bundle:
   // pointing the frame at the URL it already shows would not reload it, and
@@ -130,6 +147,7 @@ export function usePluginBridge(options: Options): Bridge {
     setLeft(false);
     setLoaded(false);
     setHandoverLabel("Hand over");
+    setFound(null);
 
     // A file fetched once per frame and review, however often the view asks;
     // the host transfers a copy each time.
@@ -200,6 +218,7 @@ export function usePluginBridge(options: Options): Bridge {
       },
       // ⌘/Ctrl+Enter pressed inside the view: the hand-over, as from the app
       handOverKey: collect,
+      onFound: setFound,
       // the view is listening and has its review: the loading cover goes
       onReady: () => setLoaded(true),
       onLeft: () => setLeft(true),
@@ -245,5 +264,5 @@ export function usePluginBridge(options: Options): Bridge {
     host.current?.changed();
   }, [readonly]);
 
-  return { loaded, submitting, handoverLabel, collect, left, reload, reloads };
+  return { loaded, submitting, handoverLabel, collect, left, reload, reloads, find, found };
 }

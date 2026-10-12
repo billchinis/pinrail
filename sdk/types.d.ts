@@ -173,7 +173,11 @@ export type AppMessage =
   /** the answer to the view's `settings_set` with this `req` */
   | { pinrail: Protocol; type: "settings"; req: number; ok: true }
   | { pinrail: Protocol; type: "settings"; req: number; ok: false; errors: Violation[] }
-  | ({ pinrail: Protocol; type: "key" } & Key);
+  | ({ pinrail: Protocol; type: "key" } & Key)
+  /** the find bar's search: the next match when `query` is the one before,
+   *  the previous one with `backwards`, nothing highlighted when empty; the
+   *  view answers `found` with this `req` */
+  | { pinrail: Protocol; type: "find"; req: number; query: string; backwards: boolean };
 
 /** Plugin → shell, over `postMessage`. */
 export type PluginMessage =
@@ -206,6 +210,22 @@ export type PluginMessage =
       altKey: false;
       shiftKey: false;
     }
+  /** ⌘D or ⌘F inside the view, Ctrl off macOS: the app discards the review,
+   *  or opens its find bar */
+  | {
+      pinrail: Protocol;
+      type: "key";
+      key: "d" | "f";
+      code: string;
+      metaKey: boolean;
+      ctrlKey: boolean;
+      altKey: false;
+      shiftKey: false;
+    }
+  /** the matches of the `find` with this `req`: how many (at most 1000),
+   *  and which one is current, from 1, or 0 when there are none; sent again
+   *  when the view's content changes */
+  | { pinrail: Protocol; type: "found"; req: number; count: number; current: number }
   /** open this link outside the app: http, https or mailto */
   | { pinrail: Protocol; type: "open"; url: string }
   /** the bytes of a file the review (or the round it revises) carries */

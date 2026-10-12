@@ -38,6 +38,8 @@ If the whole review is wrong, **discard** it with the *Discard* button at the ri
 
 :::tip[Focus on the view]
 <kbd>⌘⇧M</kbd>, or the *Maximize* button at the right of the review's header, maximizes the plugin's view and hides everything else. Press <kbd>⌘⇧M</kbd> or <kbd>Esc</kbd> to restore it. The button beside it copies the decision as Markdown, the way the agent receives it.
+
+<kbd>⌘F</kbd> finds text in the plugin's view, as find in page does in a browser. Type to highlight every match, press <kbd>Enter</kbd> or <kbd>⇧Enter</kbd> to go to the next or previous one, and press <kbd>Esc</kbd> to close the find bar. The search ignores case and covers the text the view shows, but not text inside form fields, in images or in parts the view has collapsed.
 :::
 
 ## Rounds
@@ -84,6 +86,7 @@ Press <kbd>?</kbd> anywhere in the app to see these. On Linux, use <kbd>Ctrl</kb
 | <kbd>⌘[</kbd> / <kbd>⌘]</kbd> | Back / forward |
 | <kbd>⌘↵</kbd> | Hand over to the agent |
 | <kbd>⌘⇧M</kbd> | Maximize / restore the view |
+| <kbd>⌘F</kbd> | Find in the view |
 | <kbd>[</kbd> / <kbd>]</kbd> | Previous / next round |
 | <kbd>?</kbd> | Keyboard shortcuts |
 
