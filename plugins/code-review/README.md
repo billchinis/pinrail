@@ -38,7 +38,9 @@ comments on the host.
   in the diff renders under its file as a file-level comment; one whose file
   is not in the diff renders in a section of its own.
 - ```` ```suggestion ```` blocks in a body render as a proposed change,
-  with the `:-A+B` range modifier honoured when present.
+  with the `:-A+B` range modifier honoured when present, and highlighted
+  in the language of the proposal's file. Other code blocks are
+  highlighted when their info string names a language.
 - `thread` carries the whole conversation for a reply, so history renders
   without the forge. `ours` marks the requester's own comments; threads with
   a developer's response open by default.
@@ -63,7 +65,7 @@ comments on the host.
 ## View
 
 File tree with per-file counts, semantic or path order, inline or split
-diff, folding, per-file summaries, proposals anchored on their lines with
+diff with syntax highlighting in each file's language, folding, per-file summaries, proposals anchored on their lines with
 accept / reject / note, reply threads, suggestion blocks, the reviewer's
 own comments from any diff line, keyboard navigation
 (`?` lists the keys), a confirmation before a hand-over that leaves

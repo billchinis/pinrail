@@ -32,7 +32,7 @@ pinrail plugins install code-review
 ## What you see
 
 - **A file tree** with a count of proposals per file, in the order the agent suggests reading them or by path.
-- **The diff**, inline or side by side, with folding and a short summary of what changed in each file.
+- **The diff**, inline or side by side, with syntax highlighting, folding and a short summary of what changed in each file. The language comes from each file's name. Because the diff holds only parts of a file, a hunk that starts inside a multi-line string or comment may be coloured wrongly until that string or comment ends.
 - **Proposals on their lines**, each with severity, markdown body, and `suggestion` blocks shown as the change they would make. Accept, reject, or add a note.
 - **Reply threads**, with the whole conversation so far.
 - **Your own comments**, from any line of the diff.

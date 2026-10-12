@@ -1463,6 +1463,7 @@
     <div id="app"></div>
     <script src="/sdk/v1/pinrail-plugin.js"></script>
     <script src="/sdk/v1/markdown.js"></script>
+    <script src="/sdk/v1/highlight.js"></script>
     <script>
       "use strict";
       /* The review review: a change's diff with the agent's proposed comments
@@ -1649,7 +1650,8 @@
               below: mod && mod[2] ? parseInt(mod[2], 10) : 0,
             });
           } else {
-            segs.push({ kind: "code", text });
+            // the info string's first word, if the highlighter knows it
+            segs.push({ kind: "code", text, lang: info.split(/\s+/)[0] || null });
           }
           last = re.lastIndex;
         }
@@ -1660,7 +1662,7 @@
         return mdSegments(body || "")
           .map((seg) => {
             if (seg.kind === "para") return `<div class="md-text">${seg.html}</div>`;
-            return `<pre style="margin:0 0 6px 0;background:var(--pinrail-bg-panel);border:1px solid var(--pinrail-border);border-radius:5px;padding:6px 9px;font-family:var(--pinrail-mono);font-size:11.5px;line-height:1.5;overflow-x:auto;white-space:pre-wrap">${esc(seg.text)}</pre>`;
+            return `<pre style="margin:0 0 6px 0;background:var(--pinrail-bg-panel);border:1px solid var(--pinrail-border);border-radius:5px;padding:6px 9px;font-family:var(--pinrail-mono);font-size:11.5px;line-height:1.5;overflow-x:auto;white-space:pre-wrap">${seg.kind === "code" ? highlightCode(seg.text, seg.lang) : esc(seg.text)}</pre>`;
           })
           .join("");
       }
@@ -1690,6 +1692,56 @@
         }
         return rows;
       }
+      /* Each row's code, highlighted in the file's language. A hunk's two
+   sides are highlighted as two runs of code, the old one its context and
+   deleted lines and the new one its context and added lines, so a string
+   or a comment over several lines reads as one. What starts before the
+   hunk, such as a docstring the hunk opens inside, the highlighter cannot
+   see. A file of more rows than the limit keeps plain text. */
+      const HIGHLIGHT_LIMIT = 5000;
+      /* The highlighter is the app's /sdk/v1/highlight.js. An app older than
+   it serves none, and the code stays plain. */
+      const highlighting = typeof Pinrail.highlight === "function" && !!window[Symbol.for("pinrail.highlight")];
+      const languageOf = (path) => (highlighting && path ? Pinrail.languageOf(path) : null);
+      const highlightCode = (code, language) => (highlighting ? Pinrail.highlight(code, language) : esc(code));
+      const highlightLines = (code, language) =>
+        highlighting ? Pinrail.highlightLines(code, language) : code.split("\n").map(esc);
+      function colour(rows, language) {
+        if (!language || rows.length > HIGHLIGHT_LIMIT) return;
+        let i = 0;
+        while (i < rows.length) {
+          if (rows[i].kind === "hunk") {
+            i++;
+            continue;
+          }
+          let end = i;
+          while (end < rows.length && rows[end].kind !== "hunk") end++;
+          const hunk = rows.slice(i, end);
+          const side = (kind) =>
+            highlightLines(
+              hunk
+                .filter((r) => r.kind === "ctx" || r.kind === kind)
+                .map((r) => r.text)
+                .join("\n"),
+              language,
+            );
+          const old = side("del"),
+            now = side("add");
+          let o = 0,
+            n = 0;
+          for (const r of hunk) {
+            if (r.kind === "del") r.html = old[o++];
+            else if (r.kind === "add") r.html = now[n++];
+            else {
+              r.html = now[n++];
+              o++;
+            }
+          }
+          i = end;
+        }
+      }
+      /** A row's code as HTML: highlighted when it could be, escaped otherwise. */
+      const codeHtml = (r) => (r ? (r.html ?? esc(r.text)) : "");
       function buildSplit(rows) {
         const out = [];
         let i = 0;
@@ -1748,6 +1800,7 @@
       function prep() {
         PARSED = D.files.map((f) => {
           const rows = parseDiff(f.diff);
+          colour(rows, languageOf(f.path));
           return {
             rows,
             splitRows: buildSplit(rows),
@@ -1767,12 +1820,13 @@
                 const old = [];
                 for (let ln = start; ln <= end; ln++) {
                   const row = PARSED[fi].rows.find((r) => r.kind !== "hunk" && r.new === ln);
-                  if (row) old.push({ line: ln, text: row.text });
+                  if (row) old.push({ line: ln, text: row.text, html: codeHtml(row) });
                 }
                 if (old.length) {
                   seg.oldLines = old;
                   seg.line = start;
                 }
+                seg.lines = highlightLines(seg.text, languageOf(p.file));
               }
             }
           });
@@ -2039,13 +2093,13 @@
         return (SEGMENTS[p.id] || [])
           .map((seg) => {
             if (seg.kind === "para") return `<div class="md-text">${seg.html}</div>`;
-            if (seg.kind === "code") return `<pre class="code-block">${esc(seg.text)}</pre>`;
-            const row = (cls, sign, ln, text) =>
-              `<div class="sugg-row ${cls}"><span class="ln">${ln}</span><span class="sign">${sign}</span><span class="code">${esc(text)}</span></div>`;
-            const delRows = (seg.oldLines || []).map((o) => row("del", "−", o.line, o.text)).join("");
-            const addRows = seg.text
-              .split("\n")
-              .map((t, i) => row("add", "+", seg.line != null ? seg.line + i : "", t))
+            // a block names its language, or is shown as it is
+            if (seg.kind === "code") return `<pre class="code-block">${highlightCode(seg.text, seg.lang)}</pre>`;
+            const row = (cls, sign, ln, html) =>
+              `<div class="sugg-row ${cls}"><span class="ln">${ln}</span><span class="sign">${sign}</span><span class="code">${html}</span></div>`;
+            const delRows = (seg.oldLines || []).map((o) => row("del", "−", o.line, o.html)).join("");
+            const addRows = (seg.lines || seg.text.split("\n").map(esc))
+              .map((html, i) => row("add", "+", seg.line != null ? seg.line + i : "", html))
               .join("");
             return `<div class="sugg">
       <div class="sugg-head">SUGGESTED CHANGE</div>
@@ -2246,7 +2300,7 @@
           const isAdd = r.kind === "add",
             isDel = r.kind === "del";
           return (
-            `<div class="diff-row inline${isAdd ? " add" : isDel ? " del" : ""}"${r.new != null ? ` data-n="${r.new}"` : ""}${r.old != null ? ` data-o="${r.old}"` : ""}><span class="ln">${r.old ?? ""}</span><span class="ln">${r.new ?? ""}</span><span class="sign">${isAdd ? "+" : isDel ? "−" : ""}</span><span class="code"${hang(r.text)}>${esc(r.text)}</span></div>` +
+            `<div class="diff-row inline${isAdd ? " add" : isDel ? " del" : ""}"${r.new != null ? ` data-n="${r.new}"` : ""}${r.old != null ? ` data-o="${r.old}"` : ""}><span class="ln">${r.old ?? ""}</span><span class="ln">${r.new ?? ""}</span><span class="sign">${isAdd ? "+" : isDel ? "−" : ""}</span><span class="code"${hang(r.text)}>${codeHtml(r)}</span></div>` +
             rowAttachments(f, r.new ?? null, r.old ?? null, 106)
           );
         });
@@ -2262,7 +2316,7 @@
           const newLn = rr && rr.new != null ? rr.new : null;
           const oldLn = l && l.old != null ? l.old : null;
           return (
-            `<div class="diff-row split"${newLn != null ? ` data-n="${newLn}"` : ""}${lDel && oldLn != null ? ` data-o="${oldLn}"` : ""}><span class="ln${lDel ? " del" : ""}">${oldLn ?? ""}</span><span class="code l${lDel ? " del" : ""}"${hang(l && l.text)}>${esc(l ? l.text : "")}</span><span class="ln${rAdd ? " add" : ""}">${newLn ?? ""}</span><span class="code${rAdd ? " add" : ""}"${hang(rr && rr.text)}>${esc(rr ? rr.text : "")}</span></div>` +
+            `<div class="diff-row split"${newLn != null ? ` data-n="${newLn}"` : ""}${lDel && oldLn != null ? ` data-o="${oldLn}"` : ""}><span class="ln${lDel ? " del" : ""}">${oldLn ?? ""}</span><span class="code l${lDel ? " del" : ""}"${hang(l && l.text)}>${codeHtml(l)}</span><span class="ln${rAdd ? " add" : ""}">${newLn ?? ""}</span><span class="code${rAdd ? " add" : ""}"${hang(rr && rr.text)}>${codeHtml(rr)}</span></div>` +
             rowAttachments(f, newLn, lDel ? oldLn : null, 52)
           );
         });

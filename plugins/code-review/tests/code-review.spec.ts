@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
-import { fixture, mountPlugin } from "pinrail-sdk/testing";
+import { fixture, mountPlugin, reviewFrom } from "pinrail-sdk/testing";
 
 const dir = path.resolve(__dirname, "..");
 const round2 = () => fixture(path.join(dir, "fixtures", "dedup-round-2.json"));
@@ -529,4 +529,60 @@ test("a proposal's markdown renders in full: lists, links and emphasis", async (
   await expect(card.locator("em")).toHaveText("one");
   await expect(card.locator("a")).toHaveAttribute("href", "https://hexdocs.pm/elixir/Enum.html");
   await expect(card.locator("code").first()).toHaveText("reverse");
+});
+
+test("the diff, suggestions and code blocks are highlighted in the file's language", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: round2() });
+  const f = plugin.frame;
+  const tickets = f.locator('[data-filesec="lib/acme/tickets.ex"]');
+  const row = (text: string) => tickets.locator(".diff-row").filter({ hasText: text });
+  // a context row, a deleted one and an added one each have their tokens
+  await expect(row("def do_save(items) do").locator(".hljs-keyword").first()).toHaveText("def");
+  await expect(row("Enum.uniq_by").first().locator(".hljs-title, .hljs-keyword, .hljs-symbol").first()).toBeVisible();
+  // the text reads as before
+  await expect(row("Repo.insert_all()")).toContainText("|> Repo.insert_all()");
+  // the suggested change, in the language of the file it is on
+  await expect(f.locator("#card-18 .sugg-row.add .code [class^='hljs-']").first()).toBeVisible();
+
+  await f.getByRole("button", { name: /split/i }).first().click();
+  await expect(row("def do_save(items) do").locator(".hljs-keyword").first()).toHaveText("def");
+});
+
+test("a string over several lines reads as one, and a file of no known language stays plain", async ({ page }) => {
+  const review = reviewFrom({
+    title: "Highlighting",
+    payload: {
+      change: { ref: "!7", title: "Docs" },
+      files: [
+        {
+          path: "lib/acme/docs.ex",
+          status: "modified",
+          diff: '@@ -1,5 +1,6 @@\n defmodule Acme.Docs do\n   @moduledoc """\n-  The old words.\n+  The new words,\n+  over two lines.\n   """\n end',
+        },
+        { path: "NOTES.unknownext", status: "modified", diff: "@@ -1,1 +1,1 @@\n-def old\n+def new" },
+      ],
+      proposals: [],
+    },
+  });
+  const plugin = await mountPlugin(page, dir, { review });
+  const f = plugin.frame;
+  const docs = f.locator('[data-filesec="lib/acme/docs.ex"] .diff-row');
+  for (const text of ["The old words.", "The new words,", "over two lines."])
+    await expect(docs.filter({ hasText: text }).locator(".hljs-string")).toHaveCount(1);
+  const notes = f.locator('[data-filesec="NOTES.unknownext"] .diff-row .code');
+  await expect(notes.first()).toContainText("def");
+  await expect(notes.locator("[class^='hljs-']")).toHaveCount(0);
+});
+
+test("in an app that serves no highlighter, the code stays plain and the view works", async ({ page }) => {
+  // as an older app: the highlighting script leaves nothing behind
+  await page.addInitScript(() => {
+    Object.defineProperty(window, Symbol.for("pinrail.highlight"), { get: () => undefined, set: () => {} });
+  });
+  const plugin = await mountPlugin(page, dir, { review: round2() });
+  const f = plugin.frame;
+  const tickets = f.locator('[data-filesec="lib/acme/tickets.ex"]');
+  await expect(tickets.locator(".diff-row").filter({ hasText: "def do_save(items) do" })).toHaveCount(1);
+  await expect(tickets.locator("[class^='hljs-']")).toHaveCount(0);
+  await expect(f.locator("#card-18")).toContainText("|> Enum.uniq_by(& &1.id)");
 });
