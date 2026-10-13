@@ -8,12 +8,21 @@ export type Origin = {
   url?: string | null;
 };
 
+/** Where a decision or a discard was made: in the app, with the pinrail
+ *  CLI, or by another client of the API. Null when it was recorded before
+ *  the app kept this. */
+export type Via = "app" | "cli" | "api";
+
 export type Decision = {
-  decided_by: string;
+  /** the person, for a decision made in the app; otherwise whoever the client named, or nobody */
+  decided_by: string | null;
   decided_at: string;
   data: unknown;
   /** what was decided, as the plugin declares it summed up */
   summary?: Summary | null;
+  via?: Via | null;
+  /** the agent's session that decided with the CLI, if any */
+  session?: string | null;
 };
 
 /** The fixed set of colours a plugin's summary may use. */
@@ -37,6 +46,8 @@ export type Review = {
   title: string;
   origin: Origin;
   requested_by: string | null;
+  /** the agent's session the review was submitted from, if the CLI knew it */
+  session?: string | null;
   created_at: string;
   expires_at: string | null;
   revises: string | null;
@@ -50,6 +61,8 @@ export type Review = {
   discarded_at: string | null;
   discarded_by: string | null;
   discarded_reason: string | null;
+  discarded_via?: Via | null;
+  discarded_session?: string | null;
   /** present on single-review responses, absent in listings */
   payload?: unknown;
   /** the files the review carries; on single-review responses only, as the payload */

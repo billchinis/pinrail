@@ -25,9 +25,35 @@ export function loadState(): State {
 }
 
 /** The env the CLI needs to find (and start) this run's server. */
+/** The variables by which the CLI recognises an agent and its session. The
+ * agent that runs the tests is not the one the tests are about, so they
+ * are cleared; a test that needs one sets it. */
+const AGENT_VARS = [
+  "AI_AGENT",
+  "AGENT",
+  "CLAUDECODE",
+  "CLAUDE_CODE_ENTRYPOINT",
+  "CLAUDE_CODE_SESSION_ID",
+  "CODEX_THREAD_ID",
+  "CODEX_SANDBOX",
+  "CODEX_CI",
+  "CODEX_SESSION_ID",
+  "CURSOR_AGENT",
+  "ANTIGRAVITY_AGENT",
+  "ANTIGRAVITY_CONVERSATION_ID",
+  "OPENCODE",
+  "OPENCODE_PID",
+  "OPENCODE_CLIENT",
+  "OPENCODE_SESSION_ID",
+  "GROK_AGENT",
+  "GROK_SESSION_ID",
+];
+
 export function cliEnv(state: State = loadState()): NodeJS.ProcessEnv {
+  const inherited = { ...process.env };
+  for (const name of AGENT_VARS) delete inherited[name];
   const env: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...inherited,
     PINRAIL_DATA_DIR: state.dataDir,
     PINRAIL_CONFIG_DIR: state.configDir,
     PINRAIL_PORT: String(state.port),

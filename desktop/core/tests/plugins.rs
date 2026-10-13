@@ -160,7 +160,13 @@ async fn a_review_keeps_its_release_through_updates_and_removal() {
         .unwrap();
     assert_eq!(kept.version, "1.0.0");
     app.reviews()
-        .decide(&review.id, &json!({}), None, None)
+        .decide(
+            &review.id,
+            &json!({}),
+            None,
+            None,
+            &pinrail_core::reviews::Source::api(),
+        )
         .unwrap();
     assert!(app.reviews().get(&review.id).unwrap().decision.is_some());
 }
@@ -686,11 +692,23 @@ async fn a_pending_review_moves_to_the_folder_when_it_is_opened() {
     // the old schema's decision is refused, the new one's taken
     assert!(
         app.reviews()
-            .decide(&review.id, &json!({"ok": true}), None, Some(&second))
+            .decide(
+                &review.id,
+                &json!({"ok": true}),
+                None,
+                Some(&second),
+                &pinrail_core::reviews::Source::api()
+            )
             .is_err()
     );
     app.reviews()
-        .decide(&review.id, &json!({"verdict": "yes"}), None, Some(&second))
+        .decide(
+            &review.id,
+            &json!({"verdict": "yes"}),
+            None,
+            Some(&second),
+            &pinrail_core::reviews::Source::api(),
+        )
         .unwrap();
 
     app.plugins().remove("hello").unwrap();
@@ -745,11 +763,18 @@ async fn a_decision_is_recorded_with_the_version_that_was_shown() {
         &json!({"ok": true}),
         None,
         Some("0".repeat(64).as_str()),
+        &pinrail_core::reviews::Source::api(),
     );
     assert!(matches!(stale, Err(Error::Conflict(_))), "{stale:?}");
     let decided = app
         .reviews()
-        .decide(&review.id, &json!({"ok": true}), None, Some(&shown))
+        .decide(
+            &review.id,
+            &json!({"ok": true}),
+            None,
+            Some(&shown),
+            &pinrail_core::reviews::Source::api(),
+        )
         .unwrap();
     assert_eq!(decided.plugin_bundle.as_deref(), Some(shown.as_str()));
 }
@@ -815,6 +840,7 @@ async fn an_update_moves_the_pending_reviews_it_takes() {
             &json!({}),
             None,
             opened.review.plugin_bundle.as_deref(),
+            &pinrail_core::reviews::Source::api(),
         )
         .unwrap();
 

@@ -100,7 +100,8 @@ export type Status = "pending" | "decided" | "withdrawn" | "expired" | "discarde
 
 export type Decision<Data = unknown> = {
   data: Data;
-  decided_by: string;
+  /** the person, for a decision made in the app; null when nobody is known */
+  decided_by: string | null;
   decided_at: string;
 };
 

@@ -15,6 +15,7 @@ import { clearAll, useUrlParams } from "../lib/url";
 import { useLive } from "../state/live";
 import { NO_PROJECT } from "../lib/url";
 import { modalOpen } from "../lib/keys";
+import { SourceBadge } from "../components/SourceBadge";
 
 const ENDED = "decided,withdrawn,discarded,expired";
 /** How long the search waits for typing to pause before it asks the server. */
@@ -302,9 +303,24 @@ export function History() {
                     {r.origin.repo}
                     {r.origin.ref ? <small className="mono">{r.origin.ref}</small> : null}
                   </td>
-                  <td title={stamp(settledAt(r))}>
-                    {stamp(settledAt(r))}
-                    {r.decision ? <small>Decided by {r.decision.decided_by}</small> : null}
+                  <td>
+                    <span title={stamp(settledAt(r))}>{stamp(settledAt(r))}</span>
+                    {r.decision ? (
+                      <small>
+                        {r.decision.decided_by ? `Decided by ${r.decision.decided_by}` : "Decided"}
+                        <SourceBadge review={r} made={r.decision} command="decide" />
+                      </small>
+                    ) : null}
+                    {r.status === "discarded" ? (
+                      <small>
+                        {r.discarded_by ? `Discarded by ${r.discarded_by}` : "Discarded"}
+                        <SourceBadge
+                          review={r}
+                          made={{ via: r.discarded_via, session: r.discarded_session }}
+                          command="discard"
+                        />
+                      </small>
+                    ) : null}
                   </td>
                 </tr>
               ))}

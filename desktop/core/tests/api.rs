@@ -430,6 +430,7 @@ async fn wait_times_out_with_204_and_wakes_on_a_decision() {
                 &json!({"decisions": [], "undecided": [1, 2]}),
                 None,
                 None,
+                &pinrail_core::reviews::Source::api(),
             )
             .unwrap();
     });
@@ -3715,4 +3716,142 @@ fn a_port_in_use_is_refused_at_bind_with_its_address() {
     // may take the one just held as soon as it is let go
     assert!(pinrail_core::api::bind(&Config::new(dir.path(), 0)).is_ok());
     drop(held);
+}
+
+/// A POST with headers of the caller's, for the source of a decision.
+async fn post_as(
+    app: &App,
+    path: &str,
+    headers: &[(&str, &str)],
+    body: Value,
+) -> (StatusCode, Value) {
+    let mut request = Request::builder()
+        .method("POST")
+        .uri(path)
+        .header("host", "127.0.0.1:4747")
+        .header("content-type", "application/json");
+    for (name, value) in headers {
+        request = request.header(*name, *value);
+    }
+    let response = app
+        .router
+        .clone()
+        .oneshot(request.body(Body::from(body.to_string())).unwrap())
+        .await
+        .unwrap();
+    let status = response.status();
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
+}
+
+/// One way of sending a decision: the headers, what the body adds, and the
+/// source, session and decider the core should record.
+type SourceCase = (
+    &'static [(&'static str, &'static str)],
+    Value,
+    &'static str,
+    Value,
+    Value,
+);
+
+/// A decision and a discard record where they came from: the app by its
+/// origin, the CLI by its header with the agent's session it ran in, and
+/// any other client as the API. Only one from the app is the person's; one
+/// from elsewhere is recorded as made by whoever the client names, or by
+/// nobody.
+#[tokio::test]
+async fn a_decision_and_a_discard_record_where_they_came_from() {
+    let app = app();
+    let decision = json!({"decisions": [{"id": 1, "action": "accept"}], "undecided": [2]});
+    let cases: [SourceCase; 5] = [
+        (
+            &[("origin", "tauri://localhost")],
+            json!({"session": "ignored", "by": "ignored"}),
+            "app",
+            Value::Null,
+            json!("tester"),
+        ),
+        (
+            &[("x-pinrail-client", "cli")],
+            json!({"session": " s-42 ", "by": "claude-code"}),
+            "cli",
+            json!("s-42"),
+            json!("claude-code"),
+        ),
+        (
+            &[("x-pinrail-client", "cli")],
+            json!({}),
+            "cli",
+            Value::Null,
+            Value::Null,
+        ),
+        (
+            &[("origin", "https://example.com")],
+            json!({"session": "s-7"}),
+            "api",
+            json!("s-7"),
+            Value::Null,
+        ),
+        (
+            &[],
+            json!({"by": "a script"}),
+            "api",
+            Value::Null,
+            json!("a script"),
+        ),
+    ];
+    for (headers, extra, via, session, by) in cases {
+        let id = submit(&app, submission()).await["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let mut body = json!({"data": decision});
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        let (status, review) = post_as(
+            &app,
+            &format!("/api/v1/reviews/{id}/decision"),
+            headers,
+            body,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{review}");
+        assert_eq!(review["decision"]["via"], via, "{headers:?}");
+        assert_eq!(review["decision"]["session"], session, "{headers:?}");
+        assert_eq!(review["decision"]["decided_by"], by, "{headers:?}");
+        // as stored, not only as answered
+        let (_, stored) = call(&app, "GET", &format!("/api/v1/reviews/{id}"), None).await;
+        assert_eq!(stored["decision"]["via"], via);
+        assert_eq!(stored["decision"]["session"], session);
+        assert_eq!(stored["decision"]["decided_by"], by);
+
+        let id = submit(&app, submission()).await["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let (status, review) = post_as(
+            &app,
+            &format!("/api/v1/reviews/{id}/discard"),
+            headers,
+            extra.clone(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{review}");
+        assert_eq!(review["discarded_via"], via, "{headers:?}");
+        assert_eq!(review["discarded_session"], session, "{headers:?}");
+        assert_eq!(review["discarded_by"], by, "{headers:?}");
+        let (_, events) = call(&app, "GET", &format!("/api/v1/reviews/{id}/events"), None).await;
+        let event = events
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["kind"] == "discarded")
+            .unwrap();
+        assert_eq!(event["attrs"]["via"], via);
+        assert_eq!(event["actor"], by);
+    }
 }

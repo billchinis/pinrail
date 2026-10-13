@@ -12,7 +12,7 @@ use std::time::Duration;
 use chrono::{DateTime, Datelike, Utc};
 use serde_json::{Map, Value};
 
-use super::model::{Decision, Review, parse_datetime};
+use super::model::{Decision, Review, Source, Via, parse_datetime};
 use crate::attachments::{Attachments, Presence, ReviewAttachment};
 use crate::db::{Db, Event, Filters, NotStored};
 use crate::error::{Error, Violation};
@@ -150,6 +150,8 @@ impl Reviews {
             discarded_at: None,
             discarded_by: None,
             discarded_reason: None,
+            discarded_via: None,
+            discarded_session: None,
             attachments_total: (
                 attachments.len() as u64,
                 attachments.iter().map(|a| a.size).sum(),
@@ -309,6 +311,7 @@ impl Reviews {
         data: &Value,
         agent_note: Option<&str>,
         shown: Option<&str>,
+        source: &Source,
     ) -> Result<Review, Error> {
         let review = self.get(id)?;
         if !review.is_pending(Utc::now()) {
@@ -330,7 +333,7 @@ impl Reviews {
             return Err(Error::Invalid(violations));
         }
         let decision = Decision {
-            decided_by: self.user.clone(),
+            decided_by: self.attributed(source),
             decided_at: Utc::now(),
             data: data.clone(),
             summary: plugin
@@ -338,6 +341,8 @@ impl Reviews {
                 .outcome
                 .as_ref()
                 .and_then(|rules| rules.derive(data)),
+            via: Some(source.via),
+            session: source.session.clone(),
         };
         let note = agent_note.map(str::trim).filter(|n| !n.is_empty());
         let Some(event_id) =
@@ -487,24 +492,37 @@ impl Reviews {
     pub fn discard(
         &self,
         id: &str,
-        by: Option<&str>,
         reason: Option<&str>,
+        source: &Source,
     ) -> Result<Review, Error> {
         let review = self.get(id)?;
         if !review.is_pending(Utc::now()) {
             return Err(Error::NotPending(id.to_string()));
         }
-        let by = by
-            .map(str::trim)
-            .filter(|b| !b.is_empty())
-            .unwrap_or(&self.user);
+        let by = self.attributed(source);
+        let by = by.as_deref();
         let reason = reason.map(str::trim).filter(|r| !r.is_empty());
-        let Some(event_id) = self.db.insert_discard(id, Utc::now(), by, reason)? else {
+        let Some(event_id) = self.db.insert_discard(id, Utc::now(), by, reason, source)? else {
             return Err(Error::NotPending(id.to_string()));
         };
         let review = self.get(id)?;
         self.publish(event_id, events::DISCARDED, &review);
         Ok(review)
+    }
+
+    /// Who a decision or a discard is recorded as made by: the person, the
+    /// server's user, when it came from the app; otherwise only whoever the
+    /// client named, since nothing says a person was there.
+    fn attributed(&self, source: &Source) -> Option<String> {
+        match source.via {
+            Via::App => Some(self.user.clone()),
+            Via::Cli | Via::Api => source
+                .by
+                .as_deref()
+                .map(str::trim)
+                .filter(|b| !b.is_empty())
+                .map(str::to_string),
+        }
     }
 
     /// Logs that a person opened the review and announces it, so the

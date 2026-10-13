@@ -41,14 +41,76 @@ impl Status {
     }
 }
 
+/// Where a decision or a discard was made: in the app, with the `pinrail`
+/// CLI, or by another client of the API. It is what the client says, and
+/// the API has no authentication, so it is not proof; it makes an honest
+/// `pinrail decide` visible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Via {
+    App,
+    Cli,
+    Api,
+}
+
+impl Via {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Via::App => "app",
+            Via::Cli => "cli",
+            Via::Api => "api",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "app" => Some(Via::App),
+            "cli" => Some(Via::Cli),
+            "api" => Some(Via::Api),
+            _ => None,
+        }
+    }
+}
+
+/// Who sent a decision or a discard: where from, and the agent's session
+/// the CLI ran in, if it ran in one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Source {
+    pub via: Via,
+    pub session: Option<String>,
+    /// Who the client says made it, such as the agent the CLI runs under,
+    /// or the name given to `pinrail discard --by`. The app's own requests
+    /// name nobody: the person at the app is the server's user.
+    pub by: Option<String>,
+}
+
+impl Source {
+    /// A client of the API that says nothing about itself.
+    pub fn api() -> Self {
+        Source {
+            via: Via::Api,
+            session: None,
+            by: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Decision {
-    pub decided_by: String,
+    /// The person, for a decision made in the app; for one made elsewhere,
+    /// whoever the client named, or nobody.
+    pub decided_by: Option<String>,
     pub decided_at: DateTime<Utc>,
     pub data: Value,
     /// What was decided, summed up as the plugin declares; none when it
     /// declares no outcome summary or there is nothing to show.
     pub summary: Option<Value>,
+    /// Where it was made; none for a decision recorded before this was kept.
+    #[serde(default)]
+    pub via: Option<Via>,
+    /// The agent's session that made it with the CLI, if any.
+    #[serde(default)]
+    pub session: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -79,6 +141,10 @@ pub struct Review {
     pub discarded_at: Option<DateTime<Utc>>,
     pub discarded_by: Option<String>,
     pub discarded_reason: Option<String>,
+    /// Where the discard was made, and the agent's session that made it
+    /// with the CLI, as for a decision.
+    pub discarded_via: Option<Via>,
+    pub discarded_session: Option<String>,
     /// The files the review carries, by the names its payload uses. Read
     /// with a single review; listings leave them out, as they do the payload.
     pub attachments: Vec<crate::attachments::ReviewAttachment>,
@@ -127,6 +193,8 @@ impl Review {
                 "decided_at": iso(d.decided_at),
                 "data": d.data,
                 "summary": d.summary,
+                "via": d.via.map(Via::as_str),
+                "session": d.session,
             })),
             "agent_note": self.agent_note,
             "withdrawn_at": self.withdrawn_at.map(iso),
@@ -134,6 +202,8 @@ impl Review {
             "discarded_at": self.discarded_at.map(iso),
             "discarded_by": self.discarded_by,
             "discarded_reason": self.discarded_reason,
+            "discarded_via": self.discarded_via.map(Via::as_str),
+            "discarded_session": self.discarded_session,
             "attachments_total": { "count": self.attachments_total.0, "bytes": self.attachments_total.1 },
         });
         if with_payload {
@@ -219,6 +289,8 @@ mod tests {
             discarded_at: None,
             discarded_by: None,
             discarded_reason: None,
+            discarded_via: None,
+            discarded_session: None,
         }
     }
 
@@ -236,10 +308,12 @@ mod tests {
         r.withdrawn_at = Some(now);
         assert_eq!(r.status(now), Status::Withdrawn);
         r.decision = Some(Decision {
-            decided_by: "a".into(),
+            decided_by: Some("a".into()),
             decided_at: now,
             data: json!({}),
             summary: None,
+            via: None,
+            session: None,
         });
         assert_eq!(r.status(now), Status::Decided);
     }

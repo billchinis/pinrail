@@ -7,7 +7,7 @@ use std::path::Path;
 use chrono::{Duration, Utc};
 use pinrail_core::attachments::ReviewAttachment;
 use pinrail_core::db::{Db, Filters, LATEST_MIGRATION, NotStored};
-use pinrail_core::reviews::{Decision, Review, Status};
+use pinrail_core::reviews::{Decision, Review, Source, Status};
 use serde_json::{Map, json};
 
 fn review(id: &str, expires_in: Option<Duration>) -> Review {
@@ -34,15 +34,19 @@ fn review(id: &str, expires_in: Option<Duration>) -> Review {
         discarded_at: None,
         discarded_by: None,
         discarded_reason: None,
+        discarded_via: None,
+        discarded_session: None,
     }
 }
 
 fn decision() -> Decision {
     Decision {
-        decided_by: "pat".into(),
+        decided_by: Some("pat".into()),
         decided_at: Utc::now(),
         data: json!({"ok": true}),
         summary: None,
+        via: None,
+        session: None,
     }
 }
 
@@ -148,7 +152,7 @@ fn nothing_ends_a_review_after_it_expired() {
             .is_none()
     );
     assert!(
-        db.insert_discard("r_1", Utc::now(), "pat", None)
+        db.insert_discard("r_1", Utc::now(), Some("pat"), None, &Source::api())
             .unwrap()
             .is_none()
     );
@@ -168,7 +172,7 @@ fn a_review_ends_once_whichever_way() {
     );
     // every other ending loses to the one on record, across kinds
     assert!(
-        db.insert_discard("r_1", Utc::now(), "pat", Some("late"))
+        db.insert_discard("r_1", Utc::now(), Some("pat"), Some("late"), &Source::api())
             .unwrap()
             .is_none()
     );
@@ -191,7 +195,7 @@ fn a_review_ends_once_whichever_way() {
         .unwrap()
         .unwrap();
     assert!(
-        db.insert_discard("r_2", Utc::now(), "pat", Some("no"))
+        db.insert_discard("r_2", Utc::now(), Some("pat"), Some("no"), &Source::api())
             .unwrap()
             .is_some()
     );
@@ -224,7 +228,8 @@ fn status_is_answered_by_the_query_and_the_count_is_not_a_listing() {
     db.insert_decision("r_0", &decision(), None, None).unwrap();
     db.insert_withdrawal("r_1", Utc::now(), Some("gone"))
         .unwrap();
-    db.insert_discard("r_2", Utc::now(), "pat", None).unwrap();
+    db.insert_discard("r_2", Utc::now(), Some("pat"), None, &Source::api())
+        .unwrap();
 
     assert_eq!(by_status(&db, Status::Decided), vec!["r_0"]);
     assert_eq!(by_status(&db, Status::Withdrawn), vec!["r_1"]);

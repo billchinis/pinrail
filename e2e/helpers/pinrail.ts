@@ -20,16 +20,17 @@ function invocation(args: string[]) {
   return { args: args.filter((a) => a !== "--markdown"), env: rest };
 }
 
-/** Runs the CLI to completion. */
-export function pinrail(args: string[], opts: { input?: string } = {}): Run {
+/** Runs the CLI to completion, with `env` added to its environment. */
+export function pinrail(args: string[], opts: { input?: string; env?: NodeJS.ProcessEnv } = {}): Run {
   const state = loadState();
   const run = invocation(args);
-  const r = spawnSync(state.cli, run.args, { cwd, env: run.env, encoding: "utf8", input: opts.input });
+  const env = { ...run.env, ...opts.env };
+  const r = spawnSync(state.cli, run.args, { cwd, env, encoding: "utf8", input: opts.input });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 
 /** Runs the CLI and parses its stdout as JSON, failing loudly otherwise. */
-export function pinrailJson(args: string[], opts: { input?: string } = {}): any {
+export function pinrailJson(args: string[], opts: { input?: string; env?: NodeJS.ProcessEnv } = {}): any {
   const r = pinrail(args, opts);
   if (r.code !== 0) throw new Error(`pinrail ${args.join(" ")} exited ${r.code}\n${r.stderr}`);
   return JSON.parse(r.stdout);
@@ -43,10 +44,10 @@ export type Waiter = {
 };
 
 /** Starts `pinrail submit … --wait` (or `pinrail wait`) in the background. */
-export function startWaiter(args: string[]): Waiter {
+export function startWaiter(args: string[], env: NodeJS.ProcessEnv = {}): Waiter {
   const state = loadState();
   const run = invocation(args);
-  const proc = spawn(state.cli, run.args, { cwd, env: run.env });
+  const proc = spawn(state.cli, run.args, { cwd, env: { ...run.env, ...env } });
   let stdout = "";
   let stderr = "";
   proc.stdout!.on("data", (d) => (stdout += d));
@@ -94,20 +95,23 @@ export const listPayload = {
   ],
 };
 
-export function submitListReview(title: string, extra: string[] = []): Waiter {
+export function submitListReview(title: string, extra: string[] = [], env: NodeJS.ProcessEnv = {}): Waiter {
   const payload = tmpFile("payload.json", JSON.stringify(listPayload));
-  return startWaiter([
-    "submit",
-    "list",
-    "--title",
-    title,
-    "--origin",
-    "repo=acme,workflow=review,ref=42",
-    "--data",
-    payload,
-    "--wait",
-    ...extra,
-  ]);
+  return startWaiter(
+    [
+      "submit",
+      "list",
+      "--title",
+      title,
+      "--origin",
+      "repo=acme,workflow=review,ref=42",
+      "--data",
+      payload,
+      "--wait",
+      ...extra,
+    ],
+    env,
+  );
 }
 
 export function reviewUrl(id: string): string {

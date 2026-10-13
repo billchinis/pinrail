@@ -79,12 +79,16 @@ pub fn render_in(
     let data = &review["decision"]["data"];
     let standing = match status {
         "decided" => {
-            let by = review["decision"]["decided_by"]
-                .as_str()
-                .unwrap_or("someone");
             format!(
-                "Decided by {by} at {}",
-                when(review["decision"]["decided_at"].as_str())
+                "Decided{} at {}{}",
+                by_whom(&review["decision"]["decided_by"]),
+                when(review["decision"]["decided_at"].as_str()),
+                made_with(
+                    &review["decision"]["via"],
+                    &review["decision"]["session"],
+                    &review["session"],
+                    "decide"
+                )
             )
         }
         "withdrawn" => {
@@ -98,10 +102,16 @@ pub fn render_in(
             line
         }
         "discarded" => {
-            let by = review["discarded_by"].as_str().unwrap_or("someone");
             let mut line = format!(
-                "Discarded by {by} at {}",
-                when(review["discarded_at"].as_str())
+                "Discarded{} at {}{}",
+                by_whom(&review["discarded_by"]),
+                when(review["discarded_at"].as_str()),
+                made_with(
+                    &review["discarded_via"],
+                    &review["discarded_session"],
+                    &review["session"],
+                    "discard"
+                )
             );
             if let Some(reason) = text(&review["discarded_reason"]) {
                 line.push_str(&format!(": {reason}"));
@@ -495,6 +505,35 @@ fn when_in(iso: Option<&str>, zone: Option<FixedOffset>) -> String {
         .unwrap_or_else(|| Utc::now().format("%Y-%m-%d %H:%M").to_string())
 }
 
+/// " by <name>", or nothing when nobody is named: a decision made outside
+/// the app by a client that names no one is not the person's.
+fn by_whom(by: &Value) -> String {
+    match by.as_str().filter(|b| !b.is_empty()) {
+        Some(name) => format!(" by {name}"),
+        None => String::new(),
+    }
+}
+
+/// How a decision or a discard was made, when not in the app: with the
+/// `pinrail` CLI or another client of the API, and from which agent
+/// session. Nothing for one made in the app, or recorded before this was
+/// kept.
+fn made_with(via: &Value, session: &Value, requested_in: &Value, command: &str) -> String {
+    let mut out = match via.as_str() {
+        Some("cli") => format!(", with `pinrail {command}`"),
+        Some("api") => ", through the API".to_string(),
+        _ => return String::new(),
+    };
+    match session.as_str().filter(|s| !s.is_empty()) {
+        Some(s) if requested_in.as_str() == Some(s) => {
+            out.push_str(", from the agent session that submitted the review")
+        }
+        Some(s) => out.push_str(&format!(", from agent session {s}")),
+        None => {}
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -795,5 +834,75 @@ Undecided: #19, #20
         assert!(md.contains("\nScores: [1,2,3]\n"), "{md}");
         assert!(md.contains("\nMeta: {\"k\":\"v\"}\n"), "{md}");
         assert!(md.contains("\n## Things\n\n- **#1**\n"), "{md}");
+    }
+
+    #[test]
+    fn a_decision_or_discard_made_outside_the_app_says_how() {
+        let line = |review: &Value| {
+            render(review, None, None)
+                .lines()
+                .nth(3)
+                .unwrap()
+                .to_string()
+        };
+        let mut review = decided("list", json!({"decisions": [], "undecided": []}));
+        review["session"] = json!("s-1");
+        // in the app, or before the source was kept: as before
+        for via in [json!("app"), Value::Null] {
+            review["decision"]["via"] = via;
+            let line = line(&review);
+            assert!(line.starts_with("Decided by pnezis at "), "{line}");
+            assert!(
+                !line.contains(", with") && !line.contains(", through"),
+                "{line}"
+            );
+        }
+        review["decision"]["via"] = json!("cli");
+        assert!(
+            line(&review).ends_with(", with `pinrail decide`"),
+            "{}",
+            line(&review)
+        );
+        review["decision"]["session"] = json!("s-2");
+        assert!(
+            line(&review).ends_with(", with `pinrail decide`, from agent session s-2"),
+            "{}",
+            line(&review)
+        );
+        review["decision"]["session"] = json!("s-1");
+        assert!(
+            line(&review).ends_with(
+                ", with `pinrail decide`, from the agent session that submitted the review"
+            ),
+            "{}",
+            line(&review)
+        );
+        review["decision"]["via"] = json!("api");
+        review["decision"]["session"] = Value::Null;
+        assert!(
+            line(&review).ends_with(", through the API"),
+            "{}",
+            line(&review)
+        );
+
+        // a client that names nobody: no name
+        review["decision"]["decided_by"] = Value::Null;
+        assert!(
+            line(&review).starts_with("Decided at "),
+            "{}",
+            line(&review)
+        );
+
+        review["status"] = json!("discarded");
+        review["discarded_at"] = json!("2026-09-16T09:00:00Z");
+        review["discarded_by"] = json!("pnezis");
+        review["discarded_reason"] = json!("wrong branch");
+        review["discarded_via"] = json!("cli");
+        review["discarded_session"] = json!("s-1");
+        let md = render(&review, None, None);
+        assert!(
+            md.contains(", with `pinrail discard`, from the agent session that submitted the review: wrong branch"),
+            "{md}"
+        );
     }
 }

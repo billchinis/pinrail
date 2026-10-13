@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 
 use super::Db;
 use super::events::insert_event;
-use crate::reviews::{Decision, Review, Status, parse_datetime};
+use crate::reviews::{Decision, Review, Status, Via, parse_datetime};
 
 #[derive(Debug, Default, Clone)]
 pub struct Filters {
@@ -599,7 +599,8 @@ fn select(with_payload: bool) -> String {
     (SELECT count(*) FROM review_attachments a WHERE a.review_id = r.id),
     (SELECT coalesce(sum(a.size), 0) FROM review_attachments a WHERE a.review_id = r.id),
     o.summary,
-    r.session
+    r.session,
+    o.via, o.session
   FROM reviews r
   LEFT JOIN outcomes o ON o.review_id = r.id{join}"
     )
@@ -639,6 +640,11 @@ fn row_to_review(row: &rusqlite::Row<'_>, with_payload: bool) -> rusqlite::Resul
     let plugin_version: Option<String> = row.get(17)?;
     let attachments_total = (row.get::<_, i64>(18)? as u64, row.get::<_, i64>(19)? as u64);
     let outcome_summary: Option<String> = row.get(20)?;
+    let via = row
+        .get::<_, Option<String>>(22)?
+        .as_deref()
+        .and_then(Via::parse);
+    let outcome_session: Option<String> = row.get(23)?;
     let at = at.and_then(|s| parse_datetime(&s));
     let (
         mut decision,
@@ -647,17 +653,21 @@ fn row_to_review(row: &rusqlite::Row<'_>, with_payload: bool) -> rusqlite::Resul
         mut discarded_at,
         mut discarded_by,
         mut discarded_reason,
-    ) = (None, None, None, None, None, None);
+        mut discarded_via,
+        mut discarded_session,
+    ) = (None, None, None, None, None, None, None, None);
     match kind.as_deref() {
         Some("decided") => {
             decision = Some(Decision {
-                decided_by: by.clone().unwrap_or_default(),
+                decided_by: by.clone(),
                 decided_at: at.unwrap_or_default(),
                 data: data
                     .as_deref()
                     .and_then(|d| serde_json::from_str(d).ok())
                     .unwrap_or(Value::Null),
                 summary: outcome_summary.and_then(|s| serde_json::from_str(&s).ok()),
+                via,
+                session: outcome_session.clone(),
             })
         }
         Some("withdrawn") => {
@@ -668,6 +678,8 @@ fn row_to_review(row: &rusqlite::Row<'_>, with_payload: bool) -> rusqlite::Resul
             discarded_at = at;
             discarded_by = by.clone();
             discarded_reason = reason.clone();
+            discarded_via = via;
+            discarded_session = outcome_session.clone();
         }
         _ => {}
     }
@@ -703,5 +715,7 @@ fn row_to_review(row: &rusqlite::Row<'_>, with_payload: bool) -> rusqlite::Resul
         discarded_at,
         discarded_by,
         discarded_reason,
+        discarded_via,
+        discarded_session,
     })
 }

@@ -50,6 +50,8 @@ An ended review never changes again. It moves from the inbox to your history, re
 
 **Discarding** is different: it means *no, and stop*. Use it when the whole thing is wrong, not worth doing, or not wanted now. You can give a reason, which goes to the agent. A discarded review has no decision, and an agent that is told it was discarded should stop the work it was asking about rather than try again.
 
+Pinrail records where each decision and discard was made. One made in the app is recorded as yours. One made with `pinrail decide` or `pinrail discard`, or by another program through the local API, is not: it is recorded as made by the agent the command ran under, by the name the program gave, or by nobody. It says how it was made on the review, in the history and in what the agent receives, such as "Decided by claude-code at 09:14 UTC, with `pinrail decide`". When the command ran in the same agent session that submitted the review, the review page shows a warning: an agent should never decide its own review. Any program on your computer can claim to be the app, so this is a record of what the program said, not proof.
+
 ## Rounds
 
 Often you want some changes before you approve. The agent makes the changes and asks again, submitting a new review that **revises** the first. That is a new round.

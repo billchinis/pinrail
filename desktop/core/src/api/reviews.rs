@@ -19,7 +19,7 @@ use super::parse_body;
 use crate::Pinrail;
 use crate::error::Error;
 use crate::markdown::Head;
-use crate::reviews::{Filters, Status};
+use crate::reviews::{Filters, Source, Status, Via};
 
 const DEFAULT_WAIT: u64 = 300;
 const MAX_WAIT: u64 = 600;
@@ -247,7 +247,9 @@ async fn decide(
     let note = body.get("agent_note").and_then(Value::as_str);
     // the bundle the person's view showed, when the app sends it
     let shown = body.get("bundle").and_then(Value::as_str);
-    let review = state.reviews().decide(&id, data, note, shown)?;
+    let review = state
+        .reviews()
+        .decide(&id, data, note, shown, &source(&headers, &body))?;
     review_response(&state, &review, wants_markdown(&headers, &params)).await
 }
 
@@ -264,6 +266,7 @@ async fn withdraw(
 async fn discard(
     State(state): State<Arc<Pinrail>>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<Value>, ApiError> {
     let body = if body.is_empty() {
@@ -272,10 +275,52 @@ async fn discard(
         parse_body(&body)?
     };
     let reason = body.get("reason").and_then(Value::as_str);
-    let by = body.get("by").and_then(Value::as_str);
     Ok(Json(
-        state.reviews().discard(&id, by, reason)?.to_json(true),
+        state
+            .reviews()
+            .discard(&id, reason, &source(&headers, &body))?
+            .to_json(true),
     ))
+}
+
+/// The header the `pinrail` CLI sends with every request: `cli`.
+pub(crate) const CLIENT_HEADER: &str = "x-pinrail-client";
+
+/// Where a decision or a discard comes from. The app's requests carry its
+/// own origin, which a browser sets and a web page cannot; the CLI names
+/// itself in a header, and sends the agent's session it runs in; anything
+/// else is another client of the API. A program on this machine can claim
+/// any of these, so this records what a client says, not proof.
+fn source(headers: &HeaderMap, body: &Value) -> Source {
+    let origin = headers.get(header::ORIGIN).and_then(|v| v.to_str().ok());
+    if origin.is_some_and(|o| super::shell_origins().iter().any(|s| s == o)) {
+        return Source {
+            via: Via::App,
+            session: None,
+            by: None,
+        };
+    }
+    let cli = headers
+        .get(CLIENT_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v == "cli");
+    let session = body
+        .get("session")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    let by = body
+        .get("by")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|b| !b.is_empty())
+        .map(str::to_string);
+    Source {
+        via: if cli { Via::Cli } else { Via::Api },
+        session,
+        by,
+    }
 }
 
 async fn viewed(

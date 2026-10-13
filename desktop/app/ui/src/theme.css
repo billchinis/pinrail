@@ -2008,6 +2008,27 @@ h1 {
   background: var(--accent);
   box-shadow: 0 0 0 2px var(--bg);
 }
+/* how a decision or a discard was made, when not in the app: a badge
+   whose tooltip says how */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font: 500 10px/15px var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--dim);
+  vertical-align: 1px;
+  cursor: default;
+}
+.source-badge.is-own {
+  border-color: color-mix(in srgb, var(--sev-major) 55%, transparent);
+  background: color-mix(in srgb, var(--sev-major) 10%, transparent);
+  color: var(--sev-major);
+}
 .decision-box {
   border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
   background: color-mix(in srgb, var(--ok) 5%, transparent);

@@ -11,6 +11,22 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ## [Unreleased]
 
+### Added
+
+- Pinrail records whether a decision or a discard was made in the app,
+  with `pinrail decide` or `pinrail discard`, or by another program
+  through the API, and in which agent session. The review page, the
+  history, `pinrail show` and the decision an agent receives say so when
+  it was not made in the app. The review page warns when the agent
+  session that submitted a review also decided it.
+
+### Changed
+
+- Only a decision or a discard made in the app is recorded as yours. One
+  made with `pinrail decide` or `pinrail discard` is recorded as made by
+  the agent the command runs under, if any, and one made through the API
+  by the name the program gives, if any.
+
 ### Fixed
 
 - On Linux, an update of the AppImage reliably updates the copy of the

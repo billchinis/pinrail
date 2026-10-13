@@ -122,7 +122,7 @@ test("markdown, the default, prints the decision as prose, and the decision file
   const result = await waiter.done;
   expect(result.code).toBe(0);
   expect(result.stdout).toMatch(
-    /^r_\w+ · decided · markdown please\nlist · acme · review · 42 · decided by [^\n]*\noutcome: 1 accepted, 1 rejected\n\n> ship it\n\n## lib\/acme\/tickets\.ex\n\n- \*\*#1 accepted\*\* — do_save dedups without reversing \(major\)\n- \*\*#2 rejected\*\* — moduledoc typo \(minor\)\n {2}> typo is fine\n$/,
+    /^r_\w+ · decided · markdown please\nlist · acme · review · 42 · decided at [^\n]*, with `pinrail decide`\noutcome: 1 accepted, 1 rejected\n\n> ship it\n\n## lib\/acme\/tickets\.ex\n\n- \*\*#1 accepted\*\* — do_save dedups without reversing \(major\)\n- \*\*#2 rejected\*\* — moduledoc typo \(minor\)\n {2}> typo is fine\n$/,
   );
 
   const shown = pinrail(["show", id, "--markdown"]);
@@ -281,4 +281,33 @@ test("plugins lists the built-in and the installed test plugins", async () => {
   // hello is a link; sampler was copied
   const kinds = Object.fromEntries(plugins.plugins.map((p: any) => [p.name, p.install?.link]));
   expect(kinds).toMatchObject({ hello: true, sampler: false });
+});
+
+test("a decision made with pinrail decide says so, and names the agent session that made it", async () => {
+  // the agent that asks and decides in the same Claude Code session
+  const session = { CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s-same" };
+  const waiter = submitListReview("decided by the asker", [], session);
+  const id = await waiter.reviewId;
+  pinrailJson(["decide", id, "--data", tmpFile("d.json", JSON.stringify(decision))], { env: session });
+  const result = await waiter.done;
+  expect(result.code, result.stderr).toBe(0);
+  const review = JSON.parse(result.stdout);
+  expect(review.session).toBe("s-same");
+  expect(review.decision.via).toBe("cli");
+  expect(review.decision.session).toBe("s-same");
+  // the agent decided, not the person
+  expect(review.decision.decided_by).toBe("claude-code");
+  const md = pinrail(["show", id, "--markdown"]).stdout;
+  expect(md).toContain("decided by claude-code at ");
+  expect(md).toContain(", with `pinrail decide`, from the agent session that submitted the review");
+
+  // a discard from outside any agent session
+  const other = submitListReview("discarded by hand");
+  const otherId = await other.reviewId;
+  pinrailJson(["discard", otherId, "--reason", "not now"]);
+  const discarded = JSON.parse((await other.done).stdout);
+  expect(discarded.discarded_via).toBe("cli");
+  expect(discarded.discarded_session).toBeNull();
+  // outside any agent, with no --by, nobody is named
+  expect(discarded.discarded_by).toBeNull();
 });

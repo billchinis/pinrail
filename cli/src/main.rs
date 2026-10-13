@@ -228,10 +228,12 @@ enum Command {
     /// pending reviews of every project. Use --status and --repo to choose
     /// other reviews, and --all to list every review.
     List(ListArgs),
-    /// Record a decision on behalf of the person, from a test or a tool
+    /// Record a decision from a test or a tool
     ///
     /// An agent never decides a review that it submitted. Only the person
-    /// does.
+    /// does. The app records that the decision was made with pinrail decide,
+    /// by the agent the command runs under, if any, and in which agent
+    /// session, and shows this with the decision.
     Decide(DecideArgs),
     /// Withdraw a pending review. A command that is waiting on it exits with 3
     Withdraw {
@@ -241,18 +243,20 @@ enum Command {
         #[arg(long)]
         reason: Option<String>,
     },
-    /// Discard a pending review on behalf of the person
+    /// Discard a pending review
     ///
     /// This does what discarding does in the app. A command that is waiting
     /// on the review exits with 5 and tells the agent to stop. An agent never
-    /// discards a review that it submitted.
+    /// discards a review that it submitted. The app records that the review
+    /// was discarded with pinrail discard, as it does for pinrail decide.
     Discard {
         /// The review's id
         id: String,
         /// The reason, which the agent receives
         #[arg(long)]
         reason: Option<String>,
-        /// Who discards the review [default: the server's user]
+        /// Who discards the review [default: the agent the command runs
+        /// under, if any]
         #[arg(long)]
         by: Option<String>,
     },
@@ -1014,7 +1018,8 @@ fn run(cli: Cli) -> Result<u8> {
         }
         Command::Decide(args) => {
             let data = read_json_arg(&args.data)?;
-            let review = client.decide(&args.id, data, args.note)?;
+            let review =
+                client.decide(&args.id, data, args.note, agent::detect(), agent::session())?;
             output.review(&client, &review)?;
             Ok(0)
         }
@@ -1023,7 +1028,10 @@ fn run(cli: Cli) -> Result<u8> {
             Ok(0)
         }
         Command::Discard { id, reason, by } => {
-            output.review(&client, &client.discard(&id, reason, by)?)?;
+            output.review(
+                &client,
+                &client.discard(&id, reason, by.or_else(agent::detect), agent::session())?,
+            )?;
             Ok(0)
         }
         Command::Plugins(PluginsArgs {

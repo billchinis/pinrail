@@ -374,10 +374,22 @@ mod tests {
 
         // each decided with its own release's schema
         let one = json!({"decisions": [{"id": 1, "action": "accept"}], "undecided": []});
-        assert!(app.reviews().decide(&new.id, &one, None, None).is_err());
-        app.reviews().decide(&old.id, &one, None, None).unwrap();
+        assert!(
+            app.reviews()
+                .decide(&new.id, &one, None, None, &crate::reviews::Source::api())
+                .is_err()
+        );
         app.reviews()
-            .decide(&new.id, &json!({"verdict": "ok"}), None, None)
+            .decide(&old.id, &one, None, None, &crate::reviews::Source::api())
+            .unwrap();
+        app.reviews()
+            .decide(
+                &new.id,
+                &json!({"verdict": "ok"}),
+                None,
+                None,
+                &crate::reviews::Source::api(),
+            )
             .unwrap();
         let rendered = app
             .plugins()

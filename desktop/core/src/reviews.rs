@@ -4,5 +4,5 @@ mod model;
 mod service;
 
 pub use crate::db::Filters;
-pub use model::{Decision, ORIGIN_KEYS, Review, Status, iso, parse_datetime};
+pub use model::{Decision, ORIGIN_KEYS, Review, Source, Status, Via, iso, parse_datetime};
 pub use service::{Listing, Reviews};

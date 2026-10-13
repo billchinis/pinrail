@@ -8,6 +8,8 @@ import path from "node:path";
 /** The port of the headless core the shell runs against. */
 export const corePort = 4799;
 export const core = `http://127.0.0.1:${corePort}`;
+/** The origin the shell runs on in these tests, which the core takes for the app's. */
+export const shellOrigin = "http://127.0.0.1:5199";
 
 /** A list review with one proposal, for when the content does not matter. */
 export const onePayload = {
@@ -35,9 +37,13 @@ export async function createReview(
   return (await response.json()) as { id: string };
 }
 
-/** Records a decision as the app does when a person submits one. */
+/** Records a decision as the app does when a person submits one: from the
+ *  shell's origin, so the core records it as made in the app. */
 export async function decide(request: APIRequestContext, id: string, data: unknown) {
-  const response = await request.post(`${core}/api/v1/reviews/${id}/decision`, { data: { data } });
+  const response = await request.post(`${core}/api/v1/reviews/${id}/decision`, {
+    data: { data },
+    headers: { origin: shellOrigin },
+  });
   expect(response.status(), await response.text()).toBe(200);
 }
 

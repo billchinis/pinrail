@@ -102,7 +102,8 @@ export async function startApp({ build = true } = {}) {
   const api = async (method, route, body) => {
     const res = await fetch(`${core}${route}`, {
       method,
-      headers: method === "GET" ? {} : { "content-type": "application/json" },
+      // from the shell's origin, so what the seed decides reads as decided in the app
+      headers: method === "GET" ? {} : { "content-type": "application/json", origin: ui },
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await res.text();

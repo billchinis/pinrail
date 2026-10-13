@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use super::Db;
 use super::events::insert_event;
-use crate::reviews::Decision;
+use crate::reviews::{Decision, Source, Via};
 
 impl Db {
     /// Records the decision; `None` when the review had already ended.
@@ -28,15 +28,20 @@ impl Db {
             Outcome {
                 kind: "decided",
                 at: decision.decided_at,
-                by: Some(&decision.decided_by),
+                by: decision.decided_by.as_deref(),
                 reason: None,
                 data: Some(&decision.data),
                 summary: decision.summary.as_ref(),
                 agent_note,
+                via: decision.via,
+                session: decision.session.as_deref(),
             },
             crate::events::DECIDED,
-            Some(&decision.decided_by),
-            Value::Null,
+            decision.decided_by.as_deref(),
+            decision
+                .via
+                .map(|via| serde_json::json!({ "via": via.as_str() }))
+                .unwrap_or(Value::Null),
         )
     }
 
@@ -62,6 +67,8 @@ impl Db {
                 data: None,
                 summary: None,
                 agent_note: None,
+                via: None,
+                session: None,
             },
             crate::events::WITHDRAWN,
             None,
@@ -75,27 +82,30 @@ impl Db {
         &self,
         id: &str,
         at: DateTime<Utc>,
-        by: &str,
+        by: Option<&str>,
         reason: Option<&str>,
+        source: &Source,
     ) -> rusqlite::Result<Option<i64>> {
-        let attrs = match reason {
-            Some(r) => serde_json::json!({ "by": by, "reason": r }),
-            None => serde_json::json!({ "by": by }),
-        };
+        let mut attrs = serde_json::json!({ "by": by, "via": source.via.as_str() });
+        if let Some(r) = reason {
+            attrs["reason"] = Value::String(r.to_string());
+        }
         self.insert_outcome(
             id,
             None,
             Outcome {
                 kind: "discarded",
                 at,
-                by: Some(by),
+                by,
                 reason,
                 data: None,
                 summary: None,
                 agent_note: None,
+                via: Some(source.via),
+                session: source.session.as_deref(),
             },
             crate::events::DISCARDED,
-            Some(by),
+            by,
             attrs,
         )
     }
@@ -120,8 +130,8 @@ impl Db {
         // An expired review has no outcome row, so the insert itself checks
         // the time: an ending that arrives as the review expires loses.
         let inserted = tx.execute(
-            "INSERT OR IGNORE INTO outcomes (review_id, kind, at, by, reason, data, agent_note, summary) \
-             SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?9 FROM reviews \
+            "INSERT OR IGNORE INTO outcomes (review_id, kind, at, by, reason, data, agent_note, summary, via, session) \
+             SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?9, ?11, ?12 FROM reviews \
              WHERE id = ?1 AND (expires_at IS NULL OR expires_at > ?8) \
                AND (?10 IS NULL OR plugin_bundle = ?10)",
             params![
@@ -134,7 +144,9 @@ impl Db {
                 outcome.agent_note,
                 crate::reviews::iso(chrono::Utc::now()),
                 outcome.summary.map(Value::to_string),
-                bundle
+                bundle,
+                outcome.via.map(Via::as_str),
+                outcome.session
             ],
         )?;
         if inserted == 0 {
@@ -155,4 +167,6 @@ struct Outcome<'a> {
     data: Option<&'a Value>,
     summary: Option<&'a Value>,
     agent_note: Option<&'a str>,
+    via: Option<Via>,
+    session: Option<&'a str>,
 }

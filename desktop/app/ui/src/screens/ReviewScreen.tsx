@@ -22,6 +22,7 @@ import { AttachmentsChip } from "../components/AttachmentsChip";
 import { OutcomeBadge, PluginBadge, SummaryCounts, outcomeOf } from "../components/Badges";
 import { DiscardDialog } from "../components/DiscardDialog";
 import { FindBar } from "../components/FindBar";
+import { SourceBadge } from "../components/SourceBadge";
 import { WaitMark } from "../components/WaitMark";
 import { LinkDialog, type LinkChoice } from "../components/LinkDialog";
 import { allowedWithoutAsking, allowing, linkRequest, sourceOf, type LinkRequest } from "../lib/links";
@@ -675,9 +676,21 @@ export function ReviewScreen() {
       ) : null}
       {review.status === "discarded" ? (
         <p className="notice">
-          <span className="text">{review.discarded_by}</span> discarded this review {age(review.discarded_at)} ago
+          {review.discarded_by ? (
+            <>
+              <span className="text">{review.discarded_by}</span> discarded this review
+            </>
+          ) : (
+            "This review was discarded"
+          )}{" "}
+          {age(review.discarded_at)} ago
           {review.discarded_reason ? `: ${review.discarded_reason}` : "."} The agent was told to stop; nothing was
-          decided.
+          decided.{" "}
+          <SourceBadge
+            review={review}
+            made={{ via: review.discarded_via, session: review.discarded_session }}
+            command="discard"
+          />
         </p>
       ) : null}
       {linkAsk && plugin ? (
@@ -698,8 +711,15 @@ export function ReviewScreen() {
       {review.decision ? (
         <section className="decision-box">
           <div className="dim">
-            Decided by <span className="text">{review.decision.decided_by}</span>{" "}
-            <span title={stamp(review.decision.decided_at)}>{age(review.decision.decided_at)} ago</span>
+            {review.decision.decided_by ? (
+              <>
+                Decided by <span className="text">{review.decision.decided_by}</span>
+              </>
+            ) : (
+              "Decided"
+            )}{" "}
+            <span title={stamp(review.decision.decided_at)}>{age(review.decision.decided_at)} ago</span>{" "}
+            <SourceBadge review={review} made={review.decision} command="decide" />
           </div>
           {review.agent_note ? (
             <div className="agent-note">

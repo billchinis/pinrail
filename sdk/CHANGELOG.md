@@ -6,6 +6,12 @@ change to the protocol is a new major and a new path.
 
 ## [Unreleased]
 
+### Changed
+
+- A decision's `decided_by` can be `null`: the app names the person only
+  for a decision made in the app, and nobody when a program that names
+  no one made it.
+
 ### Added
 
 - The app's find bar searches a view's text. The app sends a `find`

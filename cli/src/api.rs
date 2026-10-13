@@ -9,6 +9,9 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 use ureq::Agent;
 
+/// The header that tells the app a request comes from this CLI.
+const CLIENT_HEADER: &str = "x-pinrail-client";
+
 #[derive(Debug)]
 pub struct ApiError {
     pub status: u16,
@@ -156,10 +159,25 @@ impl Client {
         }
     }
 
-    pub fn decide(&self, id: &str, data: Value, note: Option<String>) -> Result<Value> {
+    /// Decides a review. `by` is the agent the CLI runs under and
+    /// `session` its session, which the app records with the decision.
+    pub fn decide(
+        &self,
+        id: &str,
+        data: Value,
+        note: Option<String>,
+        by: Option<String>,
+        session: Option<String>,
+    ) -> Result<Value> {
         let mut body = serde_json::json!({ "data": data });
+        if let Some(by) = by {
+            body["by"] = Value::String(by);
+        }
         if let Some(note) = note {
             body["agent_note"] = Value::String(note);
+        }
+        if let Some(session) = session {
+            body["session"] = Value::String(session);
         }
         self.post(
             &format!("/api/v1/reviews/{}/decision", segment(id)),
@@ -175,8 +193,18 @@ impl Client {
         )
     }
 
-    pub fn discard(&self, id: &str, reason: Option<String>, by: Option<String>) -> Result<Value> {
+    /// Discards a review, recording `session` as for a decision.
+    pub fn discard(
+        &self,
+        id: &str,
+        reason: Option<String>,
+        by: Option<String>,
+        session: Option<String>,
+    ) -> Result<Value> {
         let mut body = serde_json::Map::new();
+        if let Some(session) = session {
+            body.insert("session".into(), Value::String(session));
+        }
         if let Some(reason) = reason {
             body.insert("reason".into(), Value::String(reason));
         }
@@ -315,11 +343,12 @@ impl Client {
 
     fn post_with(&self, agent: &Agent, path: &str, body: Option<&Value>) -> Result<Value> {
         let url = format!("{}{path}", self.base);
+        // the app records which client made a decision or a discard
+        let request = agent.post(&url).header(CLIENT_HEADER, "cli");
         let mut resp = match body {
-            Some(json) => agent.post(&url).send_json(json),
+            Some(json) => request.send_json(json),
             // the server refuses a write that does not say it is JSON, even an empty one
-            None => agent
-                .post(&url)
+            None => request
                 .header("content-type", "application/json")
                 .send_empty(),
         }
