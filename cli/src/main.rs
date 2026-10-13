@@ -1024,7 +1024,10 @@ fn run(cli: Cli) -> Result<u8> {
             Ok(0)
         }
         Command::Withdraw { id, reason } => {
-            output.review(&client, &client.withdraw(&id, reason, agent::detect(), agent::session())?)?;
+            output.review(
+                &client,
+                &client.withdraw(&id, reason, agent::detect(), agent::session())?,
+            )?;
             Ok(0)
         }
         Command::Discard { id, reason, by } => {
