@@ -256,11 +256,17 @@ async fn decide(
 async fn withdraw(
     State(state): State<Arc<Pinrail>>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<Value>, ApiError> {
     let body = parse_body(&body)?;
     let reason = body.get("reason").and_then(Value::as_str);
-    Ok(Json(state.reviews().withdraw(&id, reason)?.to_json(true)))
+    Ok(Json(
+        state
+            .reviews()
+            .withdraw(&id, reason, &source(&headers, &body))?
+            .to_json(true),
+    ))
 }
 
 async fn discard(
@@ -286,7 +292,7 @@ async fn discard(
 /// The header the `pinrail` CLI sends with every request: `cli`.
 pub(crate) const CLIENT_HEADER: &str = "x-pinrail-client";
 
-/// Where a decision or a discard comes from. The app's requests carry its
+/// Where a decision, a discard or a withdrawal comes from. The app's requests carry its
 /// own origin, which a browser sets and a web page cannot; the CLI names
 /// itself in a header, and sends the agent's session it runs in; anything
 /// else is another client of the API. A program on this machine can claim

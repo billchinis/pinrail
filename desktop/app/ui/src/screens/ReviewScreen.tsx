@@ -659,8 +659,20 @@ export function ReviewScreen() {
       ) : null}
       {review.status === "withdrawn" ? (
         <p className="notice">
-          The requester withdrew this review {age(review.withdrawn_at)} ago
-          {review.withdrawn_reason ? `: ${review.withdrawn_reason}` : "."} Nothing was decided.
+          {review.withdrawn_by ? (
+            <>
+              <span className="text">{review.withdrawn_by}</span> withdrew this review
+            </>
+          ) : (
+            "This review was withdrawn"
+          )}{" "}
+          {age(review.withdrawn_at)} ago
+          {review.withdrawn_reason ? `: ${review.withdrawn_reason}.` : "."} Nothing was decided.{" "}
+          <SourceBadge
+            review={review}
+            made={{ via: review.withdrawn_via, session: review.withdrawn_session }}
+            command="withdraw"
+          />
         </p>
       ) : null}
       {waiting ? (

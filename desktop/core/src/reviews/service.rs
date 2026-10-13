@@ -147,6 +147,9 @@ impl Reviews {
             agent_note: None,
             withdrawn_at: None,
             withdrawn_reason: None,
+            withdrawn_by: None,
+            withdrawn_via: None,
+            withdrawn_session: None,
             discarded_at: None,
             discarded_by: None,
             discarded_reason: None,
@@ -189,7 +192,8 @@ impl Reviews {
         // waiting agent is told, and the inbox shows only the newer round
         if let Some(revised) = &review.revises {
             let reason = format!("superseded by {}", review.id);
-            match self.withdraw(revised, Some(&reason)) {
+            let by = review.requested_by.as_deref();
+            match self.withdrawal(revised, Some(&reason), by, None, review.session.as_deref()) {
                 Ok(_) | Err(Error::NotPending(_)) => {}
                 Err(e) => return Err(e),
             }
@@ -473,13 +477,39 @@ impl Reviews {
     }
 
     /// The requester gives up.
-    pub fn withdraw(&self, id: &str, reason: Option<&str>) -> Result<Review, Error> {
+    pub fn withdraw(
+        &self,
+        id: &str,
+        reason: Option<&str>,
+        source: &Source,
+    ) -> Result<Review, Error> {
+        let by = self.attributed(source);
+        self.withdrawal(
+            id,
+            reason,
+            by.as_deref(),
+            Some(source.via),
+            source.session.as_deref(),
+        )
+    }
+
+    fn withdrawal(
+        &self,
+        id: &str,
+        reason: Option<&str>,
+        by: Option<&str>,
+        via: Option<Via>,
+        session: Option<&str>,
+    ) -> Result<Review, Error> {
         let review = self.get(id)?;
         if !review.is_pending(Utc::now()) {
             return Err(Error::NotPending(id.to_string()));
         }
         let reason = reason.map(str::trim).filter(|r| !r.is_empty());
-        let Some(event_id) = self.db.insert_withdrawal(id, Utc::now(), reason)? else {
+        let Some(event_id) = self
+            .db
+            .insert_withdrawal(id, Utc::now(), by, reason, via, session)?
+        else {
             return Err(Error::NotPending(id.to_string()));
         };
         let review = self.get(id)?;
@@ -510,7 +540,7 @@ impl Reviews {
         Ok(review)
     }
 
-    /// Who a decision or a discard is recorded as made by: the person, the
+    /// Who a decision, a discard or a withdrawal is recorded as made by: the person, the
     /// server's user, when it came from the app; otherwise only whoever the
     /// client named, since nothing says a person was there.
     fn attributed(&self, source: &Source) -> Option<String> {

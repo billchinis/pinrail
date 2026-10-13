@@ -138,6 +138,12 @@ pub struct Review {
     pub agent_note: Option<String>,
     pub withdrawn_at: Option<DateTime<Utc>>,
     pub withdrawn_reason: Option<String>,
+    /// Who withdrew the review, where, and from which agent session, as
+    /// for a discard. A round withdrawn for a newer one is recorded as
+    /// withdrawn by the newer round's requester, with no `via`.
+    pub withdrawn_by: Option<String>,
+    pub withdrawn_via: Option<Via>,
+    pub withdrawn_session: Option<String>,
     pub discarded_at: Option<DateTime<Utc>>,
     pub discarded_by: Option<String>,
     pub discarded_reason: Option<String>,
@@ -199,6 +205,9 @@ impl Review {
             "agent_note": self.agent_note,
             "withdrawn_at": self.withdrawn_at.map(iso),
             "withdrawn_reason": self.withdrawn_reason,
+            "withdrawn_by": self.withdrawn_by,
+            "withdrawn_via": self.withdrawn_via.map(Via::as_str),
+            "withdrawn_session": self.withdrawn_session,
             "discarded_at": self.discarded_at.map(iso),
             "discarded_by": self.discarded_by,
             "discarded_reason": self.discarded_reason,
@@ -286,6 +295,9 @@ mod tests {
             agent_note: None,
             withdrawn_at: None,
             withdrawn_reason: None,
+            withdrawn_by: None,
+            withdrawn_via: None,
+            withdrawn_session: None,
             discarded_at: None,
             discarded_by: None,
             discarded_reason: None,

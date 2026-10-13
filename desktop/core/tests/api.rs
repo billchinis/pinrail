@@ -1441,6 +1441,8 @@ async fn a_new_round_revises_the_latest_round_with_the_same_plugin() {
         format!("superseded by {second_id}"),
         "{first}"
     );
+    // withdrawn by whoever asked for the newer round
+    assert_eq!(first["withdrawn_by"], "agent", "{first}");
 
     // the first round already has a newer one: revise that instead
     let mut body = submission();
@@ -3763,7 +3765,7 @@ type SourceCase = (
 /// from elsewhere is recorded as made by whoever the client names, or by
 /// nobody.
 #[tokio::test]
-async fn a_decision_and_a_discard_record_where_they_came_from() {
+async fn a_decision_a_discard_and_a_withdrawal_record_where_they_came_from() {
     let app = app();
     let decision = json!({"decisions": [{"id": 1, "action": "accept"}], "undecided": [2]});
     let cases: [SourceCase; 5] = [
@@ -3850,6 +3852,31 @@ async fn a_decision_and_a_discard_record_where_they_came_from() {
             .unwrap()
             .iter()
             .find(|e| e["kind"] == "discarded")
+            .unwrap();
+        assert_eq!(event["attrs"]["via"], via);
+        assert_eq!(event["actor"], by);
+
+        let id = submit(&app, submission()).await["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let (status, review) = post_as(
+            &app,
+            &format!("/api/v1/reviews/{id}/withdraw"),
+            headers,
+            extra.clone(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{review}");
+        assert_eq!(review["withdrawn_via"], via, "{headers:?}");
+        assert_eq!(review["withdrawn_session"], session, "{headers:?}");
+        assert_eq!(review["withdrawn_by"], by, "{headers:?}");
+        let (_, events) = call(&app, "GET", &format!("/api/v1/reviews/{id}/events"), None).await;
+        let event = events
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["kind"] == "withdrawn")
             .unwrap();
         assert_eq!(event["attrs"]["via"], via);
         assert_eq!(event["actor"], by);

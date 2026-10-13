@@ -57,6 +57,10 @@ export type Review = {
   agent_note: string | null;
   withdrawn_at: string | null;
   withdrawn_reason: string | null;
+  /** who withdrew it, the client used, and the agent's session */
+  withdrawn_by?: string | null;
+  withdrawn_via?: Via | null;
+  withdrawn_session?: string | null;
   /** the person's "no, and stop", with who and why */
   discarded_at: string | null;
   discarded_by: string | null;

@@ -185,8 +185,25 @@ impl Client {
         )
     }
 
-    pub fn withdraw(&self, id: &str, reason: Option<String>) -> Result<Value> {
-        let body = reason.map(|r| serde_json::json!({ "reason": r }));
+    /// Withdraws a review, recording `by` and `session` as for a discard.
+    pub fn withdraw(
+        &self,
+        id: &str,
+        reason: Option<String>,
+        by: Option<String>,
+        session: Option<String>,
+    ) -> Result<Value> {
+        let mut body = serde_json::Map::new();
+        if let Some(session) = session {
+            body.insert("session".into(), Value::String(session));
+        }
+        if let Some(reason) = reason {
+            body.insert("reason".into(), Value::String(reason));
+        }
+        if let Some(by) = by {
+            body.insert("by".into(), Value::String(by));
+        }
+        let body = (!body.is_empty()).then_some(Value::Object(body));
         self.post(
             &format!("/api/v1/reviews/{}/withdraw", segment(id)),
             body.as_ref(),

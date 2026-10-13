@@ -93,8 +93,15 @@ pub fn render_in(
         }
         "withdrawn" => {
             let mut line = format!(
-                "Withdrawn by the agent at {}",
-                when(review["withdrawn_at"].as_str())
+                "Withdrawn{} at {}{}",
+                by_whom(&review["withdrawn_by"]),
+                when(review["withdrawn_at"].as_str()),
+                made_with(
+                    &review["withdrawn_via"],
+                    &review["withdrawn_session"],
+                    &review["session"],
+                    "withdraw"
+                )
             );
             if let Some(reason) = text(&review["withdrawn_reason"]) {
                 line.push_str(&format!(": {reason}"));
@@ -514,7 +521,7 @@ fn by_whom(by: &Value) -> String {
     }
 }
 
-/// How a decision or a discard was made, when not in the app: with the
+/// How a decision, a discard or a withdrawal was made, when not in the app: with the
 /// `pinrail` CLI or another client of the API, and from which agent
 /// session. Nothing for one made in the app, or recorded before this was
 /// kept.
@@ -678,9 +685,18 @@ mod tests {
         review["withdrawn_at"] = json!("2026-09-16T09:00:00Z");
         review["withdrawn_reason"] = json!("the branch was force-pushed");
         let md = render(&review, None, None);
-        assert!(md.contains("Withdrawn by the agent at "), "{md}");
+        assert!(md.contains("Withdrawn at "), "{md}");
         assert!(
             md.trim_end().ends_with("the branch was force-pushed"),
+            "{md}"
+        );
+        review["withdrawn_by"] = json!("claude-code");
+        review["withdrawn_via"] = json!("cli");
+        let md = render(&review, None, None);
+        assert!(md.contains("Withdrawn by claude-code at "), "{md}");
+        assert!(
+            md.trim_end()
+                .ends_with(", with `pinrail withdraw`: the branch was force-pushed"),
             "{md}"
         );
 

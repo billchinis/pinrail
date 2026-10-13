@@ -46,32 +46,37 @@ impl Db {
     }
 
     /// Records the requester's withdrawal; `None` when the review had
-    /// already ended.
+    /// already ended. `via` is `None` when the server withdrew the review
+    /// itself, for a newer round.
     pub fn insert_withdrawal(
         &self,
         id: &str,
         at: DateTime<Utc>,
+        by: Option<&str>,
         reason: Option<&str>,
+        via: Option<Via>,
+        session: Option<&str>,
     ) -> rusqlite::Result<Option<i64>> {
-        let attrs = reason
-            .map(|r| serde_json::json!({ "reason": r }))
-            .unwrap_or(Value::Null);
+        let mut attrs = serde_json::json!({ "by": by, "via": via.map(Via::as_str) });
+        if let Some(r) = reason {
+            attrs["reason"] = Value::String(r.to_string());
+        }
         self.insert_outcome(
             id,
             None,
             Outcome {
                 kind: "withdrawn",
                 at,
-                by: None,
+                by,
                 reason,
                 data: None,
                 summary: None,
                 agent_note: None,
-                via: None,
-                session: None,
+                via,
+                session,
             },
             crate::events::WITHDRAWN,
-            None,
+            by,
             attrs,
         )
     }

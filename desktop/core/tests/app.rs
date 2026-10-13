@@ -2,6 +2,7 @@
 
 use pinrail_core::db::Db;
 use pinrail_core::plugins::InstallOptions;
+use pinrail_core::reviews::Source;
 use pinrail_core::{Config, Error, Pinrail};
 use serde_json::{Value, json};
 
@@ -28,7 +29,7 @@ fn event_history_hydrates_reviews_and_shared_notices_in_cursor_order() {
     app.settings().change(&json!({"autostart": true})).unwrap();
     let withdrawn = app
         .reviews()
-        .withdraw(&review.id, Some("No longer needed"))
+        .withdraw(&review.id, Some("No longer needed"), &Source::api())
         .unwrap();
 
     let notices = app.events().after(start, 10).unwrap();

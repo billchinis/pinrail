@@ -311,9 +311,25 @@ export function History() {
                         <SourceBadge review={r} made={r.decision} command="decide" />
                       </small>
                     ) : null}
+                    {r.status === "withdrawn" ? (
+                      <small>
+                        <Reason
+                          text={r.withdrawn_by ? `Withdrawn by ${r.withdrawn_by}` : "Withdrawn"}
+                          reason={r.withdrawn_reason}
+                        />
+                        <SourceBadge
+                          review={r}
+                          made={{ via: r.withdrawn_via, session: r.withdrawn_session }}
+                          command="withdraw"
+                        />
+                      </small>
+                    ) : null}
                     {r.status === "discarded" ? (
                       <small>
-                        {r.discarded_by ? `Discarded by ${r.discarded_by}` : "Discarded"}
+                        <Reason
+                          text={r.discarded_by ? `Discarded by ${r.discarded_by}` : "Discarded"}
+                          reason={r.discarded_reason}
+                        />
                         <SourceBadge
                           review={r}
                           made={{ via: r.discarded_via, session: r.discarded_session }}
@@ -330,5 +346,17 @@ export function History() {
       )}
       {data ? <Pager label="History" page={page} size={size} total={total} onPage={setPage} onSize={setSize} /> : null}
     </div>
+  );
+}
+
+/** Who withdrew or discarded a review, with the reason they gave in a tooltip. */
+function Reason({ text, reason }: { text: string; reason: string | null }) {
+  if (!reason) return <>{text}</>;
+  return (
+    <Tooltip label={reason}>
+      <span className="history-reason" tabIndex={0} data-testid="history-reason">
+        {text}
+      </span>
+    </Tooltip>
   );
 }

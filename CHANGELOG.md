@@ -19,6 +19,9 @@ The `pinrail` command ships inside the app and carries the app's version.
   history, `pinrail show` and the decision an agent receives say so when
   it was not made in the app. The review page warns when the agent
   session that submitted a review also decided it.
+- The history shows who withdrew or discarded a review and how, with the
+  reason they gave in a tooltip. Pinrail records the agent that withdrew
+  a review, as it does for a discard.
 
 ### Changed
 

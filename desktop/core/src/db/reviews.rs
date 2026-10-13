@@ -650,12 +650,17 @@ fn row_to_review(row: &rusqlite::Row<'_>, with_payload: bool) -> rusqlite::Resul
         mut decision,
         mut withdrawn_at,
         mut withdrawn_reason,
+        mut withdrawn_by,
+        mut withdrawn_via,
+        mut withdrawn_session,
         mut discarded_at,
         mut discarded_by,
         mut discarded_reason,
         mut discarded_via,
         mut discarded_session,
-    ) = (None, None, None, None, None, None, None, None);
+    ) = (
+        None, None, None, None, None, None, None, None, None, None, None,
+    );
     match kind.as_deref() {
         Some("decided") => {
             decision = Some(Decision {
@@ -673,6 +678,9 @@ fn row_to_review(row: &rusqlite::Row<'_>, with_payload: bool) -> rusqlite::Resul
         Some("withdrawn") => {
             withdrawn_at = at;
             withdrawn_reason = reason.clone();
+            withdrawn_by = by.clone();
+            withdrawn_via = via;
+            withdrawn_session = outcome_session.clone();
         }
         Some("discarded") => {
             discarded_at = at;
@@ -712,6 +720,9 @@ fn row_to_review(row: &rusqlite::Row<'_>, with_payload: bool) -> rusqlite::Resul
         },
         withdrawn_at,
         withdrawn_reason,
+        withdrawn_by,
+        withdrawn_via,
+        withdrawn_session,
         discarded_at,
         discarded_by,
         discarded_reason,

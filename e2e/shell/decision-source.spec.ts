@@ -68,3 +68,44 @@ test("a decision made outside the app says how, and warns when the asking sessio
   await expect(source("decided by a script")).toHaveText("API");
   await expect(source("decided in the app")).toHaveCount(0);
 });
+
+test("a withdrawn or discarded review shows who ended it and why", async ({ page }) => {
+  await clearInbox(page.request);
+  const withdrawn = await submitFrom(page.request, "Source: withdrawn by the asker", "s-1");
+  const response = await page.request.post(`${core}/api/v1/reviews/${withdrawn}/withdraw`, {
+    data: { reason: "the branch was force-pushed", session: "s-1", by: "claude-code" },
+    headers: { "x-pinrail-client": "cli" },
+  });
+  expect(response.status(), await response.text()).toBe(200);
+  const discarded = await submitFrom(page.request, "Source: discarded by a script", "s-1");
+  const discard = await page.request.post(`${core}/api/v1/reviews/${discarded}/discard`, {
+    data: { reason: "wrong branch" },
+  });
+  expect(discard.status(), await discard.text()).toBe(200);
+
+  // the agent withdrawing its own review is what withdrawing is for: no warning
+  const badge = page.getByTestId("source-badge");
+  await page.goto(`/#/reviews/${withdrawn}`);
+  await expect(page.locator(".notice").filter({ hasText: "withdrew" })).toContainText(
+    /^claude-code withdrew this review \S+ ago: the branch was force-pushed\./,
+  );
+  await expect(badge).toHaveText("CLI");
+  await expect(badge).not.toHaveClass(/is-own/);
+  await badge.hover();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "Withdrawn with pinrail withdraw, from the agent session that submitted the review",
+  );
+
+  await page.goto("/#/history");
+  const row = (title: string) => page.getByTestId("history-row").filter({ hasText: title });
+  await expect(row("withdrawn by the asker")).toContainText("Withdrawn by claude-code");
+  await expect(row("withdrawn by the asker").getByTestId("source-badge")).toHaveText("CLI");
+  // the reason is in a tooltip on who ended the review, not in the row
+  await expect(row("withdrawn by the asker")).not.toContainText("force-pushed");
+  await row("withdrawn by the asker").getByTestId("history-reason").hover();
+  await expect(page.getByRole("tooltip")).toHaveText("the branch was force-pushed");
+  await expect(row("discarded by a script")).toContainText("Discarded");
+  await expect(row("discarded by a script").getByTestId("source-badge")).toHaveText("API");
+  await row("discarded by a script").getByTestId("history-reason").hover();
+  await expect(page.getByRole("tooltip")).toHaveText("wrong branch");
+});

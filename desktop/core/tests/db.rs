@@ -31,6 +31,9 @@ fn review(id: &str, expires_in: Option<Duration>) -> Review {
         agent_note: None,
         withdrawn_at: None,
         withdrawn_reason: None,
+        withdrawn_by: None,
+        withdrawn_via: None,
+        withdrawn_session: None,
         discarded_at: None,
         discarded_by: None,
         discarded_reason: None,
@@ -147,7 +150,7 @@ fn nothing_ends_a_review_after_it_expired() {
             .is_none()
     );
     assert!(
-        db.insert_withdrawal("r_1", Utc::now(), None)
+        db.insert_withdrawal("r_1", Utc::now(), None, None, None, None)
             .unwrap()
             .is_none()
     );
@@ -177,7 +180,7 @@ fn a_review_ends_once_whichever_way() {
             .is_none()
     );
     assert!(
-        db.insert_withdrawal("r_1", Utc::now(), None)
+        db.insert_withdrawal("r_1", Utc::now(), None, None, None, None)
             .unwrap()
             .is_none()
     );
@@ -226,7 +229,7 @@ fn status_is_answered_by_the_query_and_the_count_is_not_a_listing() {
         .unwrap()
         .unwrap();
     db.insert_decision("r_0", &decision(), None, None).unwrap();
-    db.insert_withdrawal("r_1", Utc::now(), Some("gone"))
+    db.insert_withdrawal("r_1", Utc::now(), None, Some("gone"), None, None)
         .unwrap();
     db.insert_discard("r_2", Utc::now(), Some("pat"), None, &Source::api())
         .unwrap();
