@@ -4,9 +4,10 @@
 # release of the same tag. Plugins that Pinrail 0.1.0 scaffolded depend on
 # that tarball; later ones depend on the package on npm.
 #
-# Publishing to npm is the last job, and runs only once the repository
-# variable PUBLISH_PINRAIL_SDK is "npm" (Settings › Variables) and the
-# NPM_TOKEN secret is set.
+# Publishing to npm is the last job, and runs only while the repository
+# variable PUBLISH_PINRAIL_SDK is "npm" (Settings › Variables). It holds no
+# token: npm trusts this workflow as the package's publisher (npm's trusted
+# publishing), through the job's OIDC token, and adds the provenance.
 name: sdk release
 
 on:
@@ -99,5 +100,3 @@ jobs:
         run: |
           npm ci
           npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
