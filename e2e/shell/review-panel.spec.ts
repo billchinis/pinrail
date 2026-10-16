@@ -66,6 +66,29 @@ test("⌥↓ and ⌥↑ walk the list from the panel, in the order it shows", as
   await expect(panel(page).getByTestId("review-title")).toHaveText("Panel walk: newest");
 });
 
+test("J and K move to the next and previous review, from the list and from the view", async ({ page }) => {
+  await clearInbox(page.request);
+  await createReview(page.request, { title: "Panel keys: oldest" });
+  await createReview(page.request, { title: "Panel keys: newest" });
+  const title = panel(page).getByTestId("review-title");
+  const frame = page.frameLocator("#plugin-frame");
+
+  await page.goto("/#/");
+  await row(page, "Panel keys: newest").click();
+  await expect(title).toHaveText("Panel keys: newest");
+  await page.locator("body").press("j");
+  await expect(title).toHaveText("Panel keys: oldest");
+  // at the end of the list it stays
+  await page.locator("body").press("j");
+  await expect(title).toHaveText("Panel keys: oldest");
+
+  // with the view in focus, the view passes them up
+  await expect(frame.locator("body")).toContainText("One proposal.");
+  await frame.locator("body").click();
+  await page.keyboard.press("k");
+  await expect(title).toHaveText("Panel keys: newest");
+});
+
 test("the panel is one step back however many reviews it went through", async ({ page }) => {
   await clearInbox(page.request);
   await createReview(page.request, { title: "Panel back: oldest" });

@@ -24,7 +24,7 @@ Open a review with <kbd>Enter</kbd> or a click. It opens in a panel beside the i
 
 - **Open as a page** with the button at the right of the panel's header, when the view needs more room. The page has a button that shows the review in the panel again.
 - **Close the panel** with its *Close* button, or press <kbd>Esc</kbd>. If the plugin uses <kbd>Esc</kbd> itself, use the button.
-- **Go to the next or previous review** with <kbd>⌥↓</kbd> and <kbd>⌥↑</kbd>, in the order the inbox lists them. While the panel is open, <kbd>J</kbd>, <kbd>K</kbd> and the other keys go to the plugin's view, as they do on the review's page.
+- **Go to the next or previous review** with <kbd>J</kbd> and <kbd>K</kbd>, in the order the inbox lists them. They work while you work in the view too, unless you are typing in a field. <kbd>⌥↓</kbd> and <kbd>⌥↑</kbd> do the same, and go round at the ends of the list.
 - **Resize the panel** by dragging its left edge. Pinrail remembers the width.
 
 To open reviews as a page of their own instead, set *Settings › General › Opening a review* to *As a page*.

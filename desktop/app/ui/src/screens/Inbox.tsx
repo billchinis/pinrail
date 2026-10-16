@@ -264,21 +264,31 @@ export function Inbox() {
     event.preventDefault();
   };
 
-  // With a review open beside the list, ⌥↓ and ⌥↑ walk the list as it is
-  // drawn. The listener captures, so it runs before the layout's walk of the
-  // waiting reviews, which then leaves the key alone.
+  // With a review open beside the list, J and K move to the next and
+  // previous review, from the list or from the view, which passes them up;
+  // ⌥↓ and ⌥↑ do too, and go round at the ends. The listener captures, so
+  // it runs before the layout's walk of the waiting reviews, which then
+  // leaves the key alone.
   useEffect(() => {
     const onWalk = (event: KeyboardEvent) => {
-      if (modalOpen()) return;
-      if (openId && event.altKey && !hasMod(event) && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
-        const list = orderedRef.current;
-        if (!list.length) return;
-        event.preventDefault();
-        const at = list.findIndex((r) => r.id === openId);
-        const next = at < 0 ? 0 : (at + (event.key === "ArrowDown" ? 1 : list.length - 1)) % list.length;
-        openInPanel(list[next].id, { replace: true });
-        return;
-      }
+      if (!openId || modalOpen() || hasMod(event)) return;
+      const walk = event.altKey && !event.shiftKey && (event.key === "ArrowDown" || event.key === "ArrowUp");
+      const step = !event.altKey && !event.shiftKey && (event.key === "j" || event.key === "k");
+      if (!walk && !step) return;
+      const el = event.target as HTMLElement | null;
+      if (step && el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      const list = orderedRef.current;
+      if (!list.length) return;
+      event.preventDefault();
+      const at = list.findIndex((r) => r.id === openId);
+      const down = event.key === "ArrowDown" || event.key === "j";
+      const next =
+        at < 0
+          ? 0
+          : walk
+            ? (at + (down ? 1 : list.length - 1)) % list.length
+            : Math.min(Math.max(at + (down ? 1 : -1), 0), list.length - 1);
+      if (list[next].id !== openId) openInPanel(list[next].id, { replace: true });
     };
     window.addEventListener("keydown", onWalk, true);
     return () => window.removeEventListener("keydown", onWalk, true);
@@ -289,7 +299,7 @@ export function Inbox() {
       // the inbox's keys are not for a dialog in front of it
       if (modalOpen()) return;
       // the open review has the rest of the keys: the panel discards it, and
-      // J, K and Enter may be its view's
+      // Enter may be its view's
       if (openId) {
         if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
           const el = event.target as HTMLElement | null;
@@ -548,7 +558,7 @@ export function Inbox() {
         <footer className="inbox-footer">
           {openId ? (
             <>
-              <kbd>⌥</kbd> <kbd>↓</kbd> <kbd>↑</kbd> next and previous · <kbd>Esc</kbd> close · <kbd>/</kbd> search
+              <kbd>J</kbd> <kbd>K</kbd> next and previous · <kbd>Esc</kbd> close · <kbd>/</kbd> search
             </>
           ) : (
             <>
