@@ -25,6 +25,10 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Changed
 
+- An app update now updates the installed official plugins to the
+  versions it carries, when Pinrail starts. Until now, Settings › Plugins
+  offered each update and waited for you to apply it. Reviews keep the
+  version they were submitted to.
 - A plugin can no longer declare J or K as shortcuts. They are the
   app's keys for moving through the inbox, and `pinrail plugins check`
   refuses a manifest that declares them. The official plugins move

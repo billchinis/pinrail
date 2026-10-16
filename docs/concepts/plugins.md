@@ -59,7 +59,7 @@ A plugin you install is ready for agents as soon as it is installed. Your instru
 
 ## The plugins that come with Pinrail
 
-Five official plugins come with the app. The setup installs the two it recommends, `list` and `feedback`, and you install the others in *Settings › Plugins* or with `pinrail plugins install <name>`. A newer version arrives with an app update, and *Settings › Plugins* offers to update an installed plugin to it.
+Five official plugins come with the app. The setup installs the two it recommends, `list` and `feedback`, and you install the others in *Settings › Plugins* or with `pinrail plugins install <name>`. A newer version arrives with an app update, and Pinrail updates an installed plugin to it when it starts.
 
 | Plugin | For |
 |---|---|

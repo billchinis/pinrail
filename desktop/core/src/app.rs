@@ -142,6 +142,7 @@ impl Pinrail {
             config.plugins_dir(),
             catalogs,
         )?);
+        update_official(&db, &registry);
         let events = Events::new(db.clone());
         let settings =
             SettingsService::open(&config.data_dir, db.clone(), registry.clone(), events.bus());
@@ -168,6 +169,24 @@ impl Pinrail {
             bundles,
             _lock: lock,
         })
+    }
+}
+
+/// Updates each official plugin to the newest version the app's catalogs
+/// offer, so a new Pinrail brings its plugins' new versions with it. Each
+/// review keeps the version it was submitted to. A plugin installed from a
+/// folder, a zip or a link is left alone, and an update that fails leaves
+/// the version installed before.
+fn update_official(db: &Db, registry: &Registry) {
+    for plugin in registry.all() {
+        let Some(entry) = registry.update_for(&plugin.name) else {
+            continue;
+        };
+        let (id, version) = (entry.id(), entry.version.clone());
+        match crate::plugins::install::install_offered(db, registry, &id, Some(&version)) {
+            Ok(_) => eprintln!("pinrail: {id} updated from {} to {version}", plugin.version),
+            Err(error) => eprintln!("pinrail: {id} not updated to {version}: {error}"),
+        }
     }
 }
 
@@ -336,12 +355,12 @@ mod tests {
         }
     }
 
-    /// The next app carries list 2.0.0: it is offered as an update, not
-    /// applied. Once the person updates, new reviews use it, and each review
-    /// keeps the release it was submitted to. An older app opening the data
-    /// again offers nothing and changes nothing.
+    /// The next app carries list 2.0.0, and installs it when it opens: new
+    /// reviews use it, and each review keeps the release it was submitted
+    /// to. An older app opening the data again offers nothing and changes
+    /// nothing.
     #[test]
-    fn a_newer_release_in_the_next_app_is_offered_as_an_update() {
+    fn a_newer_release_in_the_next_app_is_installed_when_it_opens() {
         let dir = tempfile::tempdir().unwrap();
         let config = Config::new(dir.path(), 0);
         let app = Pinrail::open(config.clone()).unwrap();
@@ -361,12 +380,7 @@ mod tests {
         drop(app);
 
         let app = Pinrail::open_with(config.clone(), vec![with_list("2.0.0", true)]).unwrap();
-        assert_eq!(row(&app, "list")["update"], "2.0.0");
-        assert_eq!(submit(&app, "Still 1.0.0").plugin_version, "1.0.0");
-
-        let updated = install(&app, "list");
-        assert_eq!(updated["version"], "2.0.0");
-        assert_eq!(updated["replaced_version"], "1.0.0");
+        assert_eq!(row(&app, "list")["version"], "2.0.0");
         assert_eq!(row(&app, "list")["update"], Value::Null);
         let new = submit(&app, "With 2.0.0");
         assert_eq!(new.plugin_version, "2.0.0");
@@ -407,7 +421,7 @@ mod tests {
     /// with the registry's index beside the app's catalog; a plugin a
     /// catalog drops stays installed.
     #[test]
-    fn the_highest_version_of_any_catalog_is_the_update() {
+    fn the_highest_version_of_any_catalog_is_installed() {
         let dir = tempfile::tempdir().unwrap();
         let config = Config::new(dir.path(), 0);
         let app = Pinrail::open(config.clone()).unwrap();
@@ -428,11 +442,12 @@ mod tests {
             with_list("1.2.0", false),
         ];
         let app = Pinrail::open_with(config.clone(), catalogs).unwrap();
-        assert_eq!(row(&app, "list")["update"], "1.4.0");
+        assert_eq!(row(&app, "list")["version"], "1.4.0");
+        assert_eq!(row(&app, "list")["update"], Value::Null);
         drop(app);
 
         let app = Pinrail::open_with(config, vec![]).unwrap();
-        assert_eq!(row(&app, "list")["version"], "1.0.0");
+        assert_eq!(row(&app, "list")["version"], "1.4.0");
         assert_eq!(row(&app, "list")["update"], Value::Null);
     }
 

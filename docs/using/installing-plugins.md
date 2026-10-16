@@ -74,7 +74,7 @@ flowchart LR
   r3(["pending reviews, once opened"]) -.-> c
 ```
 
-An official plugin is upgraded by the app: when an app update brings a newer version, *Settings › Plugins* shows *Update* on its row. To upgrade any other plugin, install the new version from its folder or its zip. The new version replaces the installed one for new reviews, and for the pending reviews it accepts.
+An official plugin is upgraded by the app: when an app update brings a newer version of an installed official plugin, Pinrail installs it the next time it starts. Reviews submitted before keep the version they were submitted to. To upgrade any other plugin, install the new version from its folder or its zip. The new version replaces the installed one for new reviews, and for the pending reviews it accepts.
 
 - **A newer version** replaces the installed one.
 - **An older version** also replaces it. The install panel says that the version is older before you install it, and the command line says so afterwards, for example *Replaced review 1.3.0 with the older 1.2.0*.
