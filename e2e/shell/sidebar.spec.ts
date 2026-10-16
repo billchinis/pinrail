@@ -1,5 +1,8 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
-import { clearInbox, core, createReview, decide, settingsDialog } from "./helpers";
+import { clearInbox, core, createReview, decide, settingsDialog, onReviewPages } from "./helpers";
+
+// a review opened from the inbox or the sidebar is followed on its own page
+onReviewPages();
 
 const payload = {
   summary: "Two proposals.",

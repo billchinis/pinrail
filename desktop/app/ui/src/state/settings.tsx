@@ -20,6 +20,8 @@ export type Settings = {
   menu_bar_icon: boolean;
   notifications: { enabled: boolean; paused_until: string | null; sound: boolean; muted_plugins: string[] };
   shortcut: { global: string; global_opens: "oldest" | "inbox" };
+  /** where the inbox opens a review: beside the list, or as a page */
+  inbox: { open_in: "panel" | "page" };
   /** each plugin's own settings, only the values someone changed */
   plugins: Record<string, Record<string, unknown>>;
   /** each plugin's permission to open links without asking */
@@ -43,6 +45,7 @@ type Patch = {
   menu_bar_icon?: boolean;
   notifications?: Partial<Settings["notifications"]>;
   shortcut?: Partial<Settings["shortcut"]>;
+  inbox?: Partial<Settings["inbox"]>;
   /** a change to one or more plugins' settings, merged key by key */
   plugins?: Record<string, Record<string, unknown>>;
   /** a plugin's link permission replaced, or null to forget it */
@@ -73,6 +76,7 @@ type Served = Pick<
   | "menu_bar_icon"
   | "notifications"
   | "shortcut"
+  | "inbox"
   | "plugins"
   | "links"
   | "port"
@@ -92,6 +96,7 @@ const fromServer = (s: ServerSettings): Served => ({
     muted_plugins: s.notifications.muted_plugins,
   },
   shortcut: { global: s.shortcut.global, global_opens: s.shortcut.global_opens },
+  inbox: { open_in: s.inbox?.open_in ?? "panel" },
   plugins: s.plugins ?? {},
   links: s.links ?? {},
   port: s.port,
@@ -127,6 +132,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     menu_bar_icon: true,
     notifications: { enabled: true, paused_until: null, sound: true, muted_plugins: [] },
     shortcut: { global: DEFAULT_GLOBAL_SHORTCUT, global_opens: "oldest" },
+    inbox: { open_in: "panel" },
     plugins: {},
     links: {},
     port: 4747,
@@ -207,6 +213,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         patch.menu_bar_icon !== undefined ||
         patch.notifications ||
         patch.shortcut ||
+        patch.inbox ||
         patch.plugins ||
         patch.links ||
         patch.port !== undefined ||
@@ -222,6 +229,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           menu_bar_icon: patch.menu_bar_icon ?? base.menu_bar_icon,
           notifications: { ...base.notifications, ...patch.notifications },
           shortcut: { ...base.shortcut, ...patch.shortcut },
+          inbox: { ...base.inbox, ...patch.inbox },
           plugins: mergePlugins(base.plugins, patch.plugins),
           links: mergeLinks(base.links, patch.links),
           port: patch.port ?? base.port,
@@ -239,6 +247,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (patch.menu_bar_icon !== undefined) body.menu_bar_icon = patch.menu_bar_icon;
         if (patch.notifications) body.notifications = patch.notifications;
         if (patch.shortcut) body.shortcut = patch.shortcut;
+        if (patch.inbox) body.inbox = patch.inbox;
         if (patch.plugins) body.plugins = patch.plugins;
         if (patch.links) body.links = patch.links;
         if (patch.port !== undefined) body.port = patch.port;

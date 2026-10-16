@@ -27,6 +27,7 @@ async fn every_setting_is_listed_at_its_default() {
     assert_eq!(body["shortcut"]["global_opens"], "oldest");
     assert_eq!(body["port"], 4747);
     assert!(body["history"]["keep_days"].is_null());
+    assert_eq!(body["inbox"]["open_in"], "panel");
     assert!(
         !app.dir.path().join("settings.json").exists(),
         "nothing is written until something changes"

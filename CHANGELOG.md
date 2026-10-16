@@ -25,6 +25,11 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Changed
 
+- The inbox opens a review in a panel beside the list. The panel opens
+  the review as a page when the view needs more room, closes with its
+  button or Esc, and moves on to the next review after a decision. ⌥↓
+  and ⌥↑ step through the list from it. *Settings › General › Opening a
+  review* switches back to opening reviews as a page.
 - Only a decision or a discard made in the app is recorded as yours. One
   made with `pinrail decide` or `pinrail discard` is recorded as made by
   the agent the command runs under, if any, and one made through the API

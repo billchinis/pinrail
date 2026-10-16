@@ -5,6 +5,8 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { inTauri } from "../api/client";
+import { useSettings } from "../state/settings";
+import { reviewPath } from "./url";
 
 const OPEN_EVENT = "pinrail:open";
 
@@ -86,6 +88,10 @@ export function useNativeRoutes() {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
+  // a review's route opens where the inbox opens reviews
+  const { settings } = useSettings();
+  const openInRef = useRef(settings.inbox.open_in);
+  openInRef.current = settings.inbox.open_in;
   useEffect(() => {
     if (!inTauri()) return;
     let cancelled = false;
@@ -96,7 +102,9 @@ export function useNativeRoutes() {
         import("@tauri-apps/api/core"),
       ]);
       const go = (route: string) => {
-        if (route) navigateRef.current(route);
+        const review = route.match(/^\/reviews\/([^/?#]+)$/)?.[1];
+        if (review) navigateRef.current(reviewPath(decodeURIComponent(review), openInRef.current));
+        else if (route) navigateRef.current(route);
       };
       // the app also saves each route for a shell not listening yet; one
       // that arrived here is taken, so it cannot come back later

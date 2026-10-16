@@ -64,6 +64,12 @@ const LEAVES: &[Leaf] = &[
         "What closing the window does: hide it and keep running in the menu bar, or quit.",
     ),
     (
+        "/inbox/open_in",
+        Kind::Enum(&["panel", "page"]),
+        || json!("panel"),
+        "Where the inbox opens a review: in a panel beside the list, or as a page of its own.",
+    ),
+    (
         "/menu_bar_icon",
         Kind::Bool,
         || json!(true),

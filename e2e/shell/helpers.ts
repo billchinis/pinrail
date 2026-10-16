@@ -1,7 +1,7 @@
 // What the shell specs share: where the core listens, and reviews submitted,
 // decided and cleared through its API, as an agent or the app would.
 
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -45,6 +45,18 @@ export async function decide(request: APIRequestContext, id: string, data: unkno
     headers: { origin: shellOrigin },
   });
   expect(response.status(), await response.text()).toBe(200);
+}
+
+/** Sets where the inbox opens a review: its panel, the default, or a page. */
+export async function openReviewsIn(request: APIRequestContext, where: "panel" | "page") {
+  const response = await request.patch(`${core}/api/v1/settings`, { data: { inbox: { open_in: where } } });
+  expect(response.status(), await response.text()).toBe(200);
+}
+
+/** These specs follow a review opened as a page: each sets it, and puts the default back. */
+export function onReviewPages() {
+  test.beforeEach(({ request }) => openReviewsIn(request, "page"));
+  test.afterEach(({ request }) => openReviewsIn(request, "panel"));
 }
 
 /** Discards whatever is pending, so a test starts from an empty inbox. */

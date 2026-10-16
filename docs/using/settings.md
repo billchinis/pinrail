@@ -7,7 +7,13 @@ Open settings with <kbd>⌘,</kbd>, with the gear at the bottom of the sidebar, 
 
 ## General
 
-![Settings, General: startup and notifications.](screenshot:settings-general)
+![Settings, General: the inbox, startup and notifications.](screenshot:settings-general)
+
+### Inbox
+
+| Setting | What it does |
+|---|---|
+| **Opening a review** | *Beside the inbox* opens a review in a panel next to the list, which stays in view. *As a page* opens it on a page of its own. |
 
 ### Startup
 

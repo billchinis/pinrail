@@ -17,7 +17,7 @@ import {
   SunMoon,
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router";
+import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { sendFeedback } from "../api/client";
 import { overlayTitleBar } from "../lib/native";
 import { CommandPalette, type PaletteAction } from "./CommandPalette";
@@ -26,7 +26,7 @@ import { Toasts } from "./Toasts";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { FeedbackDialog, rememberFeedbackEmail, type FeedbackDraft } from "./FeedbackDialog";
 import { MOD, SHIFT, hasMod } from "../lib/keys";
-import { NO_PROJECT } from "../lib/url";
+import { NO_PROJECT, reviewPath, reviewShown } from "../lib/url";
 import { useLive } from "../state/live";
 import { useToast } from "../state/toasts";
 import { useSettings } from "../state/settings";
@@ -108,7 +108,7 @@ export function Layout({ children }: { children: ReactNode }) {
       icon: Inbox,
       run: () => {
         const oldest = live.pending[live.pending.length - 1];
-        navigate(oldest ? `/reviews/${oldest.id}` : "/");
+        navigate(oldest ? reviewPath(oldest.id, prefs.inbox.open_in) : "/");
       },
     },
     { id: "history", label: "Go to history", keys: NAV[1].keys, icon: History, run: () => navigate("/history") },
@@ -131,7 +131,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { id: "settings", label: "Open settings", keys: [MOD, ","], icon: Settings, run: () => setSettings("general") },
     { id: "welcome", label: "Set up Pinrail", icon: Hand, run: () => setWelcome({ step: 0 }) },
     { id: "feedback", label: "Send feedback…", icon: MessageSquare, run: () => setFeedback(true) },
-    ...(location.pathname.startsWith("/reviews/")
+    ...(reviewShown(location.pathname, location.search)
       ? [
           {
             id: "discard",
@@ -164,7 +164,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const openFromWelcome = (id: string) => {
     setAway(id);
     setWelcome(null);
-    navigate(`/reviews/${id}`);
+    navigate(reviewPath(id, prefs.inbox.open_in));
   };
   useEffect(() => {
     if (!away || !live.connected || live.pending.some((r) => r.id === away)) return;
@@ -184,6 +184,8 @@ export function Layout({ children }: { children: ReactNode }) {
 
   // The reviews waiting, oldest first, the order the global shortcut uses;
   // kept in a ref so the key handler below sees the current list.
+  // the review on screen, on its page or in the inbox's panel
+  const shown = reviewShown(location.pathname, location.search);
   const waiting = useMemo(
     () => [...live.pending].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)),
     [live.pending],
@@ -196,17 +198,21 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [live.pending]);
   const waitingRef = useRef(waiting);
   waitingRef.current = waiting;
-  const pathRef = useRef(location.pathname);
-  pathRef.current = location.pathname;
+  const shownRef = useRef<string | null>(null);
+  shownRef.current = reviewShown(location.pathname, location.search);
+  const openInRef = useRef(prefs.inbox.open_in);
+  openInRef.current = prefs.inbox.open_in;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // ⌥↓ and ⌥↑ walk the waiting reviews from wherever you are
+      // the inbox walks its own list while a review is open in its panel
+      if (event.defaultPrevented) return;
       if (event.altKey && !hasMod(event) && !event.shiftKey && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
         const list = waitingRef.current;
         if (!list.length) return;
         event.preventDefault();
-        const current = pathRef.current.match(/^\/reviews\/([^/]+)/)?.[1];
+        const current = shownRef.current;
         const at = list.findIndex((r) => r.id === current);
         const next =
           at < 0
@@ -214,7 +220,7 @@ export function Layout({ children }: { children: ReactNode }) {
               ? 0
               : list.length - 1
             : (at + (event.key === "ArrowDown" ? 1 : list.length - 1)) % list.length;
-        navigate(`/reviews/${list[next].id}`);
+        navigate(reviewPath(list[next].id, openInRef.current));
         return;
       }
       if (hasMod(event) && !event.altKey) {
@@ -360,10 +366,15 @@ export function Layout({ children }: { children: ReactNode }) {
                     label={[r.origin.repo, r.origin.workflow].filter(Boolean).join(" · ") || r.plugin}
                     side="top"
                   >
-                    <NavLink to={`/reviews/${r.id}`} className="sidebar-review" data-testid="waiting-review">
+                    <Link
+                      to={reviewPath(r.id, prefs.inbox.open_in)}
+                      className={`sidebar-review ${shown === r.id ? "active" : ""}`}
+                      aria-current={shown === r.id ? "page" : undefined}
+                      data-testid="waiting-review"
+                    >
                       <PluginIcon icon={live.pluginIcon(r.plugin)} size={14} strokeWidth={1.75} />
                       <span className="sidebar-review-title">{r.title}</span>
-                    </NavLink>
+                    </Link>
                   </Tooltip>
                 ))}
                 {waiting.length > WAITING_SHOWN ? (

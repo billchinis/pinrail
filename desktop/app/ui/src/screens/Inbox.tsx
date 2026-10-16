@@ -1,6 +1,6 @@
 import { Ban, Blocks, CheckCheck, FolderGit2, List, Search, SearchX } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, type To } from "react-router";
 import type { Review } from "../api/types";
 import { EmptyState } from "../components/EmptyState";
 import { Pager, pageOf, pageSizeOf } from "../components/Pager";
@@ -15,6 +15,8 @@ import { clearAll, useUrlParams } from "../lib/url";
 import { useLive } from "../state/live";
 import { NO_PROJECT, inProject } from "../lib/url";
 import { MOD, hasMod, modalOpen } from "../lib/keys";
+import { useSettings } from "../state/settings";
+import { ReviewView } from "./ReviewScreen";
 
 /** How the inbox is laid out, remembered on this machine. */
 type Layout = "projects" | "list";
@@ -24,6 +26,20 @@ function savedLayout(): Layout {
     return localStorage.getItem(LAYOUT) === "list" ? "list" : "projects";
   } catch {
     return "projects";
+  }
+}
+
+/** The panel's width, remembered on this machine. */
+const PANEL_WIDTH = "pinrail.inbox.panel";
+const PANEL_MIN = 420;
+// the list keeps at least this much beside the panel
+const LIST_MIN = 320;
+function savedWidth(): number | null {
+  try {
+    const n = Number(localStorage.getItem(PANEL_WIDTH));
+    return n >= PANEL_MIN ? n : null;
+  } catch {
+    return null;
   }
 }
 
@@ -47,6 +63,10 @@ export function Inbox() {
   const live = useLive();
   const navigate = useNavigate();
   const [params, updateParams] = useUrlParams();
+  const { settings: prefs } = useSettings();
+  // with the panel, a review opens beside the list, named by ?open=
+  const panelMode = prefs.inbox.open_in === "panel";
+  const openId = panelMode ? params.get("open") : null;
   // The search box keeps its own text: a router navigation per keystroke is
   // deferred, and a controlled input bound to the URL would snap back.
   const [q, setQ] = useState(params.get("q") ?? "");
@@ -161,10 +181,124 @@ export function Inbox() {
     setFocused((f) => Math.min(f, Math.max(0, shown.length - 1)));
   }, [shown.length]);
 
+  // The highlight follows the review the panel opens, by a click, a key or
+  // after a decision; a pointer resting on another row takes it back only
+  // once it moves.
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  useEffect(() => {
+    if (!openId) return;
+    const at = shownRef.current.findIndex((r) => r.id === openId);
+    if (at < 0) return;
+    keyboard.current = true;
+    setFocused(at);
+  }, [openId]);
+
+  /** Where a review's row leads: the panel, keeping the filters, or its page. */
+  const hrefFor = useCallback(
+    (id: string): To => {
+      if (!panelMode) return `/reviews/${id}`;
+      const next = new URLSearchParams(params);
+      next.set("open", id);
+      return { pathname: "/", search: `?${next}` };
+    },
+    [panelMode, params],
+  );
+  /** Opens a review in the panel, or closes it with null. */
+  const openInPanel = useCallback(
+    (id: string | null, options?: { replace?: boolean }) =>
+      updateParams((next) => {
+        if (id) next.set("open", id);
+        else next.delete("open");
+      }, options),
+    [updateParams],
+  );
+  // the order the rows are drawn in, as the panel walks it
+  const orderedRef = useRef(ordered);
+  orderedRef.current = ordered;
+  /** The review after the one that just ended, or before it at the end of the list. */
+  const openNext = useCallback(() => {
+    const list = orderedRef.current;
+    const at = list.findIndex((r) => r.id === openId);
+    const next = at < 0 ? list[0] : (list[at + 1] ?? list[at - 1]);
+    openInPanel(next && next.id !== openId ? next.id : null, { replace: true });
+  }, [openId, openInPanel]);
+  const closePanel = useCallback(() => openInPanel(null), [openInPanel]);
+
+  // the panel's width, dragged at its edge, within what the window allows
+  const split = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState<number | null>(savedWidth);
+  const clampWidth = (w: number) => {
+    const room = split.current?.clientWidth ?? window.innerWidth;
+    return Math.round(Math.max(PANEL_MIN, Math.min(w, room - LIST_MIN)));
+  };
+  const keepWidth = (w: number) => {
+    setWidth(w);
+    try {
+      localStorage.setItem(PANEL_WIDTH, String(w));
+    } catch {
+      // no storage: the width lasts until the app restarts
+    }
+  };
+  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const right = split.current?.getBoundingClientRect().right ?? window.innerWidth;
+    // the view's frame would take the pointer while it passes over it
+    document.body.classList.add("is-resizing");
+    const onMove = (e: PointerEvent) => setWidth(clampWidth(right - e.clientX));
+    const onUp = (e: PointerEvent) => {
+      document.body.classList.remove("is-resizing");
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      keepWidth(clampWidth(right - e.clientX));
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+  const resizeBy = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 80 : 20;
+    const now = width ?? split.current?.querySelector<HTMLElement>(".review-panel")?.offsetWidth ?? PANEL_MIN;
+    if (event.key === "ArrowLeft") keepWidth(clampWidth(now + step));
+    else if (event.key === "ArrowRight") keepWidth(clampWidth(now - step));
+    else return;
+    event.preventDefault();
+  };
+
+  // With a review open beside the list, ⌥↓ and ⌥↑ walk the list as it is
+  // drawn. The listener captures, so it runs before the layout's walk of the
+  // waiting reviews, which then leaves the key alone.
+  useEffect(() => {
+    const onWalk = (event: KeyboardEvent) => {
+      if (modalOpen()) return;
+      if (openId && event.altKey && !hasMod(event) && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+        const list = orderedRef.current;
+        if (!list.length) return;
+        event.preventDefault();
+        const at = list.findIndex((r) => r.id === openId);
+        const next = at < 0 ? 0 : (at + (event.key === "ArrowDown" ? 1 : list.length - 1)) % list.length;
+        openInPanel(list[next].id, { replace: true });
+        return;
+      }
+    };
+    window.addEventListener("keydown", onWalk, true);
+    return () => window.removeEventListener("keydown", onWalk, true);
+  }, [openId, openInPanel]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // the inbox's keys are not for a dialog in front of it
       if (modalOpen()) return;
+      // the open review has the rest of the keys: the panel discards it, and
+      // J, K and Enter may be its view's
+      if (openId) {
+        if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+          const el = event.target as HTMLElement | null;
+          if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+          event.preventDefault();
+          search.current?.focus();
+        }
+        return;
+      }
       if (hasMod(event) && !event.altKey && !event.shiftKey && (event.key === "d" || event.key === "D")) {
         // the key must not land in the reason field that opens
         event.preventDefault();
@@ -187,18 +321,20 @@ export function Inbox() {
       if (event.key === "j" || event.key === "k") keyboard.current = true;
       if (event.key === "j") setFocused((f) => Math.min(f + 1, shown.length - 1));
       if (event.key === "k") setFocused((f) => Math.max(f - 1, 0));
-      if (event.key === "Enter" && shown[focused]) navigate(`/reviews/${shown[focused].id}`);
+      if (event.key === "Enter" && shown[focused]) navigate(hrefFor(shown[focused].id));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shown, focused, navigate, discarding]);
+  }, [shown, focused, navigate, discarding, openId, openInPanel, hrefFor]);
 
   /** A review's row; `here` is its place in the order J and K walk. */
   const row = (review: Review, here: number) => (
     <Link
       key={review.id}
-      to={`/reviews/${review.id}`}
-      className={`review-row ${here === focused ? "is-focused" : ""}`}
+      to={hrefFor(review.id)}
+      replace={!!openId}
+      className={`review-row ${here === focused ? "is-focused" : ""} ${review.id === openId ? "is-open" : ""}`}
+      aria-current={review.id === openId ? "true" : undefined}
       onMouseEnter={() => !keyboard.current && setFocused(here)}
       data-testid="review-row"
     >
@@ -261,156 +397,187 @@ export function Inbox() {
   let index = -1;
 
   return (
-    <div className="inbox">
-      <header className="page-head">
-        <div className="heading-inline">
-          <h1>Inbox</h1>
-          <span className="inbox-total" data-testid="inbox-total">
-            {live.pendingCount}
-          </span>
-        </div>
-        <div className="inbox-controls">
-          <Tooltip label="Search the inbox" keys={["/"]} hoverOnly>
-            <label className="search-field">
-              <Search size={14} aria-hidden="true" />
-              <input
-                ref={search}
-                id="inbox-search"
-                type="search"
-                placeholder="Search inbox…"
-                aria-label="Search inbox"
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setParam("q", e.target.value);
-                }}
-              />
-            </label>
-          </Tooltip>
-          <Select
-            id="inbox-repo"
-            label="Project"
-            icon={<FolderGit2 size={14} />}
-            value={repo}
-            onChange={(v) => setParam("repo", v)}
-            options={[
-              { value: "", label: "All projects", icon: <FolderGit2 size={14} /> },
-              ...live.projects.map((r) => ({ value: r, label: r, icon: <FolderGit2 size={14} /> })),
-              ...(live.unassigned > 0 || repo === NO_PROJECT
-                ? [{ value: NO_PROJECT, label: "No project", icon: <FolderGit2 size={14} /> }]
-                : []),
-            ]}
-          />
-          <Select
-            id="inbox-plugin"
-            label="Plugin"
-            icon={<Blocks size={14} />}
-            value={plugin}
-            onChange={(v) => setParam("plugin", v)}
-            options={[
-              { value: "", label: "All plugins", icon: <Blocks size={14} /> },
-              ...plugins.map((p) => ({
-                value: p,
-                label: p,
-                icon: <PluginIcon icon={live.pluginIcon(p)} size={14} />,
-              })),
-            ]}
-          />
-        </div>
-      </header>
-      <nav className="list-tabs" aria-label="Inbox views">
-        <button type="button" className={rounds !== "new" ? "active" : ""} onClick={() => setParam("rounds", "")}>
-          Pending <span>{live.pendingCount}</span>
-        </button>
-        <button type="button" className={rounds === "new" ? "active" : ""} onClick={() => setParam("rounds", "new")}>
-          New rounds <span>{newRounds}</span>
-        </button>
-        <span className="list-sort">Newest first</span>
-        <span className="segmented inbox-layout" role="radiogroup" aria-label="Inbox layout">
-          <Tooltip label="Grouped by project" side="top">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={layout === "projects"}
-              aria-label="Grouped by project"
-              className={layout === "projects" ? "is-on" : ""}
-              onClick={() => setLayout("projects")}
-            >
-              <FolderGit2 size={13} />
-            </button>
-          </Tooltip>
-          <Tooltip label="One list, newest first" side="top">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={layout === "list"}
-              aria-label="One list"
-              className={layout === "list" ? "is-on" : ""}
-              onClick={() => setLayout("list")}
-            >
-              <List size={13} />
-            </button>
-          </Tooltip>
-        </span>
-      </nav>
-      {live.pendingUnloaded > 0 ? (
-        <p className="notice" data-testid="inbox-capped">
-          The inbox shows the newest {live.pending.length} of {live.pendingCount} pending reviews. Decide or withdraw
-          some to see the rest.
-        </p>
-      ) : null}
-      {groups.length === 0 ? (
-        <EmptyState
-          title={filtered ? "No matching reviews" : "All caught up"}
-          icon={filtered ? <SearchX size={28} strokeWidth={1.5} /> : <CheckCheck size={28} strokeWidth={1.5} />}
-          actions={
-            filtered ? (
+    <div className={`inbox ${openId ? "has-panel" : ""}`} ref={split}>
+      <div className="inbox-side">
+        <header className="page-head">
+          <div className="heading-inline">
+            <h1>Inbox</h1>
+            <span className="inbox-total" data-testid="inbox-total">
+              {live.pendingCount}
+            </span>
+          </div>
+          <div className="inbox-controls">
+            <Tooltip label="Search the inbox" keys={["/"]} hoverOnly>
+              <label className="search-field">
+                <Search size={14} aria-hidden="true" />
+                <input
+                  ref={search}
+                  id="inbox-search"
+                  type="search"
+                  placeholder="Search inbox…"
+                  aria-label="Search inbox"
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    setParam("q", e.target.value);
+                  }}
+                />
+              </label>
+            </Tooltip>
+            <Select
+              id="inbox-repo"
+              label="Project"
+              icon={<FolderGit2 size={14} />}
+              value={repo}
+              onChange={(v) => setParam("repo", v)}
+              options={[
+                { value: "", label: "All projects", icon: <FolderGit2 size={14} /> },
+                ...live.projects.map((r) => ({ value: r, label: r, icon: <FolderGit2 size={14} /> })),
+                ...(live.unassigned > 0 || repo === NO_PROJECT
+                  ? [{ value: NO_PROJECT, label: "No project", icon: <FolderGit2 size={14} /> }]
+                  : []),
+              ]}
+            />
+            <Select
+              id="inbox-plugin"
+              label="Plugin"
+              icon={<Blocks size={14} />}
+              value={plugin}
+              onChange={(v) => setParam("plugin", v)}
+              options={[
+                { value: "", label: "All plugins", icon: <Blocks size={14} /> },
+                ...plugins.map((p) => ({
+                  value: p,
+                  label: p,
+                  icon: <PluginIcon icon={live.pluginIcon(p)} size={14} />,
+                })),
+              ]}
+            />
+          </div>
+        </header>
+        <nav className="list-tabs" aria-label="Inbox views">
+          <button type="button" className={rounds !== "new" ? "active" : ""} onClick={() => setParam("rounds", "")}>
+            Pending <span>{live.pendingCount}</span>
+          </button>
+          <button type="button" className={rounds === "new" ? "active" : ""} onClick={() => setParam("rounds", "new")}>
+            New rounds <span>{newRounds}</span>
+          </button>
+          <span className="list-sort">Newest first</span>
+          <span className="segmented inbox-layout" role="radiogroup" aria-label="Inbox layout">
+            <Tooltip label="Grouped by project" side="top">
               <button
                 type="button"
-                className="chrome-button"
-                onClick={() => {
-                  setQ("");
-                  updateParams(clearAll, { replace: true });
-                }}
+                role="radio"
+                aria-checked={layout === "projects"}
+                aria-label="Grouped by project"
+                className={layout === "projects" ? "is-on" : ""}
+                onClick={() => setLayout("projects")}
               >
-                Clear filters
+                <FolderGit2 size={13} />
               </button>
-            ) : (
-              <Link to="/history" className="chrome-button">
-                View history
-              </Link>
-            )
-          }
-        >
-          {filtered
-            ? "Try a different search or clear the filters."
-            : "New reviews appear here when an agent needs you."}
-        </EmptyState>
-      ) : layout === "list" ? (
-        <div className="inbox-list">{shown.map((review, i) => row(review, i))}</div>
-      ) : (
-        <div className="inbox-groups">
-          {groups.map(([repoName, items]) => (
-            <details key={repoName || "none"} className="inbox-repo" open data-testid="inbox-group">
-              <summary data-testid="inbox-group-heading">
-                <strong data-testid="inbox-group-name">{repoName || "No project"}</strong>
-                <span>{reviews.filter((r) => (r.origin.repo ?? "") === repoName).length}</span>
-              </summary>
-              {items.map((review) => {
-                index += 1;
-                return row(review, index);
-              })}
-            </details>
-          ))}
-        </div>
-      )}
-      <Pager label="Inbox" page={current} size={size} total={ordered.length} onPage={setPage} onSize={setSize} />
-      {discarding ? (
-        <DiscardDialog review={discarding} onClose={() => setDiscarding(null)} onDone={() => setDiscarding(null)} />
+            </Tooltip>
+            <Tooltip label="One list, newest first" side="top">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={layout === "list"}
+                aria-label="One list"
+                className={layout === "list" ? "is-on" : ""}
+                onClick={() => setLayout("list")}
+              >
+                <List size={13} />
+              </button>
+            </Tooltip>
+          </span>
+        </nav>
+        {live.pendingUnloaded > 0 ? (
+          <p className="notice" data-testid="inbox-capped">
+            The inbox shows the newest {live.pending.length} of {live.pendingCount} pending reviews. Decide or withdraw
+            some to see the rest.
+          </p>
+        ) : null}
+        {groups.length === 0 ? (
+          <EmptyState
+            title={filtered ? "No matching reviews" : "All caught up"}
+            icon={filtered ? <SearchX size={28} strokeWidth={1.5} /> : <CheckCheck size={28} strokeWidth={1.5} />}
+            actions={
+              filtered ? (
+                <button
+                  type="button"
+                  className="chrome-button"
+                  onClick={() => {
+                    setQ("");
+                    updateParams(clearAll, { replace: true });
+                  }}
+                >
+                  Clear filters
+                </button>
+              ) : (
+                <Link to="/history" className="chrome-button">
+                  View history
+                </Link>
+              )
+            }
+          >
+            {filtered
+              ? "Try a different search or clear the filters."
+              : "New reviews appear here when an agent needs you."}
+          </EmptyState>
+        ) : layout === "list" ? (
+          <div className="inbox-list">{shown.map((review, i) => row(review, i))}</div>
+        ) : (
+          <div className="inbox-groups">
+            {groups.map(([repoName, items]) => (
+              <details key={repoName || "none"} className="inbox-repo" open data-testid="inbox-group">
+                <summary data-testid="inbox-group-heading">
+                  <strong data-testid="inbox-group-name">{repoName || "No project"}</strong>
+                  <span>{reviews.filter((r) => (r.origin.repo ?? "") === repoName).length}</span>
+                </summary>
+                {items.map((review) => {
+                  index += 1;
+                  return row(review, index);
+                })}
+              </details>
+            ))}
+          </div>
+        )}
+        <Pager label="Inbox" page={current} size={size} total={ordered.length} onPage={setPage} onSize={setSize} />
+        {discarding ? (
+          <DiscardDialog review={discarding} onClose={() => setDiscarding(null)} onDone={() => setDiscarding(null)} />
+        ) : null}
+        <footer className="inbox-footer">
+          {openId ? (
+            <>
+              <kbd>⌥</kbd> <kbd>↓</kbd> <kbd>↑</kbd> next and previous · <kbd>Esc</kbd> close · <kbd>/</kbd> search
+            </>
+          ) : (
+            <>
+              <kbd>J</kbd> <kbd>K</kbd> move · <kbd>↵</kbd> open · <kbd>/</kbd> search
+            </>
+          )}
+        </footer>
+      </div>
+      {openId ? (
+        <>
+          <div
+            className="panel-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the review panel"
+            tabIndex={0}
+            onPointerDown={startResize}
+            onKeyDown={resizeBy}
+          />
+          <aside
+            className="review-panel"
+            aria-label="Review"
+            data-testid="review-panel"
+            style={width ? { width: clampWidth(width) } : undefined}
+          >
+            <ReviewView id={openId} inPanel linkTo={hrefFor} onEnded={openNext} onClose={closePanel} />
+          </aside>
+        </>
       ) : null}
-      <footer className="inbox-footer">
-        <kbd>J</kbd> <kbd>K</kbd> move · <kbd>↵</kbd> open · <kbd>/</kbd> search
-      </footer>
     </div>
   );
 }

@@ -20,11 +20,18 @@ The summary is a set of counts, such as *1 blocker · 2 major · 1 nit* for a co
 
 ## Deciding a review
 
-Open a review with <kbd>Enter</kbd> or a click. The plugin's view fills the screen. Depending on the plugin, it shows a list, a diff, draft emails or a form.
+Open a review with <kbd>Enter</kbd> or a click. It opens in a panel beside the inbox, which stays in view. Depending on the plugin, the view shows a list, a diff, draft emails or a form.
+
+- **Open as a page** with the button at the right of the panel's header, when the view needs more room. The page has a button that shows the review in the panel again.
+- **Close the panel** with its *Close* button, or press <kbd>Esc</kbd>. If the plugin uses <kbd>Esc</kbd> itself, use the button.
+- **Go to the next or previous review** with <kbd>⌥↓</kbd> and <kbd>⌥↑</kbd>, in the order the inbox lists them. While the panel is open, <kbd>J</kbd>, <kbd>K</kbd> and the other keys go to the plugin's view, as they do on the review's page.
+- **Resize the panel** by dragging its left edge. Pinrail remembers the width.
+
+To open reviews as a page of their own instead, set *Settings › General › Opening a review* to *As a page*.
 
 1. **Decide in the view.** Use the controls that the plugin provides, for example to accept, reject, edit or comment. Your work is saved as a draft as you go, so you can open another review and come back to it.
 2. **Add a note to the agent**, if you want to, in the box below the view.
-3. **Hand over** with the button, or <kbd>⌘↵</kbd>. The button says what will happen, such as *Hand over 3 of 5*. Pinrail then returns to the inbox, where the next review is waiting.
+3. **Hand over** with the button, or <kbd>⌘↵</kbd>. The button says what will happen, such as *Hand over 3 of 5*. In the panel, Pinrail then opens the next review in the list, and closes the panel after the last one. On a review's page, Pinrail returns to the inbox.
 
 :::caution[Drafts last only while Pinrail runs]
 Quitting, restarting or updating Pinrail loses your drafts and any note to the agent that you have not handed over yet. Hand over a review before you quit the app.
@@ -75,6 +82,7 @@ Press <kbd>?</kbd> anywhere in the app to see these. On Linux, use <kbd>Ctrl</kb
 | <kbd>J</kbd> / <kbd>K</kbd> | Next / previous review |
 | <kbd>Enter</kbd> | Open the focused review |
 | <kbd>⌥↓</kbd> / <kbd>⌥↑</kbd> | Next / previous waiting review |
+| <kbd>Esc</kbd> | Close the review panel |
 | <kbd>⌘D</kbd> | Discard the focused or open review |
 | <kbd>/</kbd> | Search the inbox or the history |
 | <kbd>⌘K</kbd> | Search everything |

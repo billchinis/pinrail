@@ -4,15 +4,18 @@ import {
   ClipboardX,
   Clock,
   Copy,
+  Expand,
   ExternalLink,
   Maximize2,
   Minimize2,
+  PanelRight,
   RefreshCw,
   Send,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams, type To } from "react-router";
 import { ApiError, api } from "../api/client";
 import { copyText } from "../lib/clipboard";
 import type { Plugin, Review, Violation } from "../api/types";
@@ -38,8 +41,28 @@ import { useTopBar } from "../state/topbar";
 
 const NOTE_PREFIX = "pinrail:draft:";
 
+/** The review page, at /reviews/:id. */
 export function ReviewScreen() {
   const { id = "" } = useParams();
+  return <ReviewView id={id} />;
+}
+
+type ReviewViewProps = {
+  id: string;
+  /** in the inbox's panel, beside the list, rather than a page of its own */
+  inPanel?: boolean;
+  /** where a link to another round of the review goes */
+  linkTo?: (id: string) => To;
+  /** the review ended here, decided or discarded; the page goes back to the inbox */
+  onEnded?: () => void;
+  /** closes the panel */
+  onClose?: () => void;
+};
+
+const pageOf = (id: string): To => `/reviews/${id}`;
+
+/** A review: its strip, its view, and the note that goes with a decision. */
+export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onClose }: ReviewViewProps) {
   const live = useLive();
   const { settings: prefs, update: updatePrefs } = useSettings();
   const navigate = useNavigate();
@@ -233,7 +256,7 @@ export function ReviewScreen() {
         // the review is done with: back to what is still waiting, once the
         // view has been told submitted, which the bridge sends on return
         toast("Decision recorded");
-        setTimeout(() => navigate("/"), 0);
+        setTimeout(() => (onEnded ? onEnded() : navigate("/")), 0);
         return { ok: true, decision: decided.decision! };
       } catch (e) {
         if (wanted.current !== id) return { ok: false, violations: [] };
@@ -254,7 +277,7 @@ export function ReviewScreen() {
         return { ok: false, violations: [] };
       }
     },
-    [id, load, navigate, toast, current?.bundle],
+    [id, load, navigate, toast, current?.bundle, onEnded],
   );
 
   // the plugin's own settings as they stand: its defaults under what was set
@@ -364,6 +387,20 @@ export function ReviewScreen() {
         setMaximized(false);
         return;
       }
+      // the panel closes on Escape, unless the view claims the key
+      if (
+        event.key === "Escape" &&
+        onClose &&
+        !finding &&
+        !plugin?.shortcuts?.some((s) => s.keys.toLowerCase() === "escape") &&
+        !modalOpen()
+      ) {
+        const target = event.target as HTMLElement | null;
+        if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")) {
+          onClose();
+          return;
+        }
+      }
       if (hasMod(event) && event.shiftKey && !event.altKey && (event.key === "m" || event.key === "M")) {
         event.preventDefault();
         if (plugin) setMaximized((m) => !m);
@@ -392,8 +429,8 @@ export function ReviewScreen() {
       // [ and ] alone move between rounds; with ⌘ or Ctrl they are Back and
       // Forward, which the layout handles
       const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
-      if (plain && event.key === "[" && previous) navigate(`/reviews/${previous.id}`);
-      if (plain && event.key === "]" && revisedBy) navigate(`/reviews/${revisedBy.id}`);
+      if (plain && event.key === "[" && previous) navigate(linkTo(previous.id));
+      if (plain && event.key === "]" && revisedBy) navigate(linkTo(revisedBy.id));
       // one of the plugin's declared keys, pressed with the shell in focus:
       // it goes to the view as if typed there
       const combo = comboFromEvent(event);
@@ -427,7 +464,7 @@ export function ReviewScreen() {
       window.removeEventListener("pinrail:command", onCommand);
       window.removeEventListener("pinrail:discard", onDiscard);
     };
-  }, [previous, revisedBy, navigate, maximized, plugin, pending]);
+  }, [previous, revisedBy, navigate, maximized, plugin, pending, onClose, finding, linkTo]);
 
   // the view leaves with the review
   // what was said and opened for the last review stays with it: the screen
@@ -474,6 +511,8 @@ export function ReviewScreen() {
       ) : null,
     [review?.title, review?.origin.ref, originUrl, back.to, back.label, location.state], // eslint-disable-line react-hooks/exhaustive-deps -- the fields the crumb shows, not the whole review
   );
+  // a page opened from the inbox can go back to its panel
+  const showInPanel = !inPanel && !fromHistory && prefs.inbox.open_in === "panel" && pending;
   const actions = useMemo(
     () =>
       review ? (
@@ -521,10 +560,40 @@ export function ReviewScreen() {
               </button>
             </Tooltip>
           ) : null}
+          {inPanel ? (
+            <Tooltip label="Open as a page" side="bottom">
+              <button
+                type="button"
+                className="bar-button"
+                onClick={() => navigate(`/reviews/${id}`)}
+                aria-label="Open as a page"
+              >
+                <Expand size={15} />
+              </button>
+            </Tooltip>
+          ) : showInPanel ? (
+            <Tooltip label="Show in the inbox's panel" side="bottom">
+              <button
+                type="button"
+                className="bar-button"
+                onClick={() => navigate(`/?open=${encodeURIComponent(id)}`)}
+                aria-label="Show in the inbox's panel"
+              >
+                <PanelRight size={15} />
+              </button>
+            </Tooltip>
+          ) : null}
+          {inPanel && onClose ? (
+            <Tooltip label="Close" keys={["Esc"]} side="bottom">
+              <button type="button" className="bar-button" onClick={onClose} aria-label="Close the panel">
+                <X size={15} />
+              </button>
+            </Tooltip>
+          ) : null}
         </>
       ) : null,
     // the id too: the screen outlives a change of review, and Copy acts on it
-    [id, review?.status, plugin, copied], // eslint-disable-line react-hooks/exhaustive-deps -- copyMarkdown reads only the id
+    [id, review?.status, plugin, copied, inPanel, showInPanel, onClose], // eslint-disable-line react-hooks/exhaustive-deps -- copyMarkdown reads only the id
   );
   const forPlugin = useMemo(
     () =>
@@ -538,7 +607,11 @@ export function ReviewScreen() {
         : undefined,
     [plugin],
   );
-  const topbar = useMemo(() => (review ? { crumb, plugin: forPlugin } : null), [review, crumb, forPlugin]);
+  // in the panel the inbox keeps the bar, with its own title
+  const topbar = useMemo(
+    () => (review && !inPanel ? { crumb, plugin: forPlugin } : null),
+    [review, crumb, forPlugin, inPanel],
+  );
   useTopBar(topbar);
 
   const onNote = (value: string) => {
@@ -563,7 +636,28 @@ export function ReviewScreen() {
   const originText = [origin.repo, origin.workflow].filter(Boolean).join(" / ");
 
   return (
-    <div className="review-page">
+    <div className={`review-page ${inPanel ? "in-panel" : ""}`}>
+      {inPanel ? (
+        <div className="panel-head" data-testid="panel-head">
+          <span className="panel-title copyable" title={review.title} data-testid="review-title">
+            {review.title}
+          </span>
+          {originUrl ? (
+            <Tooltip label={`Open ${review.origin.ref ?? "the origin"} in the browser`}>
+              <a
+                href={originUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="bar-button crumb-link"
+                aria-label="Open the origin"
+              >
+                <ExternalLink size={13} />
+              </a>
+            </Tooltip>
+          ) : null}
+          <span className="strip-actions">{actions}</span>
+        </div>
+      ) : null}
       <div className="review-strip" data-testid="review-strip">
         <div className="strip-info">
           <OutcomeBadge review={review} />
@@ -625,8 +719,8 @@ export function ReviewScreen() {
                 return (
                   <Tooltip key={r.id} label={`${r.title} · ${outcome.label}`} side="bottom">
                     <Link
-                      to={`/reviews/${r.id}`}
-                      state={location.state}
+                      to={linkTo(r.id)}
+                      state={inPanel ? undefined : location.state}
                       className={`round-pill round-${outcome.tone}${current ? " is-current" : unopened.has(r.id) ? " is-waiting" : ""}`}
                       aria-current={current ? "page" : undefined}
                     >
@@ -638,7 +732,7 @@ export function ReviewScreen() {
             </span>
           ) : null}
         </div>
-        <span className="strip-actions">{actions}</span>
+        {inPanel ? null : <span className="strip-actions">{actions}</span>}
       </div>
 
       {flash ? <p className="notice">{flash}</p> : null}
@@ -678,7 +772,7 @@ export function ReviewScreen() {
       {waiting ? (
         <p className="notice notice-round">
           Round {waiting.number} is waiting for you.{" "}
-          <Link to={`/reviews/${waiting.round.id}`} state={location.state}>
+          <Link to={linkTo(waiting.round.id)} state={inPanel ? undefined : location.state}>
             Open it
           </Link>
         </p>
@@ -716,7 +810,8 @@ export function ReviewScreen() {
             // the review has ended: back to what is still waiting
             setDiscarding(false);
             toast("Discarded. The agent was told to stop.");
-            navigate("/");
+            if (onEnded) onEnded();
+            else navigate("/");
           }}
         />
       ) : null}

@@ -640,6 +640,101 @@ h1 {
   min-height: 0;
 }
 
+/* The inbox with a review open beside it: the list and the panel scroll on
+   their own, split by an edge that resizes the panel. */
+.app-main > .inbox.has-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  position: relative;
+}
+.inbox.has-panel .inbox-side {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px 24px 40px;
+  container-type: inline-size;
+}
+.review-panel {
+  flex: none;
+  width: 55%;
+  min-width: 420px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px 16px 16px;
+  background: var(--bg);
+}
+.review-panel > .review-page {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.panel-resizer {
+  flex: none;
+  width: 5px;
+  margin: 0 -2px;
+  z-index: 1;
+  cursor: col-resize;
+  background: linear-gradient(var(--border), var(--border)) center / 1px 100% no-repeat;
+}
+.panel-resizer:hover,
+.panel-resizer:focus-visible {
+  background: linear-gradient(var(--accent), var(--accent)) center / 2px 100% no-repeat;
+  outline: none;
+}
+/* while the edge is dragged, the view's frame must not take the pointer */
+body.is-resizing,
+body.is-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+body.is-resizing iframe {
+  pointer-events: none;
+}
+/* the panel's own bar: the title, its link, and what can be done */
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+}
+.panel-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.review-row.is-open,
+.review-row.is-open.is-focused {
+  background: var(--accent-bg);
+}
+/* a narrow list keeps the title, the time and the discard button */
+@container (max-width: 560px) {
+  .review-row {
+    grid-template-columns: 8px 1fr auto;
+  }
+  .review-row-plugin,
+  .review-row-summary {
+    display: none;
+  }
+}
+/* a narrow window: the panel covers the list */
+@media (max-width: 900px) {
+  .inbox.has-panel .review-panel {
+    position: absolute;
+    inset: 0;
+    width: auto !important;
+    min-width: 0;
+    z-index: 2;
+  }
+  .inbox.has-panel .panel-resizer {
+    display: none;
+  }
+}
+
 /* tooltips: a raised panel in the theme, the shortcut as keys */
 .tooltip {
   position: fixed;

@@ -8,7 +8,9 @@ import { useNavigate } from "react-router";
 import { api } from "../api/client";
 import type { Plugin, Review } from "../api/types";
 import { age, settledAt } from "../lib/format";
+import { reviewPath } from "../lib/url";
 import { useLive } from "../state/live";
+import { useSettings } from "../state/settings";
 import { OutcomeBadge } from "./Badges";
 import { PluginIcon } from "./PluginIcon";
 
@@ -54,6 +56,7 @@ export function CommandPalette({
 }) {
   const { pending: waiting, pluginIcon } = useLive();
   const navigate = useNavigate();
+  const openIn = useSettings().settings.inbox.open_in;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [active, setActive] = useState(0);
@@ -119,7 +122,7 @@ export function CommandPalette({
               <span>{age(r.created_at)}</span>
             </>
           ),
-          run: () => navigate(`/reviews/${r.id}`),
+          run: () => navigate(reviewPath(r.id, openIn)),
         });
       }
     }
@@ -179,7 +182,7 @@ export function CommandPalette({
       }
     }
     return out;
-  }, [all, filter, q, waiting, pluginIcon, history, plugins, actions, navigate]);
+  }, [all, filter, q, waiting, pluginIcon, history, plugins, actions, navigate, openIn]);
 
   useEffect(() => setActive(0), [q, filter]);
   useEffect(() => {

@@ -10,6 +10,7 @@ import { copyText } from "../../lib/clipboard";
 import { size } from "../../lib/format";
 import type { Info as ServerInfo } from "../../api/types";
 import { GLOBAL_MODIFIERS, MOD, REVEAL, SHIFT, TRAY, combo } from "../../lib/keys";
+import { reviewPath } from "../../lib/url";
 import { DEFAULT_GLOBAL_SHORTCUT, SHORTCUTS } from "../../lib/shortcuts";
 import { useSettings } from "../../state/settings";
 import { describeSystem, useNotificationStatus } from "../../state/notifications";
@@ -230,6 +231,26 @@ export function SettingsDialog({
 
           {section === "general" ? (
             <SettingsPage title="General">
+              <SettingsGroup caption="Inbox">
+                <SettingsRow
+                  label="Opening a review"
+                  description={
+                    settings.inbox.open_in === "page"
+                      ? "A review opens as a page of its own."
+                      : "A review opens in a panel beside the inbox, which stays in view."
+                  }
+                >
+                  <Segmented
+                    label="Opening a review"
+                    value={settings.inbox.open_in}
+                    onChange={(v) => update({ inbox: { open_in: v } })}
+                    options={[
+                      { value: "panel", label: "Beside the inbox" },
+                      { value: "page", label: "As a page" },
+                    ]}
+                  />
+                </SettingsRow>
+              </SettingsGroup>
               <SettingsGroup caption="Startup">
                 <SettingsRow
                   label="Launch at login"
@@ -432,7 +453,7 @@ export function SettingsDialog({
               focus={plugin ?? null}
               onOpenReview={(id) => {
                 onClose();
-                navigate(`/reviews/${id}`);
+                navigate(reviewPath(id, settings.inbox.open_in));
               }}
             />
           ) : null}

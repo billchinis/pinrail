@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
-import { clearInbox, core } from "./helpers";
+import { clearInbox, core, onReviewPages } from "./helpers";
+
+// a review opened from the inbox or the sidebar is followed on its own page
+onReviewPages();
 
 async function openSetup(page: Page) {
   await page.keyboard.press("ControlOrMeta+k");
