@@ -97,8 +97,8 @@ A view that answers keys declares them in `shortcuts`:
 ```json title="manifest.json"
 {
   "shortcuts": [
-    { "keys": "j", "does": "Next proposal" },
-    { "keys": "k", "does": "Previous proposal" },
+    { "keys": "n", "does": "Next proposal" },
+    { "keys": "p", "does": "Previous proposal" },
     { "keys": "a", "does": "Accept the focused proposal", "group": "Verdicts" },
     { "keys": "x", "does": "Reject the focused proposal", "group": "Verdicts" },
     { "keys": "cmd+shift+f", "does": "Fold every file" }
@@ -113,7 +113,7 @@ Declaring a key does two things for you:
 
 | Field | Meaning |
 |---|---|
-| `keys` | Modifiers joined by `+`, in any order, then one key. The modifiers are `cmd`, `ctrl`, `alt` and `shift`; `command`, `control` and `option` also work, and `cmdorctrl` means <kbd>⌘</kbd> on macOS and <kbd>Ctrl</kbd> on Linux. Name the physical key. Write a letter or digit as itself (`j`, `1`), a punctuation key as the character it types without <kbd>Shift</kbd> (`/`, `[`, `,`), and any other key as its `KeyboardEvent.code` in lowercase (`enter`, `escape`, `arrowdown`). Write a shifted character with `shift`: <kbd>?</kbd> is `shift+/`. |
+| `keys` | Modifiers joined by `+`, in any order, then one key. The modifiers are `cmd`, `ctrl`, `alt` and `shift`; `command`, `control` and `option` also work, and `cmdorctrl` means <kbd>⌘</kbd> on macOS and <kbd>Ctrl</kbd> on Linux. Name the physical key. Write a letter or digit as itself (`n`, `1`), a punctuation key as the character it types without <kbd>Shift</kbd> (`/`, `[`, `,`), and any other key as its `KeyboardEvent.code` in lowercase (`enter`, `escape`, `arrowdown`). Write a shifted character with `shift`: <kbd>?</kbd> is `shift+/`. |
 | `does` | The one-line label shown in the keyboard help. |
 | `group` | Optional. Lists the entry under this caption. |
 
@@ -123,7 +123,7 @@ A forwarded key arrives as a `keydown` on your document, exactly like a press in
 
 ```js
 document.addEventListener("keydown", (e) => {
-  if (e.key === "j") focusNext();
+  if (e.key === "n") focusNext();
   if (e.key === "a") accept(focused);
   // e.pinrailForwarded is true when the app handed the key over
 });
@@ -131,15 +131,30 @@ document.addEventListener("keydown", (e) => {
 
 Only declared keys are forwarded. A view that declares none receives none.
 
+### Moving between items
+
+Use the same keys as the other plugins, so a person's hands know them from the first review:
+
+| Keys | Use them for |
+|---|---|
+| `n` / `p` | The next and previous item: a proposal, a question, an image, a draft. |
+| `shift+n` / `shift+p` | A wider step, such as the next file rather than the next proposal, or every item rather than only the undecided ones. |
+| `arrowleft` / `arrowright` | Something that moves on screen: a frame of a video, a slide, a day in a calendar. |
+| The four arrow keys | Panning an image or a canvas. |
+
+:::danger[J and K are forbidden]
+<kbd>J</kbd> and <kbd>K</kbd> move through the inbox while a review is open beside it, even while your view has the keyboard. A plugin cannot declare `j`, `k`, `shift+j` or `shift+k`. A manifest that does loses its shortcuts, and `pinrail plugins check` says why.
+:::
+
 :::caution[Keys the app keeps]
 Some keys belong to the app and are never forwarded:
 
-- on the review screen: <kbd>?</kbd>, <kbd>[</kbd>, <kbd>]</kbd>, <kbd>esc</kbd>, <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> and <kbd>⌘F</kbd>;
+- on the review screen: <kbd>?</kbd>, <kbd>[</kbd>, <kbd>]</kbd>, <kbd>J</kbd>, <kbd>K</kbd>, <kbd>esc</kbd>, <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> and <kbd>⌘F</kbd>;
 - in the app's menus: <kbd>⌘K</kbd>, <kbd>⌘,</kbd>, <kbd>⌘I</kbd>, <kbd>⌘B</kbd>, <kbd>⌘[</kbd>, <kbd>⌘]</kbd>, <kbd>⌘⇧H</kbd>, <kbd>⌘⇧P</kbd>, <kbd>⌘⇧M</kbd>, <kbd>⌘⇧L</kbd>, <kbd>⌘W</kbd>, <kbd>⌘M</kbd> and <kbd>⌘Q</kbd>;
 - the standard editing keys: <kbd>⌘Z</kbd>, <kbd>⌘⇧Z</kbd>, <kbd>⌘X</kbd>, <kbd>⌘C</kbd>, <kbd>⌘V</kbd> and <kbd>⌘A</kbd>;
 - on macOS only: <kbd>⌘H</kbd>, <kbd>⌥⌘H</kbd> and <kbd>⌃⌘F</kbd>.
 
 On Linux, read <kbd>Ctrl</kbd> for <kbd>⌘</kbd>. Every other combination you declare, including other <kbd>⌘</kbd> combinations, is forwarded. If you declare one of the app's keys, the keyboard help marks it as taken by the app.
 
-They work while your view has the keyboard too. Pressed outside a text field, <kbd>?</kbd>, <kbd>[</kbd> and <kbd>]</kbd> go up to the app. <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> and <kbd>⌘F</kbd> go up from anywhere in the view, a text field included. In every case, a key your view handled first and called `preventDefault()` on stays in the view.
+They work while your view has the keyboard too. Pressed outside a text field, <kbd>?</kbd>, <kbd>[</kbd>, <kbd>]</kbd>, <kbd>J</kbd> and <kbd>K</kbd> go up to the app. <kbd>⌘↵</kbd>, <kbd>⌘D</kbd> and <kbd>⌘F</kbd> go up from anywhere in the view, a text field included. In every case, a key your view handled first and called `preventDefault()` on stays in the view.
 :::

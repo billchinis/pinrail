@@ -86,10 +86,10 @@ describe("the app's own keys", () => {
   test("include the review screen's keys everywhere, and leave a view the rest", async () => {
     for (const platform of ["MacIntel", "Linux x86_64"] as const) {
       const { isShadowed } = await on(platform);
-      for (const keys of ["shift+/", "[", "]", "escape", "cmd+enter", "ctrl+enter"]) {
+      for (const keys of ["shift+/", "[", "]", "j", "k", "shift+j", "escape", "cmd+enter", "ctrl+enter"]) {
         expect(isShadowed(keys), `${platform}: ${keys}`).toBe(true);
       }
-      expect(isShadowed("j"), platform).toBe(false);
+      expect(isShadowed("n"), platform).toBe(false);
       expect(isShadowed("alt+shift+w"), platform).toBe(false);
     }
   });

@@ -782,6 +782,13 @@ mod shortcuts {
                 })?,
                 _ => return Err(format!("shortcuts[{i}] needs keys, a string")),
             };
+            if RESERVED.contains(&keys.as_str()) {
+                return Err(format!(
+                    "shortcuts[{i}]: {keys} moves through the inbox, from a view too, so a \
+                     plugin cannot declare it; use n and p for next and previous, with shift \
+                     for a wider step"
+                ));
+            }
             let does = match entry.get("does").and_then(Value::as_str) {
                 Some(d) if !d.trim().is_empty() => d.trim().to_string(),
                 _ => return Err(format!("shortcuts[{i}] needs does, a string")),
@@ -800,6 +807,10 @@ mod shortcuts {
         }
         Ok(out)
     }
+
+    /// The keys that move through the inbox while a review is open beside
+    /// it. A view passes them up to the app, so none may mean anything else.
+    const RESERVED: &[&str] = &["j", "k", "shift+j", "shift+k"];
 
     /// The order the shell writes a key press in, so a declared combination
     /// and a pressed one compare as text.
@@ -1553,7 +1564,7 @@ mod tests {
     #[test]
     fn shortcuts_are_checked_and_normalized() {
         let tmp = tempfile::tempdir().unwrap();
-        let good = r#","shortcuts":[{"keys":"j","does":"Next"},{"keys":" Cmd + Shift+M ","does":"Maximize","group":"View"},{"keys":"shift+/","does":"Help"},{"keys":"Option+Command+Control+x","does":"Synonyms"},{"keys":"cmdorctrl+k","does":"Platform"}]"#;
+        let good = r#","shortcuts":[{"keys":"n","does":"Next"},{"keys":" Cmd + Shift+M ","does":"Maximize","group":"View"},{"keys":"shift+/","does":"Help"},{"keys":"Option+Command+Control+x","does":"Synonyms"},{"keys":"cmdorctrl+k","does":"Platform"}]"#;
         let p = Plugin::load(&plugin_dir(tmp.path(), "keys", good));
         assert!(p.usable(), "{:?}", p.error);
         assert_eq!(p.shortcuts_error, None);
@@ -1561,7 +1572,7 @@ mod tests {
             p.shortcuts,
             vec![
                 // modifiers in the order a key press is read: ctrl, alt, shift, cmd
-                serde_json::json!({"keys": "j", "does": "Next"}),
+                serde_json::json!({"keys": "n", "does": "Next"}),
                 serde_json::json!({"keys": "shift+cmd+m", "does": "Maximize", "group": "View"}),
                 serde_json::json!({"keys": "shift+/", "does": "Help"}),
                 serde_json::json!({"keys": "ctrl+alt+cmd+x", "does": "Synonyms"}),
@@ -1571,22 +1582,35 @@ mod tests {
         assert_eq!(p.to_json()["shortcuts"][1]["keys"], "shift+cmd+m");
 
         let cases = [
-            (r#","shortcuts":{"keys":"j"}"#, "not of type null or array"),
+            (r#","shortcuts":{"keys":"n"}"#, "not of type null or array"),
             (
                 r#","shortcuts":[{"does":"Next"}]"#,
                 "property 'keys' is required",
             ),
             (
-                r#","shortcuts":[{"keys":"j"}]"#,
+                r#","shortcuts":[{"keys":"n"}]"#,
                 "property 'does' is required",
             ),
             (
-                r#","shortcuts":[{"keys":"hyper+j","does":"x"}]"#,
+                r#","shortcuts":[{"keys":"hyper+n","does":"x"}]"#,
                 "not a key combination",
             ),
             (
-                r#","shortcuts":[{"keys":"j","does":"x","group":3}]"#,
+                r#","shortcuts":[{"keys":"n","does":"x","group":3}]"#,
                 "shortcuts/0/group:",
+            ),
+            // J and K move through the inbox, from a view too
+            (
+                r#","shortcuts":[{"keys":"j","does":"Next"}]"#,
+                "use n and p",
+            ),
+            (
+                r#","shortcuts":[{"keys":"K","does":"Previous"}]"#,
+                "use n and p",
+            ),
+            (
+                r#","shortcuts":[{"keys":"shift+j","does":"Next of all"}]"#,
+                "use n and p",
             ),
         ];
         for (i, (extra, expected)) in cases.iter().enumerate() {

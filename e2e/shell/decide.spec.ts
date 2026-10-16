@@ -27,7 +27,7 @@ function probe(): string {
       version: "1.0.0",
       title: "Probe",
       shortcuts: [
-        { keys: "j", does: "Count" },
+        { keys: "n", does: "Count" },
         { keys: "cmdorctrl+shift+f", does: "Fold" },
         { keys: "cmdorctrl+e", does: "Expand" },
       ],
@@ -42,7 +42,7 @@ function probe(): string {
   let folds = 0;
   let expands = 0;
   document.addEventListener("keydown", (e) => {
-    if (e.key === "j") document.getElementById("keys").textContent = String(++keys);
+    if (e.key === "n") document.getElementById("keys").textContent = String(++keys);
     if (e.code === "KeyF" && e.shiftKey && (e.metaKey || e.ctrlKey)) document.getElementById("folds").textContent = String(++folds);
     if (e.code === "KeyE" && !e.shiftKey && (e.metaKey || e.ctrlKey)) document.getElementById("expands").textContent = String(++expands);
   });
@@ -155,7 +155,7 @@ test("a declared key pressed with the shell in focus reaches the view", async ({
   const view = await open(page, id, "#keys");
   await shellFocus(page);
 
-  await page.keyboard.press("j");
+  await page.keyboard.press("n");
   await expect(view.locator("#keys")).toHaveText("1");
 
   // with modifiers, written in any order and spelling in the manifest

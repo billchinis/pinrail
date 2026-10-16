@@ -53,7 +53,7 @@ The plugin it returns has the view's frame, `plugin.frame`, and the app's side o
 |---|---|
 | `handOver()` | Presses the app's hand-over button, and returns what the app would get: the decision, once the decision schema accepts it, the violations of a decision that the schema refuses, or `{ deferred: true }` when the view returned nothing. |
 | `lastDraft()`, `lastStatus()`, `messages()` | What the view sent: its draft, the label of the hand-over button, and every message. |
-| `sendKey("j")` | Presses a shortcut the manifest declares, as the app forwards it. |
+| `sendKey("n")` | Presses a shortcut the manifest declares, as the app forwards it. |
 | `settings({ … })` | Changes the plugin's settings, as *Settings › Plugins* does. |
 | `reinit()`, `reload()` | Opens the review again, with the last draft, or reloads the frame. |
 

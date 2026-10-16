@@ -78,7 +78,8 @@ test("sendKey sends only what the app would forward to the view", async ({ page 
       name: "keys",
       version: "1.0.0",
       shortcuts: [
-        { keys: "j", does: "Next" },
+        { keys: "n", does: "Next" },
+        { keys: "j", does: "Next, as the inbox moves" },
         { keys: "cmd+enter", does: "Hand over" },
         { keys: "command+shift+f", does: "Fold" },
         { keys: "cmdorctrl+k", does: "Search" },
@@ -90,8 +91,10 @@ test("sendKey sends only what the app would forward to the view", async ({ page 
     `<!doctype html><script src="/sdk/v1/pinrail-plugin.js"></script><script>Pinrail.connect({});</script><p>keys</p>`,
   );
   const plugin = await mountPlugin(page, dir, { review: reviewFrom({ title: "Keys", payload: {} }) });
-  await plugin.sendKey("j");
+  await plugin.sendKey("n");
   await expect(plugin.sendKey("x")).rejects.toThrow("not declared");
+  // J and K move through the inbox
+  await expect(plugin.sendKey("j")).rejects.toThrow("the app keeps");
   await expect(plugin.sendKey("cmd+enter")).rejects.toThrow("the app keeps");
   // modifiers in any order or spelling are the same combination
   await plugin.sendKey("shift+cmd+f");

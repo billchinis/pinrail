@@ -4,6 +4,18 @@ The package's version is the SDK's, and its major is the protocol's:
 `1.x` speaks protocol 1, served by the app at `/sdk/v1`. A breaking
 change to the protocol is a new major and a new path.
 
+## [Unreleased]
+
+### Changed
+
+- J and K belong to the app, which moves through the inbox with them
+  while a review is open beside it. Pressed in a view outside a text
+  field, they go up to the app as `key` messages, as `?`, `[` and `]` do.
+  A manifest that declares `j`, `k`, `shift+j` or `shift+k` loses its
+  shortcuts, and the test harness's `sendKey` refuses them. Plugins move
+  between items with `n` and `p`, and `shift+n` and `shift+p` for a wider
+  step.
+
 ## [1.1.0]
 
 ### Changed

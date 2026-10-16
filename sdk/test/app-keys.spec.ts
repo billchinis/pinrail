@@ -35,13 +35,16 @@ test("the app's keys go up from a view, unless typed in a field or kept by the v
   await page.keyboard.press("?");
   await page.keyboard.press("[");
   await page.keyboard.press("]"); // the view keeps this one
-  await page.keyboard.press("j"); // not the app's
-  await expect.poll(keys).toEqual(["?", "["]);
+  await page.keyboard.press("j"); // the inbox's next and previous
+  await page.keyboard.press("k");
+  await page.keyboard.press("n"); // not the app's
+  await expect.poll(keys).toEqual(["?", "[", "j", "k"]);
 
   await f.locator("#field").click();
   await page.keyboard.press("?"); // typed into the field
+  await page.keyboard.press("j");
   await page.waitForTimeout(100);
-  expect(await keys()).toEqual(["?", "["]);
+  expect(await keys()).toEqual(["?", "[", "j", "k"]);
 });
 
 test("⌘D or Ctrl+D goes up from anywhere in a view, a text field too", async ({ page }) => {

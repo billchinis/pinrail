@@ -874,8 +874,9 @@
     };
   }
 
-  // the keys the app answers on the review screen, which a view passes up
-  const APP_KEYS = ["?", "[", "]"];
+  // the keys the app answers on the review screen, which a view passes up:
+  // help, the rounds, and J and K, which move through the inbox
+  const APP_KEYS = ["?", "[", "]", "j", "k"];
 
   /* A document connects once. A second connect() is a mistake to catch
      where it happens: the app would take its second `ready` for another

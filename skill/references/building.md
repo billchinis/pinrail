@@ -222,7 +222,7 @@ test("hands over the answer", async ({ page }) => {
   returns the accepted decision, the violations of one that the decision
   schema refuses, or `{ deferred: true }` when the view returned nothing.
 - `plugin.lastDraft()`, `plugin.lastStatus()` and `plugin.messages()`
-  read what the view sent. `plugin.sendKey("j")` presses a declared
+  read what the view sent. `plugin.sendKey("n")` presses a declared
   shortcut, and `plugin.settings({ … })` changes the plugin's settings.
 
 Test what the person does and what the agent gets: each control, the
@@ -306,17 +306,26 @@ List the view's keyboard shortcuts in the manifest's `shortcuts`:
 
 ```json
 "shortcuts": [
-  { "keys": "j", "does": "Next item" },
+  { "keys": "n", "does": "Next item" },
+  { "keys": "p", "does": "Previous item" },
   { "keys": "a", "does": "Accept the focused item", "group": "Verdicts" }
 ]
 ```
 
 - `keys` is any modifiers (`cmd`, `ctrl`, `alt`, `shift`) joined by `+`,
   then one key, named as `KeyboardEvent.code` names it but without `Key`
-  or `Digit`: `j`, `1`, `enter`, `arrowdown`. `cmdorctrl` is cmd on macOS
+  or `Digit`: `n`, `1`, `enter`, `arrowdown`. `cmdorctrl` is cmd on macOS
   and ctrl on Linux.
 - The app lists the shortcuts in its keyboard help. When the app, not the
   frame, has the focus, it forwards each one to the view as a `keydown`.
+- Move between the review's items with `n` and `p` for next and
+  previous, and `shift+n` and `shift+p` for a wider step, such as the next
+  file rather than the next comment. Use the arrow keys when they move
+  something on screen: `arrowleft` and `arrowright` for frames, slides or
+  days, and all four for panning.
+- `j`, `k`, `shift+j` and `shift+k` are forbidden. They move through the
+  inbox while a review is open beside it, and the view passes them up to
+  the app. `pinrail plugins check` refuses a manifest that declares them.
 - The app keeps some keys for itself: `?`, `[`, `]`, `escape` and
   `cmd+enter` on the review screen, the keys of its menus (`cmd+k`,
   `cmd+,`, `cmd+i`, `cmd+b`, `cmd+[`, `cmd+]`, `cmd+shift+h`,

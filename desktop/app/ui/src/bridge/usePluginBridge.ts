@@ -32,9 +32,10 @@ import type { Decision, Review, Violation } from "../api/types";
 import { currentTheme } from "../lib/theme";
 import { modalOpen } from "../lib/keys";
 
-/** The app's review-screen keys a view may pass up: help, and the rounds,
- *  which come plain, and discarding and finding, which come with ⌘ or Ctrl. */
-const VIEW_APP_KEYS = ["?", "[", "]"];
+/** The app's review-screen keys a view may pass up: help, the rounds, and
+ *  J and K for the inbox, which come plain, and discarding and finding,
+ *  which come with ⌘ or Ctrl. */
+const VIEW_APP_KEYS = ["?", "[", "]", "j", "k"];
 const VIEW_APP_MOD_KEYS = ["d", "f"];
 
 const DRAFT_PREFIX = "pinrail:draft:";

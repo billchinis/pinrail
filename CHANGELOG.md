@@ -25,6 +25,10 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Changed
 
+- A plugin can no longer declare J or K as shortcuts. They are the
+  app's keys for moving through the inbox, and `pinrail plugins check`
+  refuses a manifest that declares them. The official plugins move
+  between items with N and P instead.
 - The inbox opens a review in a panel beside the list. The panel opens
   the review as a page when the view needs more room, closes with its
   button or Esc, and moves on to the next review after a decision. ⌥↓
