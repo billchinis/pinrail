@@ -882,12 +882,12 @@ document.addEventListener("keydown", (ev) => {
   const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
   const step = 80;
   if (key === " ") { if (ev.target.closest?.("button")) return; S.space = true; stage.classList.add("panning"); }
-  else if (key === "j") select(S.sel + 1);
-  else if (key === "k") select(S.sel - 1);
+  else if (key === "n") select(S.sel + 1);
+  else if (key === "p") select(S.sel - 1);
   else if (key === "f") { if (favourite()) setVerdict("favorite"); }
   else if (key === "s") setVerdict("keep");
   else if (key === "x") setVerdict("drop");
-  else if (key === "p") pointAtCentre();
+  else if (key === "m") pointAtCentre();
   else if (key === "b") boxInView();
   else if (key === "=" || key === "+") zoomAt(1.4);
   else if (key === "-" || key === "_") zoomAt(1 / 1.4);

@@ -31,7 +31,7 @@ Use feedback when the agent needs *information* from you. When it needs a *verdi
 - **A comment** on any choice question, to qualify your answer. Comments support Markdown. A comment shows as formatted text, and clicking it opens it for editing.
 - **Your previous answers**, for reference, when the agent asks again in a new round.
 
-Keys: <kbd>j</kbd> / <kbd>k</kbd> move to the next and previous question and put the focus on its answer, so the arrow keys or space answer it.
+Keys: <kbd>n</kbd> / <kbd>p</kbd> move to the next and previous question and put the focus on its answer, so the arrow keys or space answer it.
 
 If you hand over with required questions unanswered, a bar above the hand-over button says how many are left, and *Go to the first* takes you to the first of them.
 

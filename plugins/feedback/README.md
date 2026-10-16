@@ -21,7 +21,7 @@ The header uses the supplied review title. The plugin has no submit button; Pinr
 
 ## Keys
 
-`j` / `k` move to the next and previous question and focus its answer, so
+`n` / `p` move to the next and previous question and focus its answer, so
 the arrow keys or space answer it. They do nothing while you type in a text
 box.
 

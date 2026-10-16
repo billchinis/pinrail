@@ -60,7 +60,7 @@ test("one favourite, keys to decide, and a warning before undecided images go ba
   await ready(plugin);
   await f.locator("body").click({ position: { x: 600, y: 5 } });
   await f.locator("body").press("f"); // A favourite
-  await f.locator("body").press("j");
+  await f.locator("body").press("n");
   await f.locator("body").press("x"); // B dropped
   await expect(f.locator('.choice[data-action="drop"]')).not.toHaveCSS("text-decoration-line", "line-through");
   await expect(f.locator("#note")).toHaveCount(0); // a note on request
@@ -68,7 +68,7 @@ test("one favourite, keys to decide, and a warning before undecided images go ba
   await expect(f.locator("#note")).toBeFocused();
   await f.locator("#note").fill("The post floats");
   await f.locator("body").click({ position: { x: 600, y: 5 } });
-  await f.locator("body").press("j");
+  await f.locator("body").press("n");
   await f.locator('.choice[data-action="favorite"]').click(); // C favourite: A steps down
   await expect(f.locator(".pick").nth(0).locator(".verdict-chip")).toHaveText("Keep");
   await expect(f.locator(".pick").nth(2).locator(".verdict-chip")).toHaveText("★ Favourite");
@@ -237,7 +237,7 @@ test("from the keyboard: zoom, a pin at the centre, and a box around what is in 
   const f = plugin.frame;
   await ready(plugin);
   await f.locator(".stage").focus();
-  await f.locator(".stage").press("p");
+  await f.locator(".stage").press("m");
   await expect(f.locator("#pop")).toContainText("Point");
   await f.locator("#region-note").fill("Centre");
   await f.locator("#region-note").press("Enter");

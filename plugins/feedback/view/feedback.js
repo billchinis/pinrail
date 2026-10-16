@@ -336,8 +336,8 @@
     if (!payload || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.target.closest?.('textarea, input[type="text"]')) return;
     const key = e.key.toLowerCase();
-    if (key === "j") step(1);
-    else if (key === "k") step(-1);
+    if (key === "n") step(1);
+    else if (key === "p") step(-1);
     else return;
     e.preventDefault();
   });

@@ -310,7 +310,7 @@ mod tests {
         let catalogs = [Catalog::builtin(), list_at("1.2.0"), list_at("0.9.0")];
         assert_eq!(best(&catalogs, "list").unwrap().version, "1.2.0");
         assert_eq!(best(&catalogs, "forgeplane/list").unwrap().version, "1.2.0");
-        assert_eq!(best(&catalogs, "feedback").unwrap().version, "1.0.0");
+        assert_eq!(best(&catalogs, "feedback").unwrap().version, "1.1.0");
         assert!(best(&catalogs, "acme/list").is_none());
         assert!(best(&catalogs, "nothing").is_none());
         // each plugin once, at its highest version, by name

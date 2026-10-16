@@ -4,6 +4,13 @@ This plugin is released with the Pinrail app, which carries it among its
 official plugins. Each version names the release of the app that first
 carries it.
 
+## [1.2.0] - Unreleased
+
+### Changed
+
+- The next and previous undecided proposal are N and P, and every
+  proposal is Shift+N and Shift+P. J and K now move through the inbox.
+
 ## [1.1.0] - Pinrail 0.2.0
 
 ### Added

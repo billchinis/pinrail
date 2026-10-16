@@ -72,9 +72,9 @@ test("keyboard: a / x / j decide and move; with nothing undecided, a hand-over g
   await page.keyboard.press("x");
   await f.getByLabel("note for proposal 19").fill("no");
   await page.keyboard.press("Enter");
-  // saving the reason stays on #19; j moves on
+  // saving the reason stays on #19; n moves on
   await expect(f.locator("#card-19")).toHaveClass(/\bfocused\b/);
-  await page.keyboard.press("j");
+  await page.keyboard.press("n");
   await page.keyboard.press("a");
   await expect(f.locator("header")).toContainText("0 undecided");
   await plugin.collect();
@@ -88,7 +88,7 @@ test("keyboard: a / x / j decide and move; with nothing undecided, a hand-over g
   ]);
 });
 
-test("j and k go to the undecided proposals; J and K go through all", async ({ page }) => {
+test("n and p go to the undecided proposals; shift+n and shift+p go through all", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: round2() });
   const f = plugin.frame;
   await f.locator("#card-19 button", { hasText: "Accept" }).click();
@@ -97,24 +97,24 @@ test("j and k go to the undecided proposals; J and K go through all", async ({ p
 
   // deciding #19 left the focus on it
   await focused(19);
-  await page.keyboard.press("j");
+  await page.keyboard.press("n");
   await focused(20);
-  await page.keyboard.press("j");
+  await page.keyboard.press("n");
   await focused(18); // round again, past #19, which is decided
-  await page.keyboard.press("k");
+  await page.keyboard.press("p");
   await focused(20);
-  await page.keyboard.press("Shift+K");
+  await page.keyboard.press("Shift+P");
   await focused(19);
-  await page.keyboard.press("Shift+J");
+  await page.keyboard.press("Shift+N");
   await focused(20);
 
-  // with nothing undecided, j goes through all
+  // with nothing undecided, n goes through all
   await f.locator("#card-18 button", { hasText: "Accept" }).click();
   await f.locator("#card-20 button", { hasText: "Accept" }).click();
   await f.locator("body").click({ position: { x: 5, y: 5 } });
-  await page.keyboard.press("j");
+  await page.keyboard.press("n");
   await focused(18);
-  await page.keyboard.press("j");
+  await page.keyboard.press("n");
   await focused(19);
 });
 
@@ -331,9 +331,9 @@ test("a declared key forwarded by the shell works like one typed in the frame", 
   const plugin = await mountPlugin(page, dir, { review: round2() });
   const f = plugin.frame;
   await expect(f.locator("#card-18")).toBeVisible();
-  await plugin.sendKey("j");
+  await plugin.sendKey("n");
   await expect(f.locator("#card-19")).toHaveClass(/\bfocused\b/);
-  await plugin.sendKey("k");
+  await plugin.sendKey("p");
   await expect(f.locator("#card-18")).toHaveClass(/\bfocused\b/);
   await plugin.sendKey("a");
   await expect(f.locator("#card-18")).toContainText("ACCEPTED");

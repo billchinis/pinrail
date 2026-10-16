@@ -92,8 +92,8 @@ time, and `c` flips to last round's image.
 
 ## Keys
 
-`j` / `k` next and previous image · `f` favourite · `s` keep · `x` drop ·
-`p` a pin at the centre of the view · `b` a box around what is in view ·
+`n` / `p` next and previous image · `f` favourite · `s` keep · `x` drop ·
+`m` a pin at the centre of the view · `b` a box around what is in view ·
 `=` / `-` zoom · `0` fit · `1` actual pixels · arrows pan · `h` drag to pan ·
 `g` backdrop · `c` the previous round.
 

@@ -1918,9 +1918,9 @@
         });
         scrollToCard(next);
       }
-      /* j and k go to the next and previous undecided proposal, round and
-   round; J and K, and j and k once nothing is left undecided or the review
-   is read-only, go through all of them. */
+      /* n and p go to the next and previous undecided proposal, round and
+   round; shift+n and shift+p, and n and p once nothing is left undecided
+   or the review is read-only, go through all of them. */
       function moveFocus(dir, all = false) {
         const order = orderedIds();
         const undecided = RO() ? [] : order.filter((id) => !decided(id));
@@ -3056,15 +3056,15 @@
         if (e.metaKey || e.ctrlKey || e.altKey) return;
         const fid = S.focusedId;
         switch (e.key) {
-          case "j":
-          case "J":
+          case "n":
+          case "N":
             e.preventDefault();
-            moveFocus(1, e.key === "J");
+            moveFocus(1, e.shiftKey);
             break;
-          case "k":
-          case "K":
+          case "p":
+          case "P":
             e.preventDefault();
-            moveFocus(-1, e.key === "K");
+            moveFocus(-1, e.shiftKey);
             break;
           case "a":
             if (!RO() && fid != null) {
