@@ -27,6 +27,10 @@ let editing = null;
 let renderGeneration = 0;
 /** the outline beside the document: shown unless the person folded it away */
 let outlineOpen = true;
+/** in a narrow frame, the outline or the comments open as a drawer over the document */
+let drawer = null;
+const narrowOutline = window.matchMedia("(max-width: 1100px)");
+const narrowComments = window.matchMedia("(max-width: 760px)");
 /** why the app refused the last hand-over */
 let violations = [];
 
@@ -225,13 +229,17 @@ function renderOutline() {
   // folded away, or nothing to outline
   const toggle = $("outline-toggle");
   toggle.hidden = !headings.length;
-  toggle.innerHTML = Pinrail.icon(outlineOpen ? "panel-left-close" : "panel-left-open", {
+  const open = narrowOutline.matches ? drawer === "outline" : outlineOpen;
+  toggle.innerHTML = Pinrail.icon(open ? "panel-left-close" : "panel-left-open", {
     size: 15,
-    label: outlineOpen ? "Hide the outline" : "Show the outline",
+    label: open ? "Hide the outline" : "Show the outline",
   });
+  toggle.setAttribute("aria-expanded", String(open));
   const shown = headings.length > 0 && outlineOpen;
   $("work").classList.toggle("no-outline", !shown);
-  $("outline").hidden = !shown;
+  // a narrow frame shows the outline as a drawer, whatever the wide one does
+  $("outline").hidden = narrowOutline.matches ? !headings.length : !shown;
+  $("outline").classList.toggle("drawer", drawer === "outline");
   if (!headings.length) return;
   const top = Math.min(...headings.map((h) => h.level));
   $("outline-items").innerHTML = headings
@@ -247,7 +255,9 @@ function renderOutline() {
 
 $("outline-items").addEventListener("click", (event) => {
   const a = event.target.closest("[data-heading]");
-  if (a) reveal(headings[Number(a.dataset.heading)].line, headings[Number(a.dataset.heading)].line);
+  if (!a) return;
+  if (drawer) openDrawer(null);
+  reveal(headings[Number(a.dataset.heading)].line, headings[Number(a.dataset.heading)].line);
 });
 
 /** Scrolls the panes on show to a line, and flashes what holds it. */
@@ -592,6 +602,8 @@ function renderMarks() {
   drawBars();
   const n = shown.length;
   $("tally").innerHTML = `<b>${n}</b> comment${n === 1 ? "" : "s"}`;
+  $("comments-toggle").innerHTML =
+    `${Pinrail.icon("message-square", { size: 13 })}<span><b>${n}</b> comment${n === 1 ? "" : "s"}</span>`;
 }
 
 /** A straight bar in the margin beside each commented block, placed from
@@ -670,6 +682,8 @@ function renderVerdict(readonly, decided) {
 
 $("list").addEventListener("click", (event) => {
   const t = event.target;
+  // the drawer gives the document back to what the comment is about
+  if (drawer && (t.dataset.edit || (t.closest("[data-comment]") && !t.closest("button")))) openDrawer(null);
   if (t.dataset.edit) return editComment(Number(t.dataset.edit));
   if (t.dataset.delete) {
     const id = Number(t.dataset.delete);
@@ -702,8 +716,42 @@ function handOver() {
 }
 
 $("outline-toggle").addEventListener("click", () => {
+  if (narrowOutline.matches) return openDrawer(drawer === "outline" ? null : "outline");
   outlineOpen = !outlineOpen;
   plugin.setSetting("outline_open", outlineOpen);
   renderOutline();
 });
+$("comments-toggle").addEventListener("click", () => openDrawer(drawer === "comments" ? null : "comments"));
+$("scrim").addEventListener("click", () => openDrawer(null));
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && drawer && !event.defaultPrevented) {
+    event.preventDefault();
+    openDrawer(null);
+  }
+});
+for (const query of [narrowOutline, narrowComments]) {
+  query.addEventListener("change", () => {
+    if (drawer === "outline" && !narrowOutline.matches) drawer = null;
+    if (drawer === "comments" && !narrowComments.matches) drawer = null;
+    renderDrawers();
+  });
+}
+
+/** Opens the outline or the comments as a drawer, or closes it. Focus goes
+ *  into the drawer, and back to its button when it closes. */
+function openDrawer(which) {
+  const was = drawer;
+  if (was === which) return;
+  drawer = which;
+  renderDrawers();
+  if (which) $(which === "outline" ? "outline" : "side").focus();
+  else $(was === "outline" ? "outline-toggle" : "comments-toggle").focus();
+}
+
+function renderDrawers() {
+  $("work").classList.toggle("drawer-open", drawer !== null);
+  $("side").classList.toggle("drawer", drawer === "comments");
+  $("comments-toggle").setAttribute("aria-expanded", String(drawer === "comments"));
+  renderOutline();
+}
 $("shell").append(confirm.element);

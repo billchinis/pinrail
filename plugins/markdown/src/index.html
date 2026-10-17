@@ -109,6 +109,34 @@
   .previous { margin-top: 6px; border-top: 1px solid var(--pinrail-border); padding-top: 8px; }
   .previous summary { cursor: pointer; font-size: 12px; color: var(--pinrail-dim); }
 
+  /* In a narrow frame, such as the inbox's side panel, the outline opens as
+     a drawer from the left below 1100 pixels, and the comments as a drawer
+     from the right below 760 pixels, which the header's count opens. */
+  .work { position: relative; }
+  .outline:focus, .side:focus { outline: none; }
+  .scrim { display: none; }
+  .comments-toggle { display: none; }
+  @media (max-width: 1100px) {
+    .work, .work.no-outline { grid-template-columns: minmax(0, 1fr) 300px; }
+    .outline, .work.no-outline .outline { display: none; position: absolute; z-index: 7; top: 0; bottom: 0; left: 0; width: min(280px, 85%); box-sizing: border-box; background: var(--pinrail-bg-panel); box-shadow: 0 8px 28px rgb(0 0 0 / .28); }
+    .outline.drawer { display: block; }
+    .work.drawer-open .scrim { display: block; position: absolute; inset: 0; z-index: 6; background: rgb(0 0 0 / .25); }
+  }
+  @media (max-width: 760px) {
+    .work, .work.no-outline { grid-template-columns: minmax(0, 1fr); }
+    .side { display: none; position: absolute; z-index: 7; top: 0; bottom: 0; right: 0; width: min(340px, 90%); box-shadow: 0 8px 28px rgb(0 0 0 / .28); }
+    .side.drawer { display: grid; }
+    .tally { display: none; }
+    .comments-toggle { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 3px 8px; border: 1px solid var(--pinrail-border); border-radius: 7px; background: none; color: var(--pinrail-dim); font: 500 12px var(--pinrail-sans); cursor: pointer; }
+    .comments-toggle:hover, .comments-toggle[aria-expanded="true"] { background: var(--pinrail-bg-hover); color: var(--pinrail-text); }
+    .comments-toggle b { color: var(--pinrail-text); font-variant-numeric: tabular-nums; }
+  }
+  @media (max-width: 520px) {
+    .top { padding: 9px 12px; gap: 6px 10px; }
+    .rendered { padding: 16px 18px 60px; }
+    .bars span { left: 6px; }
+  }
+
   /* writing a comment: a dialog under what it is about, in the pane */
   .dialog { position: absolute; z-index: 6; width: min(420px, calc(100% - 16px)); box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px; border: 1px solid var(--pinrail-border-strong); border-radius: 12px; background: var(--pinrail-bg-panel); box-shadow: 0 1px 0 color-mix(in srgb, var(--pinrail-accent) 50%, transparent) inset, 0 16px 40px -16px rgba(0, 0, 0, .55); font-size: 13px; line-height: 1.4; }
   .dialog[hidden] { display: none; }
@@ -144,17 +172,19 @@
       <button type="button" data-mode="raw" aria-pressed="false">Raw</button>
     </div>
     <span class="tally" id="tally"></span>
+    <button type="button" class="comments-toggle" id="comments-toggle" aria-expanded="false" aria-controls="side"></button>
     <div class="context" id="context" hidden></div>
   </header>
   <div class="work" id="work">
-    <nav class="outline" id="outline" aria-label="Outline"><h2>Outline</h2><div id="outline-items"></div></nav>
+    <nav class="outline" id="outline" aria-label="Outline" tabindex="-1"><h2>Outline</h2><div id="outline-items"></div></nav>
     <div class="docs" id="docs">
       <div class="pane" id="rendered-pane"><article class="rendered" id="rendered"></article></div>
       <div class="pane" id="raw-pane" hidden><div class="raw" id="raw"></div></div>
       <button type="button" class="pick" id="pick" hidden>Comment</button>
       <div class="dialog" id="dialog" role="dialog" aria-label="Comment" hidden></div>
     </div>
-    <aside class="side">
+    <div class="scrim" id="scrim"></div>
+    <aside class="side" id="side" aria-label="Comments" tabindex="-1">
       <div class="side-head"><h2>Comments</h2></div>
       <div class="list" id="list"></div>
       <div class="verdict" id="verdict"></div>

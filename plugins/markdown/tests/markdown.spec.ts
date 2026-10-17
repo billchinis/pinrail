@@ -357,3 +357,56 @@ test("a diagram that does not parse shows its error and its source", async ({ pa
   const plugin = await mountPlugin(page, dir, { review });
   await expect(plugin.frame.locator(".diagram-error")).toContainText("does not render");
 });
+
+test("in a narrow frame the document takes the width, and the outline and the comments open as drawers", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 420, height: 800 });
+  const plugin = await mount(page);
+  const f = plugin.frame;
+  const outline = f.getByRole("navigation", { name: "Outline" });
+  const side = f.getByRole("complementary", { name: "Comments" });
+  await expect(outline).toBeHidden();
+  await expect(side).toBeHidden();
+  const article = await f.locator("#rendered").boundingBox();
+  expect(article!.width).toBeGreaterThan(400);
+
+  // a comment, written in the document; the header's count opens the list
+  await select(plugin, ".rendered li");
+  await f.locator("#pick").click();
+  await f.locator("#compose-body").fill("Slow, or failing?");
+  await f.locator("#compose-body").press("Enter");
+  const toggle = f.getByRole("button", { name: /1 comment/ });
+  await toggle.click();
+  await expect(side).toBeVisible();
+  await expect(side.locator(".card")).toContainText("Slow, or failing?");
+  await page.keyboard.press("Escape");
+  await expect(side).toBeHidden();
+  await expect(toggle).toBeFocused();
+
+  // a click on a comment closes the drawer and goes to what it is about
+  await toggle.click();
+  await side.locator(".card .body").click();
+  await expect(side).toBeHidden();
+
+  // the outline opens over the document, and a heading in it goes there
+  await f.getByRole("button", { name: "Show the outline" }).click();
+  await expect(outline).toBeVisible();
+  await outline.getByText("Open questions").click();
+  await expect(outline).toBeHidden();
+  await expect(f.locator(".rendered h2", { hasText: "Open questions" })).toBeInViewport();
+});
+
+test("between 760 and 1100 pixels the comments stay beside the document, and the outline is a drawer", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1000, height: 800 });
+  const plugin = await mount(page);
+  const f = plugin.frame;
+  await expect(f.getByRole("complementary", { name: "Comments" })).toBeVisible();
+  await expect(f.getByRole("navigation", { name: "Outline" })).toBeHidden();
+  await f.getByRole("button", { name: "Show the outline" }).click();
+  await expect(f.getByRole("navigation", { name: "Outline" })).toBeVisible();
+  await f.locator("#scrim").click({ position: { x: 600, y: 300 } });
+  await expect(f.getByRole("navigation", { name: "Outline" })).toBeHidden();
+});
