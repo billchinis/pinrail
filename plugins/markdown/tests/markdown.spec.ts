@@ -410,3 +410,28 @@ test("between 760 and 1100 pixels the comments stay beside the document, and the
   await f.locator("#scrim").click({ position: { x: 600, y: 300 } });
   await expect(f.getByRole("navigation", { name: "Outline" })).toBeHidden();
 });
+
+test("a comment can be dictated, from a microphone in the field's corner", async ({ page }) => {
+  const plugin = await mount(page, { dictation: true });
+  const f = plugin.frame;
+  await select(plugin, ".rendered li");
+  await f.locator("#pick").click();
+  const dialog = f.getByRole("dialog", { name: "Comment" });
+  await dialog.locator(".dictate-mic").getByRole("button", { name: "Dictate" }).click();
+  await plugin.say("slow or failing");
+  await plugin.say("slow or failing, which one");
+  await expect(f.locator("#compose-body")).toHaveValue("slow or failing, which one");
+  await dialog.getByRole("button", { name: "Stop dictating" }).click();
+  await expect.poll(() => plugin.dictating()).toBe(false);
+  // the dialog stays open, and the comment is added as typed
+  await f.locator("#compose-save").click();
+  await expect(f.locator(".card .body")).toHaveText("slow or failing, which one");
+});
+
+test("without the app's dictation the comment dialog has no microphone", async ({ page }) => {
+  const plugin = await mount(page);
+  await select(plugin, ".rendered li");
+  await plugin.frame.locator("#pick").click();
+  await expect(plugin.frame.locator("#compose-body")).toBeVisible();
+  await expect(plugin.frame.getByRole("button", { name: "Dictate" })).toHaveCount(0);
+});

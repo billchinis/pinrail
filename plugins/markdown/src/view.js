@@ -486,7 +486,9 @@ function openDialog(anchor) {
       )
       .join("") +
     `</div>` +
-    `<textarea id="compose-body" placeholder="${PLACEHOLDERS[kind]}" aria-label="Comment">${edited ? esc(edited.body) : ""}</textarea>` +
+    // the comment can be dictated, from a microphone in the field's corner
+    `<span class="dictate-field"><textarea id="compose-body" data-pinrail-dictate placeholder="${PLACEHOLDERS[kind]}" aria-label="Comment">${edited ? esc(edited.body) : ""}</textarea>` +
+    `<span class="dictate-mic" data-pinrail-dictate-for="compose-body"></span></span>` +
     `<div class="foot"><span class="hint"><kbd>Enter</kbd> to ${edited ? "save" : "add"}, <kbd>Esc</kbd> to cancel</span>` +
     `<button type="button" class="pinrail-btn pinrail-btn-ghost" id="compose-cancel">Cancel</button>` +
     `<button type="button" class="pinrail-btn pinrail-btn-primary" id="compose-save">${edited ? "Save" : "Comment"}</button></div>`;

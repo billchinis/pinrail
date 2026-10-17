@@ -151,6 +151,10 @@
   .card.is-question { border-left: 3px solid var(--pinrail-accent); }
   .dialog .quote { margin: 0; max-height: none; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .dialog textarea { width: 100%; box-sizing: border-box; min-height: 64px; padding: 8px 10px; resize: vertical; border: 1px solid var(--pinrail-border); border-radius: 8px; background: var(--pinrail-bg); color: var(--pinrail-text); font: 13px/1.45 var(--pinrail-sans); outline: none; transition: border-color .12s, box-shadow .12s; }
+  /* the app's microphone in the field's corner, where the app can dictate */
+  .dictate-field { position: relative; display: block; }
+  .dictate-field:has(.pinrail-dictate) textarea { padding-right: 38px; }
+  .dictate-mic { position: absolute; top: 4px; right: 4px; }
   .dialog textarea:focus { border-color: var(--pinrail-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pinrail-accent) 22%, transparent); }
   .dialog .foot { display: flex; align-items: center; gap: 6px; }
   .dialog .foot .pinrail-btn { padding: 4px 12px; font-size: 12.5px; }

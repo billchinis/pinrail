@@ -6,6 +6,11 @@ carries it.
 
 ## [1.1.0] - Unreleased
 
+### Added
+
+- A comment can be dictated in the macOS app, from a microphone in the
+  comment field's corner.
+
 ### Changed
 
 - The view fits a narrow frame, such as the inbox's side panel. Below
