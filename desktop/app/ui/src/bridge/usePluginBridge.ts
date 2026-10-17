@@ -31,6 +31,7 @@ import { api } from "../api/client";
 import type { Decision, Review, Violation } from "../api/types";
 import { currentTheme } from "../lib/theme";
 import { modalOpen } from "../lib/keys";
+import { canDictate, listen } from "../lib/dictation";
 
 /** The app's review-screen keys a view may pass up: help, the rounds, and
  *  J and K for the inbox, which come plain, and discarding and finding,
@@ -63,6 +64,8 @@ type Options = {
   onSetSetting: (patch: Record<string, unknown>) => Promise<Violation[]>;
   /** the view asks to open a link; the screen decides whether it opens */
   onOpen: (url: string) => void;
+  /** a dictation the view asked for failed: the message to show */
+  onDictationError?: (message: string) => void;
 };
 
 export type Bridge = {
@@ -84,11 +87,27 @@ export type Bridge = {
   find: (query: string, backwards?: boolean) => void;
   /** what the view found for the latest search; null before it answers */
   found: Found | null;
+  /** the view is dictating into one of its fields */
+  dictating: boolean;
+  /** stops the view's dictation */
+  stopDictation: () => void;
 };
 
 export function usePluginBridge(options: Options): Bridge {
-  const { frame, reviewId, review, previous, readonly, src, connected, onSubmit, settings, onSetSetting, onOpen } =
-    options;
+  const {
+    frame,
+    reviewId,
+    review,
+    previous,
+    readonly,
+    src,
+    connected,
+    onSubmit,
+    settings,
+    onSetSetting,
+    onOpen,
+    onDictationError,
+  } = options;
   const [loaded, setLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [handoverLabel, setHandoverLabel] = useState("Hand over");
@@ -96,10 +115,31 @@ export function usePluginBridge(options: Options): Bridge {
   const [left, setLeft] = useState(false);
   const [reloads, setReloads] = useState(0);
   const [found, setFound] = useState<Found | null>(null);
+  const [dictating, setDictating] = useState(false);
   const reload = useCallback(() => setReloads((n) => n + 1), []);
   const host = useRef<(Host & { disconnect(): void }) | null>(null);
-  const latest = useRef({ review, previous, readonly, connected, onSubmit, settings, onSetSetting, onOpen });
-  latest.current = { review, previous, readonly, connected, onSubmit, settings, onSetSetting, onOpen };
+  const latest = useRef({
+    review,
+    previous,
+    readonly,
+    connected,
+    onSubmit,
+    settings,
+    onSetSetting,
+    onOpen,
+    onDictationError,
+  });
+  latest.current = {
+    review,
+    previous,
+    readonly,
+    connected,
+    onSubmit,
+    settings,
+    onSetSetting,
+    onOpen,
+    onDictationError,
+  };
 
   const draftKey = () => DRAFT_PREFIX + (latest.current.review?.id ?? "");
   const loadDraft = () => {
@@ -199,6 +239,16 @@ export function usePluginBridge(options: Options): Bridge {
       // the view may only ever write its own settings: the handler fills in
       // the plugin's name, and the core checks the values
       setSettings: (patch) => latest.current.onSetSetting(patch),
+      // the view's frame cannot listen itself: the app listens for it, and
+      // shows that it does
+      dictation: canDictate
+        ? (listener) =>
+            listen((heard) => {
+              if ("done" in heard && heard.error) latest.current.onDictationError?.(heard.error);
+              listener(heard);
+            })
+        : undefined,
+      onDictation: setDictating,
       label: setHandoverLabel,
       // one of the app's own keys, pressed inside the view: the app acts on
       // it as if pressed in its window; nothing else is accepted
@@ -265,5 +315,7 @@ export function usePluginBridge(options: Options): Bridge {
     host.current?.changed();
   }, [readonly]);
 
-  return { loaded, submitting, handoverLabel, collect, left, reload, reloads, find, found };
+  const stopDictation = useCallback(() => host.current?.stopDictation(), []);
+
+  return { loaded, submitting, handoverLabel, collect, left, reload, reloads, find, found, dictating, stopDictation };
 }

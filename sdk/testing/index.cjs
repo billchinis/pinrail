@@ -223,6 +223,7 @@ async function mountPlugin(page, pluginDir, opts) {
     readonly: !!opts.readonly,
     draft: opts.draft ?? null,
     settings: opts.settings ?? {},
+    dictation: !!opts.dictation,
   };
   await page.evaluate((i) => window.__shell.init(i), init);
 
@@ -270,6 +271,18 @@ async function mountPlugin(page, pluginDir, opts) {
     // violations of one the schema refuses, or the view's "not yet"
     handOver: () => page.evaluate(() => window.__shell.handOver()),
     setFrameHeight: (px) => page.evaluate((h) => window.__shell.setFrameHeight(h), px),
+    // dictation, as the app's recogniser: what it has heard so far, and its end
+    // a click that starts it reaches the app a moment later: wait for it
+    say: async (text) => {
+      try {
+        await page.waitForFunction(() => window.__shell.dictating(), null, { timeout: 2000 });
+      } catch {
+        throw new Error("nothing is being dictated: the view did not start a dictation");
+      }
+      await page.evaluate((t) => window.__shell.say(t), text);
+    },
+    endDictation: (error) => page.evaluate((e) => window.__shell.endDictation(e), error ?? null),
+    dictating: () => page.evaluate(() => window.__shell.dictating()),
     reinit: (overrides = {}) => page.evaluate((o) => window.__shell.reinit(o), overrides),
     reload: () => page.evaluate(() => window.__shell.reload()),
   };

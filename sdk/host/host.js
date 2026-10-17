@@ -13,9 +13,10 @@
 
 export const PROTOCOL = 1;
 
-/** What a host can do for a view beyond protocol 1: nothing yet. A later
- *  addition is named here, so a view can tell whether the app it runs in
- *  has it. */
+/** What every host can do for a view beyond protocol 1: nothing yet. A
+ *  later addition is named in `init.capabilities`, so a view can tell
+ *  whether the app it runs in has it. A host that can turn speech into text
+ *  adds "dictation". */
 export const CAPABILITIES = [];
 
 /** How long a view has to answer a request for its decision. */
@@ -81,6 +82,9 @@ export function createHost(options) {
     onReady,
     onLeft,
     observe,
+    dictation,
+    canDictate = () => true,
+    onDictation,
     capabilities = CAPABILITIES,
     collectTimeout = COLLECT_TIMEOUT_MS,
     setTimer = (fn, ms) => setTimeout(fn, ms),
@@ -106,6 +110,9 @@ export function createHost(options) {
   let wasReadonly = readonly();
   // the latest search of the find bar: only its answers count
   let finding = 0;
+  // the one dictation that is on: the view's request number, how to stop
+  // it, and how to end it
+  let dictating = null;
 
   const send = (msg, transfer = []) => {
     if (disposed || left) return;
@@ -137,6 +144,7 @@ export function createHost(options) {
 
   function leave() {
     if (left) return;
+    endDictation(true);
     left = true;
     ready = false;
     close();
@@ -158,8 +166,60 @@ export function createHost(options) {
       draft: locked ? null : loadDraft(),
       settings: settings() ?? {},
       app_origin: origin,
-      capabilities: typeof capabilities === "function" ? capabilities() : capabilities,
+      capabilities: capabilitiesNow(),
     });
+  }
+
+  function capabilitiesNow() {
+    const base = typeof capabilities === "function" ? capabilities() : capabilities;
+    return dictation && canDictate() && !base.includes("dictation") ? [...base, "dictation"] : base;
+  }
+
+  /* Dictation: the view asks, the host listens through `dictation`, and the
+     view hears the text so far as it grows, then that it is done. One at a
+     time: a new request ends the one before. */
+  function startDictation(msg) {
+    const { req } = msg;
+    if (typeof req !== "number") return;
+    if (!dictation || !canDictate() || readonly()) {
+      send({ type: "dictation", req, done: true, error: "this app cannot dictate" });
+      return;
+    }
+    endDictation();
+    const session = { req, stop: null, over: false };
+    session.finish = (error, quietly = false) => {
+      if (session.over) return;
+      session.over = true;
+      if (dictating === session) dictating = null;
+      if (!quietly) send({ type: "dictation", req, done: true, ...(error ? { error } : {}) });
+      if (onDictation && !dictating) onDictation(false);
+    };
+    dictating = session;
+    if (onDictation) onDictation(true);
+    try {
+      session.stop = dictation((event) => {
+        if (session.over || !isObject(event)) return;
+        if (event.done) session.finish(typeof event.error === "string" ? event.error : undefined);
+        else if (typeof event.text === "string") send({ type: "dictation", req, text: event.text });
+      });
+    } catch (error) {
+      session.finish(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /** Asks the dictation that is on to stop; its last words and its end
+   *  still come, from the host's listener. */
+  function stopDictation() {
+    if (dictating && typeof dictating.stop === "function") dictating.stop();
+  }
+
+  /** Ends the dictation that is on at once: telling the view, or quietly
+   *  when the view's page is gone. */
+  function endDictation(quietly = false) {
+    const session = dictating;
+    if (!session) return;
+    if (typeof session.stop === "function") session.stop();
+    session.finish(undefined, quietly);
   }
 
   async function answerAttachment(msg) {
@@ -277,6 +337,12 @@ export function createHost(options) {
       case "settings_set":
         void answerSettings(msg);
         break;
+      case "dictation_start":
+        startDictation(msg);
+        break;
+      case "dictation_stop":
+        if (dictating && msg.req === dictating.req) stopDictation();
+        break;
       case "submit":
         void answerSubmit(msg);
         break;
@@ -322,7 +388,10 @@ export function createHost(options) {
      *  elsewhere is sent init again; one the view handed over was told so. */
     changed() {
       const now = readonly();
-      if (now) close();
+      if (now) {
+        close();
+        endDictation();
+      }
       if (now && !wasReadonly && !handedOver) init();
       wasReadonly = now;
     },
@@ -333,6 +402,7 @@ export function createHost(options) {
     },
     /** The host loads the view's page again: what follows is the view anew. */
     reload() {
+      endDictation(true);
       close();
       ready = false;
       left = false;
@@ -340,8 +410,15 @@ export function createHost(options) {
       handedOver = false;
     },
     dispose() {
+      endDictation(true);
       close();
       disposed = true;
+    },
+    /** Stops the view's dictation, as the app's own stop button does. */
+    stopDictation,
+    /** a dictation the view asked for is on */
+    get dictating() {
+      return dictating !== null;
     },
     get ready() {
       return ready;

@@ -47,6 +47,8 @@
   const PROTOCOL = 1;
   /** The key of a client's teardown, for tests. */
   const TEARDOWN = Symbol.for("pinrail.teardown");
+  /** The key of a client's dictation watch, for the microphone buttons. */
+  const HEARING = Symbol.for("pinrail.hearing");
   const THEMES = ["dark", "light"];
 
   function escape(s) {
@@ -112,6 +114,15 @@
       readonly: false,
       theme: (env.initialTheme && env.initialTheme()) || "dark",
       settings: {},
+      capabilities: [],
+    };
+    // the one dictation that is on: its request number, the field it writes
+    // into, the text around the cursor it started at, and how to settle it
+    let speaking = null;
+    // told when a dictation starts or ends, for the SDK's microphone buttons
+    const hearing = new Set();
+    const heard = () => {
+      for (const fn of hearing) fn(speaking ? speaking.field : null);
     };
     // file requests and settings changes waiting on the app, by request
     // number, which the two share
@@ -192,6 +203,9 @@
           state.previous = data.previous || null;
           state.readonly = !!data.readonly;
           state.settings = settingsOf(data.settings);
+          state.capabilities = Array.isArray(data.capabilities) ? data.capabilities.slice() : [];
+          // a review that turned read-only takes no more dictation
+          if (state.readonly && speaking) stopDictating();
           // every JSON value a view kept comes back as it was, false and 0 too
           call("onInit", {
             review: state.review,
@@ -271,6 +285,11 @@
           answer(env.find ? env.find(data.query, !!data.backwards, answer) : { count: 0, current: 0 });
           break;
         }
+        case "dictation":
+          if (!speaking || data.req !== speaking.req) break;
+          if (typeof data.text === "string") hear(data.text);
+          if (data.done) settle(typeof data.error === "string" ? data.error : null);
+          break;
         case "key":
           // One of the manifest's shortcuts, pressed while the app rather
           // than the frame had focus. It lands as a keydown on the document,
@@ -316,6 +335,71 @@
       });
     }
 
+    /* Dictation: the app listens, and the text it hears goes into a field
+       of the view's at the cursor, replacing what was selected. The field
+       gets an `input` event for each change, so the view's own handlers
+       keep its draft. One field at a time: dictating into another ends the
+       one before, and dictating into the same one again stops it. */
+    function dictate(field) {
+      if (!field) return Promise.reject(new TypeError("Pinrail: dictate needs a text field"));
+      if (speaking && speaking.field === field) {
+        stopDictating();
+        return speaking.done;
+      }
+      if (!state.capabilities.includes("dictation") || state.readonly)
+        return Promise.resolve({ error: "this app cannot dictate" });
+      if (speaking) {
+        post({ type: "dictation_stop", req: speaking.req });
+        settle(null);
+      }
+      const value = String(field.value == null ? "" : field.value);
+      const start = typeof field.selectionStart === "number" ? field.selectionStart : value.length;
+      const end = typeof field.selectionEnd === "number" ? field.selectionEnd : start;
+      const before = value.slice(0, start);
+      let resolve;
+      const done = new Promise((r) => (resolve = r));
+      speaking = {
+        req: nextAsk++,
+        field,
+        // what was said goes after a space, not against the word before
+        before: before && !/\s$/.test(before) ? before + " " : before,
+        after: value.slice(end),
+        done,
+        resolve,
+      };
+      post({ type: "dictation_start", req: speaking.req });
+      heard();
+      return done;
+    }
+
+    /** Asks the app to stop listening; the last words still arrive. */
+    function stopDictating() {
+      if (speaking) post({ type: "dictation_stop", req: speaking.req });
+    }
+
+    function hear(text) {
+      const { field, before, after } = speaking;
+      // a field the view has drawn again is gone: nothing goes into it
+      if (field.isConnected === false) {
+        if (!speaking.stopping) stopDictating();
+        speaking.stopping = true;
+        return;
+      }
+      const said = text.trimStart();
+      const gap = said && after && !/^\s/.test(after) ? " " : "";
+      field.value = before + said + gap + after;
+      const caret = (before + said).length;
+      if (typeof field.setSelectionRange === "function") field.setSelectionRange(caret, caret);
+      if (env.changed) env.changed(field);
+    }
+
+    function settle(error) {
+      const session = speaking;
+      speaking = null;
+      session.resolve(error ? { error } : {});
+      heard();
+    }
+
     /* The same file as a blob: URL, for an <img>, <video> or <audio>, which
        the frame's policy lets load blob: and nothing remote. The type is the
        one the review lists unless given; revoke the URL when done. */
@@ -350,6 +434,19 @@
       get settings() {
         return state.settings;
       },
+      /** the app can turn speech into text for this view */
+      get canDictate() {
+        return state.capabilities.includes("dictation") && !state.readonly;
+      },
+      /** the field a dictation writes into, or null */
+      get dictating() {
+        return speaking ? speaking.field : null;
+      },
+      /* Starts dictating into a text field, at its cursor, or stops when it
+         is the field already dictated into. Resolves when the dictation
+         ends, with `error` when it failed. */
+      dictate,
+      stopDictating,
       /* Asks the app to keep a setting of this plugin's. The app checks it
          against the manifest's settings schema: the promise resolves with
          the settings as they now stand, or rejects with an error whose
@@ -387,6 +484,12 @@
          connection for as long as its page lives. */
       [TEARDOWN]() {
         for (const stop of undo.splice(0)) stop();
+      },
+      /* Told the field a dictation writes into whenever it changes, and
+         null when none does: for the SDK's microphone buttons. */
+      [HEARING](fn) {
+        hearing.add(fn);
+        return () => hearing.delete(fn);
       },
     };
   }
@@ -793,6 +896,8 @@
       applyTheme: (theme) => {
         doc.documentElement.dataset.theme = theme;
       },
+      // dictated text, as the view's own handlers hear typing
+      changed: (field) => field.dispatchEvent(new win.Event("input", { bubbles: true })),
       dispatchKey: (key) => {
         const event = new win.KeyboardEvent("keydown", Object.assign({ bubbles: true, cancelable: true }, key));
         // so a handler can tell a forwarded key from one typed in the frame
@@ -890,7 +995,91 @@
       );
     }
     connected = true;
-    return createPlugin(browserEnv(root), handlers);
+    const plugin = createPlugin(browserEnv(root), handlers);
+    if (root.document && root.MutationObserver) microphones(root, plugin);
+    return plugin;
+  }
+
+  const MIC =
+    '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg>';
+
+  /* A microphone button for every text field marked data-pinrail-dictate,
+     while the app can dictate: a click dictates into the field, and a second
+     click stops. It goes into the element marked data-pinrail-dictate-for
+     with the field's id, when the view has one, and otherwise after the
+     field. The buttons follow the view as it draws its fields again, and
+     show which field is being dictated into. */
+  function microphones(win, plugin) {
+    const doc = win.document;
+    const fieldOf = new WeakMap();
+    const buttonOf = new WeakMap();
+    const slotFor = (field) => {
+      if (!field.id) return null;
+      const id = win.CSS && win.CSS.escape ? win.CSS.escape(field.id) : field.id.replace(/["\\]/g, "\\$&");
+      return doc.querySelector(`[data-pinrail-dictate-for="${id}"]`);
+    };
+    function sync() {
+      const now = plugin.dictating;
+      for (const button of doc.querySelectorAll("button.pinrail-dictate")) {
+        const on = fieldOf.get(button) === now && now !== null;
+        button.setAttribute("aria-pressed", on ? "true" : "false");
+        button.title = on ? "Stop dictating" : "Dictate";
+        button.setAttribute("aria-label", button.title);
+      }
+    }
+    function make(field) {
+      const button = doc.createElement("button");
+      button.type = "button";
+      button.className = "pinrail-dictate";
+      button.innerHTML = MIC;
+      fieldOf.set(button, field);
+      buttonOf.set(field, button);
+      button.addEventListener("click", () => {
+        void plugin.dictate(field);
+        field.focus();
+      });
+      return button;
+    }
+    function decorate() {
+      const can = plugin.canDictate;
+      for (const field of doc.querySelectorAll("[data-pinrail-dictate]")) {
+        let button = buttonOf.get(field);
+        if (!can || field.disabled || field.readOnly) {
+          if (button) button.remove();
+          continue;
+        }
+        const slot = slotFor(field);
+        const placed =
+          button && button.isConnected && (slot ? button.parentNode === slot : button.previousElementSibling === field);
+        if (placed) continue;
+        if (!button) button = make(field);
+        if (slot) slot.replaceChildren(button);
+        else field.after(button);
+      }
+      // a button whose field went with a redraw goes too
+      for (const button of doc.querySelectorAll("button.pinrail-dictate"))
+        if (!fieldOf.get(button) || !fieldOf.get(button).isConnected) button.remove();
+      sync();
+    }
+    let queued = false;
+    const later = () => {
+      if (queued) return;
+      queued = true;
+      win.queueMicrotask(() => {
+        queued = false;
+        decorate();
+      });
+    };
+    new win.MutationObserver(later).observe(doc.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-pinrail-dictate", "data-pinrail-dictate-for", "id", "disabled", "readonly"],
+    });
+    plugin[HEARING](sync);
+    // init brings what the app can do
+    win.addEventListener("message", later);
+    later();
   }
 
   const Pinrail = {

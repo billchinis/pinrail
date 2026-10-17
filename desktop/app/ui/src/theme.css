@@ -2462,6 +2462,41 @@ body.is-resizing iframe {
   font-size: 11.5px;
   color: var(--faint);
 }
+/* the app listening for the view, in place of the composer's hint */
+.composer-listening {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger);
+}
+.listening-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: listening 1.4s ease-in-out infinite;
+}
+@keyframes listening {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .listening-dot {
+    animation: none;
+  }
+}
+.listening-stop {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
 /* dictation, beside the hand-over; red while it listens */
 .composer-dictate {
   margin-left: auto;

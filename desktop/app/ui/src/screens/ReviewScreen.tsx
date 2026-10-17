@@ -368,6 +368,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
     settings: pluginSettings,
     onSetSetting,
     onOpen,
+    onDictationError: (message) => toast(message, "danger"),
   });
 
   // closing the find bar clears what it highlighted, and the keys go back
@@ -627,6 +628,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
   };
   // dictation writes into the note as it hears it, and the box grows with it
   const dictation = useDictation(onNote, (message) => toast(message, "danger"));
+  const listening = dictation.listening;
   useEffect(() => {
     const el = noteBox.current;
     if (!el || !dictation.listening) return;
@@ -950,21 +952,37 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
             }}
           />
           <div className="composer-bar">
-            <span className="composer-hint">
-              {live.connected
-                ? "The note travels with your decision"
-                : "Reconnecting — hand-over resumes when the server is back"}
-            </span>
+            {bridge.dictating ? (
+              // the view cannot listen itself: the app does, and says so
+              <span className="composer-hint composer-listening" role="status">
+                <span className="listening-dot" aria-hidden="true" />
+                Listening for the view
+                <span aria-hidden="true">·</span>
+                <button type="button" className="listening-stop" onClick={bridge.stopDictation}>
+                  Stop
+                </button>
+              </span>
+            ) : (
+              <span className="composer-hint">
+                {live.connected
+                  ? "The note travels with your decision"
+                  : "Reconnecting — hand-over resumes when the server is back"}
+              </span>
+            )}
             {canDictate ? (
-              <Tooltip label={dictation.listening ? "Stop dictating" : "Dictate the note"} side="top">
+              <Tooltip label={listening ? "Stop dictating" : "Dictate the note"} side="top">
                 <button
                   type="button"
-                  className={`bar-button composer-dictate ${dictation.listening ? "is-listening" : ""}`}
-                  aria-label={dictation.listening ? "Stop dictating" : "Dictate the note"}
-                  aria-pressed={dictation.listening}
+                  className={`bar-button composer-dictate ${listening ? "is-listening" : ""}`}
+                  aria-label={listening ? "Stop dictating" : "Dictate the note"}
+                  aria-pressed={listening}
                   onClick={() => {
                     if (dictation.listening) dictation.stop();
-                    else dictation.start(note);
+                    else {
+                      // one dictation at a time: the view's stops first
+                      if (bridge.dictating) bridge.stopDictation();
+                      dictation.start(note);
+                    }
                     noteBox.current?.focus();
                   }}
                 >

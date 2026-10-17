@@ -403,6 +403,9 @@ test("the plugin object has the members a view uses, and no others", () => {
     "attachment",
     "attachmentUrl",
     "attachments",
+    "canDictate",
+    "dictate",
+    "dictating",
     "draft",
     "handOverLabel",
     "open",
@@ -411,6 +414,7 @@ test("the plugin object has the members a view uses, and no others", () => {
     "review",
     "setSetting",
     "settings",
+    "stopDictating",
     "theme",
   ]);
 });
@@ -832,4 +836,92 @@ test("a view with a layout of its own places the same confirmation bar where it 
   assert.deepEqual(bar.children[1].children, [keep]);
   confirm.confirmation(null);
   assert.equal(bar.hidden, true);
+});
+
+/** A text field as the client sees one: its text, its selection, its input events. */
+function field(value = "", start = value.length, end = start) {
+  return {
+    value,
+    selectionStart: start,
+    selectionEnd: end,
+    isConnected: true,
+    inputs: 0,
+    setSelectionRange(a, b) {
+      this.selectionStart = a;
+      this.selectionEnd = b;
+    },
+  };
+}
+const dictationEnv = () => {
+  const env = fakeEnv();
+  env.changed = (f) => (f.inputs += 1);
+  return env;
+};
+
+test("dictation writes what the app hears at the cursor, with input events, and settles when it is done", async () => {
+  const env = dictationEnv();
+  const plugin = Pinrail.createPlugin(env, {});
+  env.deliver(init({ capabilities: ["dictation"] }));
+  assert.equal(plugin.canDictate, true);
+
+  // the cursor is after "Keep", before " for now"
+  const note = field("Keep for now", 4);
+  const done = plugin.dictate(note);
+  const req = env.last("dictation_start").msg.req;
+  assert.equal(plugin.dictating, note);
+  env.deliver(shell({ type: "dictation", req, text: "the bucket" }));
+  assert.equal(note.value, "Keep the bucket for now");
+  env.deliver(shell({ type: "dictation", req, text: " the staging bucket" }));
+  assert.equal(note.value, "Keep the staging bucket for now");
+  assert.equal(note.selectionStart, "Keep the staging bucket".length);
+  assert.equal(note.inputs, 2);
+
+  // dictating into the same field again stops it; the end still comes from the app
+  plugin.dictate(note);
+  assert.equal(env.last("dictation_stop").msg.req, req);
+  env.deliver(shell({ type: "dictation", req, done: true }));
+  assert.deepEqual(await done, {});
+  assert.equal(plugin.dictating, null);
+  // a message for a dictation that is over changes nothing
+  env.deliver(shell({ type: "dictation", req, text: "late" }));
+  assert.equal(note.value, "Keep the staging bucket for now");
+});
+
+test("dictation is refused without the app's capability or in a read-only review, and an error settles it", async () => {
+  const env = dictationEnv();
+  const plugin = Pinrail.createPlugin(env, {});
+  env.deliver(init());
+  assert.equal(plugin.canDictate, false);
+  assert.deepEqual(await plugin.dictate(field()), { error: "this app cannot dictate" });
+  assert.equal(env.last("dictation_start"), undefined);
+
+  env.deliver(init({ capabilities: ["dictation"], readonly: true }));
+  assert.equal(plugin.canDictate, false);
+
+  env.deliver(init({ capabilities: ["dictation"] }));
+  const done = plugin.dictate(field());
+  const req = env.last("dictation_start").msg.req;
+  env.deliver(shell({ type: "dictation", req, done: true, error: "No microphone was found." }));
+  assert.deepEqual(await done, { error: "No microphone was found." });
+});
+
+test("dictating into another field ends the one before, and a field drawn again takes nothing", () => {
+  const env = dictationEnv();
+  const plugin = Pinrail.createPlugin(env, {});
+  env.deliver(init({ capabilities: ["dictation"] }));
+  const one = field();
+  plugin.dictate(one);
+  const first = env.last("dictation_start").msg.req;
+  const two = field();
+  plugin.dictate(two);
+  assert.equal(env.last("dictation_stop").msg.req, first);
+  assert.equal(plugin.dictating, two);
+  const second = env.last("dictation_start").msg.req;
+
+  two.isConnected = false;
+  env.deliver(shell({ type: "dictation", req: second, text: "lost" }));
+  env.deliver(shell({ type: "dictation", req: second, text: "lost again" }));
+  assert.equal(two.value, "");
+  // asked to stop once, not for every word
+  assert.equal(env.posted.filter((p) => p.msg.type === "dictation_stop" && p.msg.req === second).length, 1);
 });

@@ -228,8 +228,32 @@ const escapeHtml = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;
 const show = (id, v) => { $(id).textContent = v == null ? "—" : typeof v === "string" ? v : JSON.stringify(v); };
 
 const readonly = () => !!review && ($("readonly").checked || review.status !== "pending");
+/* Dictation for the view, through the browser's own speech recognition,
+   as the app does it in its macOS window: Chrome and Safari have it. Where
+   the browser has none, the view is not offered dictation. */
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+function listen(listener) {
+  const recognition = new Recognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = navigator.language;
+  let failed = null;
+  recognition.onresult = (event) => {
+    let said = "";
+    for (let i = 0; i < event.results.length; i++) said += event.results[i][0].transcript;
+    listener({ text: said });
+  };
+  recognition.onerror = (event) => {
+    if (event.error !== "aborted" && event.error !== "no-speech") failed = `dictation stopped: ${event.error}`;
+  };
+  recognition.onend = () => listener(failed ? { done: true, error: failed } : { done: true });
+  recognition.start();
+  return () => recognition.stop();
+}
+
 const host = connectFrame(frame, {
   origin: location.origin,
+  dictation: Recognition ? listen : undefined,
   review: () => review,
   previous: () => previous,
   readonly,

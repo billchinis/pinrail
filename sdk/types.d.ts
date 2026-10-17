@@ -136,7 +136,8 @@ export type Init<Payload = unknown, Data = unknown> = {
   settings: Settings;
 };
 
-/** What the app can do for a view beyond protocol 1, from `init`: nothing yet. */
+/** What the app can do for a view beyond protocol 1, from `init`, such as
+ *  "dictation": it can turn speech into text for the view. */
 export type Capability = string;
 
 export type Violation = { path: string; message: string };
@@ -178,7 +179,11 @@ export type AppMessage =
   /** the find bar's search: the next match when `query` is the one before,
    *  the previous one with `backwards`, nothing highlighted when empty; the
    *  view answers `found` with this `req` */
-  | { pinrail: Protocol; type: "find"; req: number; query: string; backwards: boolean };
+  | { pinrail: Protocol; type: "find"; req: number; query: string; backwards: boolean }
+  /** the dictation with this `req`: the text heard so far, as it grows */
+  | { pinrail: Protocol; type: "dictation"; req: number; text: string }
+  /** the dictation with this `req` is over, with why when it failed */
+  | { pinrail: Protocol; type: "dictation"; req: number; done: true; error?: string };
 
 /** Plugin → shell, over `postMessage`. */
 export type PluginMessage =
@@ -230,7 +235,11 @@ export type PluginMessage =
   /** open this link outside the app: http, https or mailto */
   | { pinrail: Protocol; type: "open"; url: string }
   /** the bytes of a file the review (or the round it revises) carries */
-  | { pinrail: Protocol; type: "attachment"; req: number; name: string; round?: "previous" };
+  | { pinrail: Protocol; type: "attachment"; req: number; name: string; round?: "previous" }
+  /** asks the app to listen and turn speech into text, with "dictation" in `init.capabilities` */
+  | { pinrail: Protocol; type: "dictation_start"; req: number }
+  /** asks the app to stop the dictation with this `req` */
+  | { pinrail: Protocol; type: "dictation_stop"; req: number };
 
 // ---------------------------------------------------------------- the SDK
 
@@ -266,6 +275,19 @@ export type Plugin<Payload = unknown, Data = unknown> = {
   /** asks the app to keep one setting: the settings as they now stand, or
    *  a rejection whose error carries the `violations` */
   setSetting(key: string, value: string | number | boolean): Promise<Settings>;
+  /** the app can turn speech into text for this view: "dictation" is in
+   *  `init.capabilities`, and the review is not read-only */
+  readonly canDictate: boolean;
+  /** the field a dictation writes into, or null */
+  readonly dictating: HTMLInputElement | HTMLTextAreaElement | null;
+  /** starts dictating into a text field, at its cursor, or stops when it is
+   *  the field already dictated into; resolves when the dictation ends,
+   *  with `error` when it failed. A field marked `data-pinrail-dictate`
+   *  gets a microphone button that does this, after it or inside an element
+   *  marked `data-pinrail-dictate-for` with the field's id. */
+  dictate(field: HTMLInputElement | HTMLTextAreaElement): Promise<{ error?: string }>;
+  /** asks the app to stop listening; the last words still arrive */
+  stopDictating(): void;
   /** the files the review carries */
   readonly attachments: Attachment[];
   /** a file's bytes, from the shell; `round: "previous"` for the round this one revises */

@@ -45,6 +45,37 @@ export function dictationError(error: string): string | null {
   }
 }
 
+/** What a dictation tells its listener: the text heard so far, then that it is over. */
+export type Heard = { text: string } | { done: true; error?: string };
+
+/**
+ * Listens, and tells `listener` the text heard so far as it grows, then
+ * that it is over, with a message when it failed. Returns how to stop; the
+ * last words and the end still come after it.
+ */
+export function listen(listener: (heard: Heard) => void): () => void {
+  if (!Recognizer) {
+    listener({ done: true, error: "This window cannot turn speech into text." });
+    return () => {};
+  }
+  const recognition = new Recognizer();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = navigator.language;
+  let failed: string | null = null;
+  recognition.onresult = (event) => {
+    let said = "";
+    for (let i = 0; i < event.results.length; i++) said += event.results[i][0].transcript;
+    listener({ text: said });
+  };
+  recognition.onerror = (event) => {
+    failed = dictationError(event.error) ?? failed;
+  };
+  recognition.onend = () => listener(failed ? { done: true, error: failed } : { done: true });
+  recognition.start();
+  return () => recognition.stop();
+}
+
 /**
  * Turns speech into text after what the field holds. While it listens,
  * `onText` receives the field's text with what has been said so far, and
@@ -52,36 +83,25 @@ export function dictationError(error: string): string | null {
  */
 export function useDictation(onText: (text: string) => void, onError: (message: string) => void) {
   const [listening, setListening] = useState(false);
-  const current = useRef<Recognition | null>(null);
+  const stopping = useRef<(() => void) | null>(null);
   const handlers = useRef({ onText, onError });
   handlers.current = { onText, onError };
 
-  const stop = useCallback(() => current.current?.stop(), []);
+  const stop = useCallback(() => stopping.current?.(), []);
   const start = useCallback((before: string) => {
-    if (!Recognizer || current.current) return;
-    const recognition = new Recognizer();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = navigator.language;
+    if (!Recognizer || stopping.current) return;
     const lead = before && !/\s$/.test(before) ? `${before} ` : before;
-    recognition.onresult = (event) => {
-      let said = "";
-      for (let i = 0; i < event.results.length; i++) said += event.results[i][0].transcript;
-      handlers.current.onText(lead + said.trimStart());
-    };
-    recognition.onerror = (event) => {
-      const message = dictationError(event.error);
-      if (message) handlers.current.onError(message);
-    };
-    recognition.onend = () => {
-      current.current = null;
-      setListening(false);
-    };
-    current.current = recognition;
-    recognition.start();
+    stopping.current = listen((heard) => {
+      if ("text" in heard) handlers.current.onText(lead + heard.text.trimStart());
+      else {
+        stopping.current = null;
+        setListening(false);
+        if (heard.error) handlers.current.onError(heard.error);
+      }
+    });
     setListening(true);
   }, []);
   // leaving the review stops listening
-  useEffect(() => () => current.current?.abort(), []);
+  useEffect(() => () => stopping.current?.(), []);
   return { listening, start, stop };
 }

@@ -112,6 +112,11 @@ plugin.handOverLabel("Hand over: yes"); // the words on the hand-over button
   `await plugin.attachment(name)`.
 - Links: `plugin.open(url)`. The app asks the person before it opens a
   link, unless they allowed that site for the plugin.
+- Dictation: mark a text field the person writes in, such as a note or a
+  comment, with `data-pinrail-dictate`. In the macOS app the SDK puts a
+  microphone after it, or inside an element marked
+  `data-pinrail-dictate-for="<the field's id>"`. The dictated text arrives
+  as `input` events.
 - Rendering: `Pinrail.escape(text)`, `Pinrail.icon(name)`, and
   `Pinrail.markdown(text)` once the page also loads
   `<script src="/sdk/v1/markdown.js"></script>` after the SDK.

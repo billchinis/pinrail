@@ -57,6 +57,9 @@ last draft, when a file of the plugin changes.
 - The size menu sets the frame to the whole stage, to the app's side
   panel at 700 or 420 pixels, or to a phone or tablet. A caption under
   the frame gives its size.
+- Dictation works as in the app wherever the browser has speech
+  recognition, such as Chrome: a field marked `data-pinrail-dictate` gets
+  a microphone.
 - The side panel shows the settings and keys the manifest declares, every
   message the view sends, and what the view handed over, checked against
   the decision schema. It can answer a hand-over with violations.

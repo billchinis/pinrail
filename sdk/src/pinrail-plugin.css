@@ -463,6 +463,31 @@
     background: var(--pinrail-accent-bg);
   }
 
+  /* the microphone the SDK puts after a field marked data-pinrail-dictate,
+     red while it listens */
+  .pinrail-dictate {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    align-self: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--pinrail-faint);
+    cursor: pointer;
+  }
+  .pinrail-dictate:hover {
+    background: var(--pinrail-bg-hover);
+    color: var(--pinrail-text);
+  }
+  .pinrail-dictate[aria-pressed="true"] {
+    color: var(--pinrail-danger);
+    background: color-mix(in oklab, var(--pinrail-danger) 12%, transparent);
+  }
+
   /* one field style for the note, the comment, the search box */
   .pinrail-field,
   .pinrail-note {

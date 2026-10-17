@@ -48,6 +48,7 @@ sequenceDiagram
 | `settings` | `settings`; or `req`, `ok`, and `errors` when not `ok` | The plugin's own settings changed, in the app or from a view. With `req`, the answer to the view's `settings_set`: `ok: true` when the app kept the change, or `ok: false` and the errors when the settings schema refused it. |
 | `key` | `key`, `code`, `metaKey`, `ctrlKey`, `altKey`, `shiftKey` | A shortcut the manifest declares, pressed while the app, not the frame, had focus. |
 | `find` | `req`, `query`, `backwards` | The person searched the view from the app's find bar. The view answers with `found` and the same `req`. |
+| `dictation` | `req`, and `text`; or `done: true` and `error` when it failed | For the view's `dictation_start` with the same `req`: the text heard so far, sent again each time it grows, then once that the dictation is over. |
 
 ### `init`
 
@@ -61,7 +62,7 @@ sequenceDiagram
 | `draft` | any or `null` | What the view last posted as a draft for this review. |
 | `settings` | object | The plugin's own settings: every key the manifest declares, with its current value. |
 | `app_origin` | string | The app's origin. Accept messages from it alone. |
-| `capabilities` | string array | What the app can do beyond the messages on this page. It is empty in this version; a later addition is named here, so a view can tell whether the app it runs in has it. |
+| `capabilities` | string array | What the app can do beyond the messages that every app answers. `"dictation"` means it can turn speech into text for the view, with `dictation_start`. A later addition is named here too, so a view can tell whether the app it runs in has it. |
 
 `review` and `previous` have these fields, and no others:
 
@@ -119,6 +120,10 @@ The app validates every decision against the plugin's decision schema before the
 
 Show them next to the fields they name, and let the person hand over again.
 
+### `dictation`
+
+The view's frame cannot use the microphone. The app listens instead, and shows the person that it is listening. It stops the dictation when the person stops it in the app, when the review becomes read-only, and when the view goes. With the SDK, `plugin.dictate(field)` writes the text into a field at its cursor, and a field marked `data-pinrail-dictate` gets a microphone button.
+
 ### `key`
 
 A shortcut you declare in the manifest reaches your view even when the person pressed it with the app in focus. The SDK dispatches it as a `keydown` on your document, marked `pinrailForwarded: true`, so the listener you already have handles both. See [Settings and keys](/docs/building/settings-and-keys/#keyboard-shortcuts).
@@ -143,6 +148,8 @@ The SDK answers `find` for you. It searches the text the view shows, ignoring ca
 | `found` | `req`, `count`, `current` | The answer to the `find` with the same `req`: how many matches there are, at most 1,000, and which one is current, counted from 1, or 0 when there are none. The view sends it again when its content changes. |
 | `open` | `url` | Asks the app to open a link in the person's browser. Only `http`, `https` and `mailto` addresses are considered. The app asks the person first, unless they allowed the address's origin for this plugin. It always asks about a `mailto` address and an address longer than 2,000 characters, and it ignores `open` messages that arrive while it is asking. |
 | `attachment` | `req`, `name`, and `round: "previous"` for a file of the round this one revises | Asks for the bytes of a file the review carries. The app answers with `attachment` and the same `req`. |
+| `dictation_start` | `req` | Asks the app to listen and turn speech into text, when `init.capabilities` has `"dictation"`. The app answers with `dictation` messages and the same `req`. One dictation is on at a time: a new request ends the one before. An app that cannot dictate, or a read-only review, answers at once with `done: true` and an `error`. |
+| `dictation_stop` | `req` | Asks the app to stop the dictation with the same `req`. The last words, and the message that it is done, still come. |
 
 ### `attachment`
 

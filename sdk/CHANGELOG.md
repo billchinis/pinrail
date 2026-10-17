@@ -8,6 +8,19 @@ change to the protocol is a new major and a new path.
 
 ### Added
 
+- Dictation. The app can turn speech into text for a view: `init`
+  names the `"dictation"` capability, and the view asks with
+  `dictation_start` and `dictation_stop`. The app answers with
+  `dictation` messages carrying the text heard so far, then that it is
+  done. In the SDK, a text field marked `data-pinrail-dictate` gets a
+  microphone button, after it or inside an element marked
+  `data-pinrail-dictate-for` with the field's id, and `plugin.dictate(field)`, `plugin.stopDictating()`,
+  `plugin.canDictate` and `plugin.dictating` serve a control of the
+  view's own. The text goes in at the cursor, with an `input` event for
+  each change. The host takes a `dictation` listener and reports
+  `onDictation`. The test harness mounts a view with `dictation: true`,
+  and speaks into it with `say(text)` and `endDictation(error)`.
+
 - The development shell sizes the frame from a menu in its bar: the full
   stage, the app's side panel at 700 or 420 pixels, or a phone or tablet,
   such as an iPhone or an iPad. A caption under the frame gives its size,

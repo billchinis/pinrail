@@ -237,6 +237,34 @@ plugin.handOverLabel(`Hand over ${choices.size} of ${plugin.review.payload.ticke
 
 After a decision, and when the agent withdraws the review, the view opens read-only: `plugin.readonly` is `true` and `plugin.review.decision` holds what was decided. Render what was there, without controls. A decided review stays open to anyone reading the history, months later.
 
+### Dictation
+
+In the macOS app, a person can dictate into a text field of your view instead of typing. Mark the field, and the SDK puts a microphone button after it:
+
+```html
+<textarea class="pinrail-note" data-pinrail-dictate></textarea>
+```
+
+To put the microphone somewhere else, such as in a toolbar or over the field's corner, give the field an `id` and add an empty element that names it. The SDK puts the button inside that element:
+
+```html
+<span data-pinrail-dictate-for="comment-3"></span>
+<textarea id="comment-3" data-pinrail-dictate></textarea>
+```
+
+A click on the microphone starts dictation, and a second click stops it. The words go in at the cursor as they are heard, and the field gets an `input` event for each change, so the handler that already keeps your draft as the person types keeps the dictated text too. The button shows only where the app can turn speech into text, and not in a read-only review. It also follows your fields when you draw them again.
+
+The view never listens itself: the app does, and shows that it is listening, so no plugin can record without the person seeing it. For a control of your own, use the same calls:
+
+```js
+if (plugin.canDictate) {
+  const { error } = await plugin.dictate(field); // resolves when dictation ends
+  if (error) showProblem(error);
+}
+plugin.stopDictating();
+plugin.dictating; // the field being dictated into, or null
+```
+
 ## The sandbox
 
 The view runs in a frame with an opaque origin and a strict Content Security Policy.

@@ -18,6 +18,8 @@ let lastDraft = null;
 let lastStatus = null;
 let lastOpen = null;
 let lastSettingsSet = null;
+// what the view's dictation is told, while one is on
+let speaker = null;
 // the test waiting on handOver(): resolved with what became of the request
 let waiting = null;
 // the test waiting on collect(): resolved once the view has answered
@@ -84,6 +86,19 @@ const host = connectFrame(frame, {
   },
   // the app opens it; here it is only recorded
   open: (url) => (lastOpen = url),
+  // the app listens when a test mounts the view with `dictation: true`; the
+  // test speaks with say() and ends it with endDictation()
+  canDictate: () => !!(pending && pending.dictation),
+  dictation: (listener) => {
+    speaker = listener;
+    return () => {
+      // the recogniser stops, and says it is done
+      if (speaker === listener) {
+        speaker = null;
+        listener({ done: true });
+      }
+    };
+  },
   observe: (direction, msg) => {
     if (direction !== "in") return;
     log.push(msg);
@@ -123,6 +138,14 @@ window.__shell = {
   // The frame is the panel's height, as in the app; a test can change it,
   // to make a view scroll.
   setFrameHeight(px) { frame.style.height = px + "px"; },
+  say(text) { if (speaker) speaker({ text }); return !!speaker; },
+  endDictation(error) {
+    const listener = speaker;
+    speaker = null;
+    if (listener) listener(error ? { done: true, error } : { done: true });
+    return !!listener;
+  },
+  dictating: () => host.dictating,
   reload() { host.reload(); frame.src = frame.src; },
 };
 
