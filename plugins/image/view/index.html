@@ -148,6 +148,12 @@
   .image-note > :first-child { margin-top: 0; } .image-note > :last-child { margin-bottom: 0; }
   .image-note.is-editable { cursor: text; }
   .image-note.is-editable:hover { border-left-color: var(--pinrail-accent); }
+  /* the app's microphone, where the app can dictate: in the note's corner,
+     and among the region comment's actions */
+  .dictate-field { position: relative; display: block; }
+  .dictate-field:has(.pinrail-dictate) #note { padding-right: 40px; }
+  .dictate-mic { position: absolute; top: 6px; right: 6px; }
+  .dictate-slot { display: contents; }
   #note { width: 100%; min-height: 44px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--pinrail-border); background: var(--pinrail-bg-raised); color: var(--pinrail-text); font: 13.5px/1.5 var(--pinrail-sans); box-sizing: border-box; }
 
   /* below 820 pixels, such as in the inbox's side panel, the whole view
@@ -703,8 +709,8 @@ function renderStageChrome() {
     <div class="foot"><span>${fmtN(e.width)} × ${fmtN(e.height)}${e.type === "image/svg+xml" ? "" : " px"} · ${FORMATS[e.type]} · ${fmtBytes(e.bytes)}</span><span class="at" aria-hidden="true"></span><span class="hint">${esc(hintText())}</span></div>` : ""}
     ${S.picking ? `<div class="pop" id="pop" role="dialog" aria-label="Comment on this ${S.picking.shape}">
         <div class="pop-head"><b>${S.picking.shape === "box" ? "Box" : "Point"}</b><span class="where">${esc(describe(S.picking, e))}</span></div>
-        <textarea id="region-note" aria-label="What to change here" placeholder="What should change here? e.g. remove this, the hands look wrong, warmer light"></textarea>
-        <div class="pop-actions"><span class="k">↵ add · esc</span><button type="button" class="pinrail-btn quiet" data-pop="cancel">Cancel</button><button type="button" class="pinrail-btn pinrail-btn-primary" data-pop="add">Comment</button></div>
+        <textarea id="region-note" data-pinrail-dictate aria-label="What to change here" placeholder="What should change here? e.g. remove this, the hands look wrong, warmer light"></textarea>
+        <div class="pop-actions"><span class="k">↵ add · esc</span><span class="dictate-slot" data-pinrail-dictate-for="region-note"></span><button type="button" class="pinrail-btn quiet" data-pop="cancel">Cancel</button><button type="button" class="pinrail-btn pinrail-btn-primary" data-pop="add">Comment</button></div>
       </div>` : ""}`;
 }
 
@@ -727,7 +733,7 @@ function renderSheet() {
         ${prev ? `<div class="previous">Last round: ${chip(prev)} ${prev.note ? "— " + esc(prev.note) : ""}${prevRegions ? ` · ${prevRegions} region${prevRegions === 1 ? "" : "s"} asked for` : ""}</div>` : ""}
       </header>
       ${!plugin.readonly && S.noteOpen === m.id
-        ? `<textarea id="note" aria-label="Note on ${esc(m.name)}" placeholder="${v.action === "drop" ? "Why it goes" : "What to change in the image as a whole"}">${esc(v.note || "")}</textarea>`
+        ? `<span class="dictate-field"><textarea id="note" data-pinrail-dictate aria-label="Note on ${esc(m.name)}" placeholder="${v.action === "drop" ? "Why it goes" : "What to change in the image as a whole"}">${esc(v.note || "")}</textarea><span class="dictate-mic" data-pinrail-dictate-for="note"></span></span>`
         : v.note?.trim()
           ? plugin.readonly
             ? `<div class="image-note">${Pinrail.markdown(v.note)}</div>`

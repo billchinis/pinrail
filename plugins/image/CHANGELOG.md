@@ -10,6 +10,9 @@ carries it.
 
 - The round's notes fold away to a single line. The view remembers
   whether they are open, in the new `notes_open` setting.
+- An image's note and a region's comment can be dictated in the macOS
+  app, from a microphone in the note's corner and among the region
+  comment's buttons.
 
 ### Changed
 

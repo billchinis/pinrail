@@ -438,3 +438,33 @@ test("in a short, narrow frame the view scrolls as one, down to the image", asyn
   await f.locator('.choice[data-action="keep"]').click();
   expect(await f.locator("#app").evaluate((el) => el.scrollTop)).toBe(before);
 });
+
+test("an image's note and a region's comment can be dictated", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: round(), dictation: true });
+  const f = plugin.frame;
+  await ready(plugin);
+
+  await f.getByRole("button", { name: "Add a note" }).click();
+  await f.locator(".dictate-mic").getByRole("button", { name: "Dictate" }).click();
+  await plugin.say("warmer");
+  await plugin.say("warmer light overall");
+  await expect(f.locator("#note")).toHaveValue("warmer light overall");
+  await f.getByRole("button", { name: "Stop dictating" }).click();
+  await expect.poll(() => plugin.dictating()).toBe(false);
+
+  await page.mouse.click(...(await onImage(plugin, 0.875, 0.3)));
+  await expect(f.locator("#pop")).toContainText("Point");
+  await f.locator("#pop").getByRole("button", { name: "Dictate" }).click();
+  await plugin.say("nose up a little");
+  await expect(f.locator("#region-note")).toHaveValue("nose up a little");
+  await f.locator('[data-pop="add"]').click();
+  await expect(f.locator(".regions li")).toContainText("nose up a little");
+});
+
+test("without the app's dictation the note has no microphone", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: round() });
+  await ready(plugin);
+  await plugin.frame.getByRole("button", { name: "Add a note" }).click();
+  await expect(plugin.frame.locator("#note")).toBeVisible();
+  await expect(plugin.frame.getByRole("button", { name: "Dictate" })).toHaveCount(0);
+});
