@@ -4,6 +4,15 @@ This plugin is released with the Pinrail app, which carries it among its
 official plugins. Each version names the release of the app that first
 carries it.
 
+## [1.1.0] - Unreleased
+
+### Changed
+
+- The view fits a narrow frame, such as the inbox's side panel. Below
+  760 pixels the list of items opens as a drawer over the review, and
+  below 520 pixels the header's buttons show only their icons.
+- An item's meta chips sit on a row of their own under its title.
+
 ## [1.0.0] - Pinrail 0.1.0
 
 The first version. It shows items grouped under headings, each accepted

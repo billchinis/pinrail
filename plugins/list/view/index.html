@@ -85,11 +85,13 @@
       /* The sidebar: each group, and each item under it with a circle in its
      severity's tone, filled in that tone once accepted, and left empty with
      its title struck through when rejected. A click goes to the item. It
-     folds away from the header, and on its own in a narrow frame. */
+     folds away from the header. In a narrow frame, such as the inbox's side
+     panel, it is hidden, and the toggle opens it as a drawer over the list. */
       .columns {
         flex: 1 1 auto;
         min-height: 0;
         display: flex;
+        position: relative;
       }
       .columns > .pinrail-scroll {
         flex: 1 1 auto;
@@ -107,9 +109,45 @@
       .rail.closed {
         display: none;
       }
-      @media (max-width: 720px) {
-        .rail {
+      .scrim {
+        display: none;
+      }
+      @media (max-width: 760px) {
+        .rail,
+        .rail.closed {
           display: none;
+          position: absolute;
+          z-index: 6;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          width: min(300px, 85%);
+          box-shadow: 0 8px 28px rgb(0 0 0 / 0.28);
+        }
+        .rail.drawer {
+          display: flex;
+        }
+        .rail.drawer + .scrim {
+          display: block;
+          position: absolute;
+          inset: 0;
+          z-index: 5;
+          background: rgb(0 0 0 / 0.25);
+        }
+      }
+      /* In a narrow frame the header's buttons keep their icons and lose their
+     labels, which stay as their tooltips, and the counts take a row of their
+     own below. */
+      @media (max-width: 520px) {
+        .pinrail-header .pinrail-meta {
+          order: 1;
+          flex-basis: 100%;
+        }
+        .pinrail-header .pinrail-btn .label {
+          display: none;
+        }
+        .pinrail-header .pinrail-btn .pinrail-icon {
+          margin-right: 0;
         }
       }
       .rail-head {
@@ -290,6 +328,13 @@
       .verdict.undecided {
         display: none;
       }
+      /* the item's meta, on a row of its own under the title */
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
       .previous {
         margin-top: 6px;
         font-size: 11.5px;
@@ -413,8 +458,20 @@
       const rail = document.createElement("nav");
       rail.className = "rail";
       rail.setAttribute("aria-label", "items");
+      // in a narrow frame, a click beside the open drawer closes it
+      const scrim = document.createElement("div");
+      scrim.className = "scrim";
+      scrim.onclick = () => openDrawer(false);
       view.scroll.replaceWith(columns);
-      columns.append(rail, view.scroll);
+      columns.append(rail, scrim, view.scroll);
+      const narrow = window.matchMedia("(max-width: 760px)");
+      narrow.addEventListener("change", () => review && renderRail());
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && S.drawer) {
+          e.preventDefault();
+          openDrawer(false);
+        }
+      });
       const railToggle = document.createElement("button");
       railToggle.type = "button";
       railToggle.className = "rail-toggle";
@@ -426,7 +483,9 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "pinrail-btn pinrail-btn-ghost";
-        button.innerHTML = `${Pinrail.icon(icon)}${esc(label)}`;
+        button.innerHTML = `${Pinrail.icon(icon)}<span class="label">${esc(label)}</span>`;
+        button.title = label;
+        button.setAttribute("aria-label", label);
         button.onclick = onclick;
         return button;
       };
@@ -458,7 +517,15 @@
       let review = null,
         previous = null,
         readonly = false;
-      const S = { decisions: {}, armed: false, errors: null, summaryOpen: true, railOpen: true, railFolded: {} };
+      const S = {
+        decisions: {},
+        armed: false,
+        errors: null,
+        summaryOpen: true,
+        railOpen: true,
+        drawer: false,
+        railFolded: {},
+      };
 
       const plugin = Pinrail.connect({
         onInit(init) {
@@ -599,15 +666,30 @@
       const toneOf = (s) => (review.payload.severities || {})[s] || TONES[s] || "neutral";
       const toneClass = (s) => `pinrail-tone-${toneOf(s)}`;
 
+      /* Opens or closes the sidebar as a drawer, in a narrow frame. Focus goes
+   into it when it opens, and back to the toggle when it closes. */
+      function openDrawer(open) {
+        if (S.drawer === open) return;
+        S.drawer = open;
+        renderRail();
+        if (open) rail.querySelector(".rail-body button")?.focus();
+        else railToggle.focus();
+      }
+
       function renderRail() {
-        railToggle.innerHTML = Pinrail.icon(S.railOpen ? "panel-left-close" : "panel-left-open");
-        railToggle.title = S.railOpen ? "Hide the items" : "Show the items";
+        if (!narrow.matches) S.drawer = false;
+        const shown = narrow.matches ? S.drawer : S.railOpen;
+        railToggle.innerHTML = Pinrail.icon(shown ? "panel-left-close" : "panel-left-open");
+        railToggle.title = shown ? "Hide the items" : "Show the items";
         railToggle.setAttribute("aria-label", railToggle.title);
+        railToggle.setAttribute("aria-expanded", String(shown));
         railToggle.onclick = () => {
+          if (narrow.matches) return openDrawer(!S.drawer);
           S.railOpen = !S.railOpen;
           renderRail();
         };
         rail.classList.toggle("closed", !S.railOpen);
+        rail.classList.toggle("drawer", S.drawer);
         const before = rail.querySelector(".rail-body")?.scrollTop ?? 0;
         let rows = "";
         (review.payload.groups || []).forEach((g, gi) => {
@@ -638,6 +720,7 @@
             (b.onclick = () => {
               const el = view.content.querySelector(`.pinrail-item[data-id="${b.dataset.jump}"]`);
               if (!el) return;
+              if (S.drawer) openDrawer(false);
               el.scrollIntoView({ block: "start", behavior: "smooth" });
               el.classList.add("flash");
               setTimeout(() => el.classList.remove("flash"), 900);
@@ -664,8 +747,9 @@
         const verdict = d.action || "undecided";
         const head = `<div class="pinrail-item-head"><span class="pinrail-item-id">#${esc(item.id)}</span>
       ${item.severity ? `<span class="pinrail-tone ${toneClass(item.severity)}">${esc(item.severity)}</span>` : ""}
-      <span class="pinrail-item-title">${esc(item.title)}</span>${meta}
+      <span class="pinrail-item-title">${esc(item.title)}</span>
       <span class="verdict ${verdict}">${verdict}</span></div>
+    ${meta ? `<div class="chips">${meta}</div>` : ""}
     ${item.body ? `<div class="pinrail-item-body">${markdown(item.body)}</div>` : ""}
     ${previousLine(item.id)}`;
         if (readonly) {

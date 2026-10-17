@@ -223,3 +223,40 @@ test("the sidebar lists each group's items, marks their verdicts, and goes to on
   await f.getByRole("button", { name: "Show the items" }).click();
   await expect(rail).toBeVisible();
 });
+
+test("in a narrow frame the items open as a drawer over the list, and a click on one goes to it", async ({ page }) => {
+  await page.setViewportSize({ width: 420, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: triage() });
+  const f = plugin.frame;
+  const rail = f.getByRole("navigation", { name: "items" });
+  await expect(f.locator(".pinrail-item").first()).toBeVisible();
+  await expect(rail).toBeHidden();
+
+  // the header's buttons keep only their icons, and their names
+  await expect(f.getByRole("button", { name: "Accept all undecided" })).toBeVisible();
+  await expect(f.locator(".pinrail-header .label").first()).toBeHidden();
+
+  await f.getByRole("button", { name: "Show the items" }).click();
+  await expect(rail).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(rail).toBeHidden();
+  await expect(f.getByRole("button", { name: "Show the items" })).toBeFocused();
+
+  await f.getByRole("button", { name: "Show the items" }).click();
+  await rail.getByRole("button", { name: /Oban job timeouts/ }).click();
+  await expect(rail).toBeHidden();
+  await expect(f.locator('.pinrail-item[data-id="104"]')).toBeInViewport();
+});
+
+test("in a wide frame the items sit beside the list, and fold away from the header", async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: triage() });
+  const f = plugin.frame;
+  const rail = f.getByRole("navigation", { name: "items" });
+  await expect(rail).toBeVisible();
+  await expect(f.locator(".pinrail-header .label").first()).toBeVisible();
+  await f.getByRole("button", { name: "Hide the items" }).click();
+  await expect(rail).toBeHidden();
+  await f.getByRole("button", { name: "Show the items" }).click();
+  await expect(rail).toBeVisible();
+});
