@@ -45,8 +45,17 @@
 
   .sheet { overflow-y: auto; min-height: 0; }
   .sheet-inner { max-width: 1180px; margin: 0 auto; padding: 22px 28px 28px; display: grid; gap: 18px; }
-  /* the round's notes, across the whole width under the header, always in view */
-  .notes { flex: none; max-height: 28vh; overflow-y: auto; color: var(--pinrail-dim); font-size: 13px; line-height: 1.6; padding: 10px 20px 10px 17px; border-bottom: 1px solid var(--pinrail-border); border-left: 3px solid var(--pinrail-accent); background: var(--pinrail-bg-panel); }
+  /* the round's notes, across the whole width under the header; they fold
+     away to a line that starts them */
+  .notes { flex: none; color: var(--pinrail-dim); font-size: 13px; line-height: 1.6; border-bottom: 1px solid var(--pinrail-border); border-left: 3px solid var(--pinrail-accent); background: var(--pinrail-bg-panel); }
+  .notes summary { display: flex; align-items: center; gap: 6px; padding: 7px 20px 7px 14px; cursor: pointer; list-style: none; min-width: 0; }
+  .notes summary::-webkit-details-marker { display: none; }
+  .notes summary .pinrail-icon { flex: none; color: var(--pinrail-faint); transition: transform .12s; }
+  .notes[open] summary .pinrail-icon { transform: rotate(90deg); }
+  .notes-label { flex: none; font: 600 10.5px var(--pinrail-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--pinrail-faint); }
+  .notes-peek { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .notes[open] .notes-peek { display: none; }
+  .notes-body { max-height: 28vh; overflow-y: auto; padding: 0 20px 10px 17px; }
   .notes p { margin: 0 0 6px; } .notes p:last-child { margin: 0; }
   /* the image's name, and the verdict on it at the right */
   .image-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
@@ -141,12 +150,34 @@
   .image-note.is-editable:hover { border-left-color: var(--pinrail-accent); }
   #note { width: 100%; min-height: 44px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--pinrail-border); background: var(--pinrail-bg-raised); color: var(--pinrail-text); font: 13.5px/1.5 var(--pinrail-sans); box-sizing: border-box; }
 
+  /* below 820 pixels, such as in the inbox's side panel, the whole view
+     scrolls as one: the header, the notes and the strip of images go by,
+     and the image gets the frame */
   @media (max-width: 820px) {
-    .work { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-    .rail { grid-auto-flow: column; grid-auto-columns: 170px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--pinrail-border); }
+    .shell { display: block; overflow-y: auto; }
+    .work { display: block; }
+    .sheet { overflow: visible; }
+    .notes-body { max-height: none; }
+    .stage { height: auto; aspect-ratio: 1; min-height: 280px; max-height: 70vh; }
+    .rail { grid-auto-flow: column; grid-auto-columns: 150px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--pinrail-border); }
     .rail-label { display: none; }
     .below { grid-template-columns: 1fr; }
     .foot .hint { display: none; }
+  }
+  /* below 520 pixels the stage runs edge to edge, and the zoom moves to its
+     foot, in place of the file's details, which the File section below
+     repeats; the buttons drop their keyboard hints, which their tooltips
+     keep; and the margins and the strip's thumbnails are smaller */
+  @media (max-width: 520px) {
+    .sheet-inner { padding: 16px 14px 24px; }
+    .stage { margin-inline: -14px; border-radius: 0; box-shadow: inset 0 1px 0 var(--pinrail-border), inset 0 -1px 0 var(--pinrail-border); }
+    .bar.zoom { top: auto; bottom: 10px; }
+    .foot { display: none; }
+    .bar button kbd, .choice kbd { display: none; }
+    .choice { padding: 7px 12px; }
+    .rail { grid-auto-columns: 116px; padding: 8px 10px; }
+    .pick { padding: 6px; gap: 4px 8px; }
+    .pick-meta { display: none; }
   }
 </style>
 </head>
@@ -171,7 +202,7 @@ const round1 = (n) => Math.round(n * 10) / 10;
 const pxRound = (n, e) => Math.max(e.width, e.height) >= 200 ? Math.round(n) : Math.round(n * 100) / 100;
 
 let P = null;
-const S = { sel: 0, verdicts: {}, armed: false, errors: null, noteOpen: null, pressing: false, backdrop: "checker", pan: false, space: false, compare: false, picking: null, lit: null, keepScroll: false, flash: null };
+const S = { sel: 0, verdicts: {}, armed: false, errors: null, noteOpen: null, pressing: false, backdrop: "checker", pan: false, space: false, compare: false, picking: null, lit: null, keepScroll: false, flash: null, notesOpen: true };
 const images = [];   // per payload image: { url, width, height, ox, oy, type, bytes, error }
 const past = {};     // the previous round's image, by id: the same shape, or null
 
@@ -236,7 +267,9 @@ function shownImage() {
 }
 function fitScale(e) {
   const W = stage.clientWidth, H = stage.clientHeight;
-  return Math.min((W - 48) / e.width, (H - 96) / e.height);
+  // room for the bars above and below; a narrow stage gives the sides less
+  const side = W < 480 ? 16 : 48;
+  return Math.min((W - side) / e.width, (H - 96) / e.height);
 }
 function fit() {
   const e = shownImage();
@@ -612,6 +645,19 @@ function renderTop() {
     </div>`;
 }
 
+/* The round's notes under the header. They fold away to one line, and the
+   view remembers which way the person left them. */
+function renderNotes() {
+  if (!P.notes) return "";
+  const html = Pinrail.markdown(P.notes);
+  const peek = document.createElement("div");
+  peek.innerHTML = html;
+  return `<details class="notes"${S.notesOpen ? " open" : ""}>
+      <summary>${Pinrail.icon("chevron-right", { size: 12 })}<span class="notes-label">Notes</span><span class="notes-peek">${esc(peek.textContent.trim())}</span></summary>
+      <div class="notes-body">${html}</div>
+    </details>`;
+}
+
 function renderPick(m, i) {
   const e = images[i];
   const n = regionsOf(m.id).length;
@@ -676,7 +722,7 @@ function renderSheet() {
         <h2 id="image-name">${esc(m.name)}</h2>
         <span class="image-id">${esc(m.id)}${P.images.length > 1 ? ` · ${S.sel + 1} of ${P.images.length}` : ""}</span>
         <div class="choices" role="group" aria-label="Your verdict on ${esc(m.name)}">
-          ${offered().map(([a, label]) => `<button type="button" class="choice" data-action="${a}" aria-pressed="${v.action === a}" ${ro}>${a === "favorite" ? "★ " : ""}${label} <kbd>${KEYS[a]}</kbd></button>`).join("")}
+          ${offered().map(([a, label]) => `<button type="button" class="choice" data-action="${a}" aria-pressed="${v.action === a}" title="${label} (${KEYS[a]})" ${ro}>${a === "favorite" ? "★ " : ""}${label} <kbd>${KEYS[a]}</kbd></button>`).join("")}
         </div>
         ${prev ? `<div class="previous">Last round: ${chip(prev)} ${prev.note ? "— " + esc(prev.note) : ""}${prevRegions ? ` · ${prevRegions} region${prevRegions === 1 ? "" : "s"} asked for` : ""}</div>` : ""}
       </header>
@@ -714,13 +760,22 @@ function render() {
 function draw() {
   const sheet = document.getElementById("sheet");
   const scroll = sheet ? sheet.scrollTop : 0;
+  // in a narrow frame the whole view scrolls, and keeps its place
+  const app = document.getElementById("app");
+  const appScroll = app.scrollTop;
   const railEl = document.querySelector(".rail");
   const railScroll = railEl ? railEl.scrollTop : 0;
   const focusNote = document.activeElement?.id === "note";
   const draftNote = document.getElementById("region-note")?.value;
-  document.getElementById("app").innerHTML = `${renderTop()}${P.notes ? `<div class="notes">${Pinrail.markdown(P.notes)}</div>` : ""}<div class="work${P.images.length === 1 ? " single" : ""}">${P.images.length === 1 ? "" : renderRail()}${renderSheet()}</div>`;
-  document.getElementById("app").append(confirm.element);
+  app.innerHTML = `${renderTop()}${renderNotes()}<div class="work${P.images.length === 1 ? " single" : ""}">${P.images.length === 1 ? "" : renderRail()}${renderSheet()}</div>`;
+  app.append(confirm.element);
   if (S.keepScroll) document.getElementById("sheet").scrollTop = scroll;
+  const notes = app.querySelector("details.notes");
+  if (notes) notes.ontoggle = () => {
+    if (notes.open === S.notesOpen) return;
+    S.notesOpen = notes.open;
+    plugin.setSetting("notes_open", S.notesOpen);
+  };
   const rail = document.querySelector(".rail");
   if (rail) rail.scrollTop = railScroll;
   S.keepScroll = false;
@@ -731,6 +786,8 @@ function draw() {
   stage.classList.toggle("panning", plugin.readonly || S.compare || S.pan);
   stage.setAttribute("aria-label", `${P.images[S.sel].name}${S.compare ? ", previous round" : ""}. ${plugin.readonly ? "" : "Drag a box or click a spot to comment."}`);
   document.getElementById("stage-slot").replaceWith(stage);
+  // with the stage back in place, the view is as tall as it was
+  app.scrollTop = appScroll;
   stageImage();
   if (S.picking) {
     const ta = document.getElementById("region-note");
@@ -765,7 +822,8 @@ function toggleCompare() {
 
 let rounds = 0;
 const plugin = Pinrail.connect({
-  async onInit({ review, draft }) {
+  async onInit({ review, draft, settings }) {
+    if (typeof settings?.notes_open === "boolean") S.notesOpen = settings.notes_open;
     P = review.payload;
     S.verdicts = {};
     S.sel = 0; S.picking = null; S.compare = false; shownKey = null;
@@ -789,6 +847,12 @@ const plugin = Pinrail.connect({
     }));
   },
   onSubmitted() { render(); },
+  onSettings(settings) {
+    if (typeof settings?.notes_open !== "boolean" || settings.notes_open === S.notesOpen) return;
+    S.notesOpen = settings.notes_open;
+    S.keepScroll = true;
+    render();
+  },
   onViolations(errors) { S.errors = errors; S.armed = false; status(); },
   onCollect() { return handOver(); },
 });

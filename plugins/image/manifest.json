@@ -25,5 +25,16 @@
     { "keys": "f", "does": "Make this image the favourite", "group": "Verdicts" },
     { "keys": "s", "does": "Keep this image on the shortlist", "group": "Verdicts" },
     { "keys": "x", "does": "Drop this image", "group": "Verdicts" }
-  ]
+  ],
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "notes_open": {
+        "type": "boolean",
+        "title": "Notes open",
+        "description": "Start with the round's notes shown in full",
+        "default": true
+      }
+    }
+  }
 }

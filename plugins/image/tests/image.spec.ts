@@ -382,3 +382,59 @@ test("a second round compares with the first, and its regions", async ({ page })
   await f.locator(".stage").press("c");
   await expect(f.locator(".banner")).toHaveCount(0);
 });
+
+test("in a narrow frame the stage's bars do not overlap, and the verdicts keep one row", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: round() });
+  await ready(plugin);
+  const f = plugin.frame;
+  const zoom = (await f.getByRole("group", { name: "Zoom" }).boundingBox())!;
+  const tools = (await f.getByRole("group", { name: "Stage" }).boundingBox())!;
+  const apart = zoom.x + zoom.width <= tools.x || tools.x + tools.width <= zoom.x || zoom.y >= tools.y + tools.height;
+  expect(apart).toBe(true);
+  const tops = await f
+    .locator(".image-head .choice")
+    .evaluateAll((buttons) => buttons.map((b) => Math.round(b.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  // the key a button takes is still named, in its tooltip
+  await expect(f.locator('.choice[data-action="keep"]')).toHaveAttribute("title", "Keep (s)");
+});
+
+test("the round's notes fold away to a line, and the view keeps the choice", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: round() });
+  await ready(plugin);
+  const f = plugin.frame;
+  const notes = f.locator("details.notes");
+  await expect(notes).toHaveAttribute("open", "");
+  await notes.locator("summary").click();
+  await expect(notes.locator(".notes-body")).toBeHidden();
+  await expect(notes.locator(".notes-peek")).toContainText("Round 1 of the empty inbox");
+  await expect.poll(() => plugin.lastSettingsSet()).toEqual({ notes_open: false });
+  // a redraw keeps them folded, and so does the setting the next time
+  await f.locator('.choice[data-action="keep"]').click();
+  await expect(notes.locator(".notes-body")).toBeHidden();
+  await plugin.settings({ notes_open: true });
+  await expect(notes.locator(".notes-body")).toBeVisible();
+});
+
+test("a review opened with the notes folded starts with them folded", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: round(), settings: { notes_open: false } });
+  await ready(plugin);
+  await expect(plugin.frame.locator("details.notes .notes-body")).toBeHidden();
+});
+
+test("in a short, narrow frame the view scrolls as one, down to the image", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  const plugin = await mountPlugin(page, dir, { review: round() });
+  await ready(plugin);
+  const f = plugin.frame;
+  const stage = f.locator(".stage");
+  expect((await stage.boundingBox())!.height).toBeGreaterThanOrEqual(280);
+  await stage.scrollIntoViewIfNeeded();
+  await expect(f.locator(".stage .art")).toBeInViewport();
+  // a verdict redraws the view without losing the place
+  const before = await f.locator("#app").evaluate((el) => el.scrollTop);
+  expect(before).toBeGreaterThan(0);
+  await f.locator('.choice[data-action="keep"]').click();
+  expect(await f.locator("#app").evaluate((el) => el.scrollTop)).toBe(before);
+});
