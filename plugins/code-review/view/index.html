@@ -968,7 +968,6 @@
         gap: 10px;
       }
       .note-hint {
-        margin-left: auto;
         font: 11px var(--pinrail-sans);
         letter-spacing: 0;
         color: var(--pinrail-faint);
@@ -1590,8 +1589,12 @@
         display: contents;
       }
       .dictate-slot .pinrail-dictate {
+        align-self: auto;
         width: 26px;
         height: 26px;
+      }
+      .dictate-slot .pinrail-dictate:not([aria-pressed="true"]) {
+        color: var(--pinrail-dim);
       }
     </style>
   </head>
@@ -2372,7 +2375,7 @@
       function composerHtml() {
         const c = S.composer;
         return `<div class="mine editing">
-    <div class="mine-head">${Pinrail.icon("message-square", { size: 13 })}<span class="mine-label">YOUR COMMENT</span><span class="mine-at">${esc(anchorOf(c))}</span><span class="grow"></span><span class="mine-hint">Enter to ${c.editId != null ? "save" : "add"} · Esc to cancel</span>
+    <div class="mine-head">${Pinrail.icon("message-square", { size: 13 })}<span class="mine-label">YOUR COMMENT</span><span class="mine-at">${esc(anchorOf(c))}</span><span class="mine-hint">Enter to ${c.editId != null ? "save" : "add"} · Esc to cancel</span><span class="grow"></span>
       <span class="dictate-slot" data-pinrail-dictate-for="composer-ta"></span>
       <button class="icon-btn" data-act="cancel-composer" title="Cancel">${Pinrail.icon("x", { size: 15, label: "Cancel" })}</button>
       <button class="icon-btn ok" data-act="save-composer" title="${c.editId != null ? "Save" : "Add comment"}">${Pinrail.icon("check", { size: 15, label: c.editId != null ? "Save" : "Add comment" })}</button></div>
