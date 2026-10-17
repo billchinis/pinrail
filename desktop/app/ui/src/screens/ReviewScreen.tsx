@@ -435,6 +435,9 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
       const combo = comboFromEvent(event);
       if (combo && !isShadowed(combo) && plugin?.shortcuts?.some((s) => s.keys === combo)) {
         event.preventDefault();
+        // the view gets the keyboard with its key: a field the key opens,
+        // such as a code review's note on c, then takes typing at once
+        frame.current?.focus();
         frame.current?.contentWindow?.postMessage(
           {
             pinrail: 1,

@@ -50,6 +50,25 @@ test("a code review closes with Escape when it has nothing of its own to cancel"
   await expect(panel(page)).toHaveCount(0);
 });
 
+test("a view's key pressed in the app gives the view the keyboard, so c in a code review takes typing at once", async ({
+  page,
+}) => {
+  await clearInbox(page.request);
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "..", "plugins", "code-review", "fixtures", "webhooks.json"), "utf8"),
+  );
+  await createReview(page.request, { title: "Panel: c to comment", plugin: "code-review", payload: fixture.payload });
+  await page.goto("/#/");
+  await row(page, "Panel: c to comment").click();
+  const frame = page.frameLocator("#plugin-frame");
+  await expect(frame.locator(".card").first()).toBeVisible();
+  // the app has the keyboard, as after a click in the list
+  await page.locator("body").press("c");
+  await expect(frame.locator("textarea.note-ta")).toBeVisible();
+  await page.keyboard.type("shorter, please");
+  await expect(frame.locator("textarea.note-ta")).toHaveValue("shorter, please");
+});
+
 test("a review opens beside the inbox, and closes with its button or Escape", async ({ page }) => {
   await clearInbox(page.request);
   const review = await createReview(page.request, { title: "Panel: open and close" });
