@@ -1073,7 +1073,7 @@ body.is-resizing iframe {
 }
 /* What's new: one card at a time, its picture across the top */
 .whats-new {
-  width: min(720px, calc(100vw - 32px));
+  width: min(860px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -1108,23 +1108,26 @@ body.is-resizing iframe {
   border-radius: 4px;
   padding: 3px 8px;
 }
+/* the picture: the whole app window, small and framed, on a tinted ground */
 .whats-new-picture {
   margin: 0 22px;
-  aspect-ratio: 2.05;
   flex: none;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-raised);
-  overflow: hidden;
+  padding: 18px 22px;
+  border-radius: 12px;
+  background: var(--accent-bg);
   display: grid;
   place-items: center;
+  min-height: 200px;
   color: var(--accent);
 }
 .whats-new-picture img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
   display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1180 / 576;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.16);
 }
 .whats-new-text {
   padding: 18px 22px 4px;

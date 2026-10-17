@@ -75,7 +75,7 @@ export function WhatsNewDialog({
         </header>
         <div className="whats-new-picture">
           {picture ? (
-            <img src={picture} alt={card.alt ?? ""} style={{ objectPosition: card.focus ?? "center top" }} />
+            <img src={picture} alt={card.alt ?? ""} />
           ) : (
             <Sparkles size={40} strokeWidth={1.25} aria-hidden="true" />
           )}

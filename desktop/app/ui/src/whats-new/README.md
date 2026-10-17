@@ -14,13 +14,13 @@ changelog. Each card has:
 | `text` | One or two sentences. |
 | `image` | Optional. The name of a screenshot scene in `e2e/screenshots/scenes.mjs`. |
 | `alt` | What the picture shows, for a screen reader. Required with `image`. |
-| `focus` | Optional. Which part of the picture to keep when it is cropped, as CSS `object-position`. |
 | `action` | Optional. A button that opens the change: `{"label": "Open the inbox", "to": "/"}` for a screen, or `{"label": "Open Plugins", "settings": "plugins"}` for a section of Settings. |
 
 The screenshot run makes the pictures: a scene whose name a card gives as
 its `image` is saved here as `<version>/<image>-light.png` and
-`<image>-dark.png`. Crop a scene to the part that changed, about twice as
-wide as it is high, so its text stays readable in the dialog:
+`<image>-dark.png`. A scene shows the whole window at 1180 by 576, the
+shape of the dialog's picture, with the change on screen; it does not
+crop, so nothing is cut off at the edges:
 
 ```sh
 mise run screenshots -- --only inbox-panel

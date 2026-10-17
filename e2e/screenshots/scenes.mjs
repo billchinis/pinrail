@@ -59,54 +59,57 @@ async function note(f, id, text) {
   await f.locator(`[data-note-ta="${id}"]`).fill(text);
 }
 
-/** A part of the window, for a What's new picture: about twice as wide as it is high. */
-const crop = (x, y, width) => ({ clip: { x, y, width, height: Math.round(width / 2.05) } });
+/** A What's new picture is the whole window at this size, the shape of the dialog's picture. */
+const card = (page) => page.setViewportSize({ width: 1180, height: 576 });
 
 export const scenes = [
   // What's new in 0.3.0: each saved into that release's folder
   {
     name: "inbox-panel",
     async run({ page, app, reviews, shot }) {
+      await card(page);
       await page.goto(`${app.ui}/#/?open=${reviews["16-list-cloud"]}`);
       await page.frameLocator("#plugin-frame").locator("body").waitFor();
       await settle(page, 700);
-      await shot("inbox-panel", page, crop(420, 38, 1000));
+      await shot("inbox-panel");
     },
   },
   {
     name: "history-source",
     async run({ page, app, shot }) {
+      await card(page);
       await page.goto(`${app.ui}/#/history`);
       await page.waitForLoadState("networkidle");
       const row = page.getByTestId("history-row").filter({ hasText: "Bump lodash" });
       await row.getByTestId("source-badge").hover();
       await page.getByRole("tooltip").waitFor();
       await settle(page, 400);
-      const box = await row.boundingBox();
-      await shot("history-source", page, crop(600, Math.max(38, Math.round(box.y - 110)), 840));
+      await shot("history-source");
     },
   },
   {
     name: "plugins-official",
     async run({ page, app, shot }) {
+      await card(page);
       await page.goto(`${app.ui}/#/`);
       await page.getByTestId("inbox-group").first().waitFor();
       await page.keyboard.press("Meta+,");
       await settingsSection(page, "Plugins").click();
       await page.waitForLoadState("networkidle");
       await settle(page, 500);
-      await shot("plugins-official", page.getByRole("dialog", { name: "Settings", exact: true }));
+      await shot("plugins-official");
     },
   },
   {
     name: "review-shortcuts",
     async run({ page, app, reviews, shot }) {
+      await card(page);
       await openReview(page, app, reviews["10-review-webhooks"]);
       await page.locator("body").press("?");
       const dialog = page.getByRole("dialog", { name: "Keyboard shortcuts" });
       await dialog.getByRole("searchbox", { name: "Search shortcuts" }).fill("proposal");
       await settle(page, 400);
-      await shot("review-shortcuts", dialog);
+      await shot("review-shortcuts");
     },
   },
 

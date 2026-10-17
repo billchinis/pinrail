@@ -15,8 +15,6 @@ export type Card = {
   image?: string;
   /** what the picture shows, for a screen reader */
   alt?: string;
-  /** which part of the picture to keep when it is cropped, as CSS object-position */
-  focus?: string;
   action?: CardAction;
 };
 
