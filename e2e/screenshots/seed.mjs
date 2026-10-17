@@ -102,18 +102,25 @@ export async function seed(app) {
       title: f.title,
       origin: f.origin,
       requested_by: f.requested_by,
+      ...(f.session ? { session: f.session } : {}),
       payload: f.payload,
       ...(f.attachments ? { attachments: await upload(app, f.attachments) } : {}),
       ...(f.revises ? { revises: created[f.revises] } : {}),
     });
     created[f.key] = review.id;
+    // `decided_with` names the client that decided, and who and from which
+    // session it says it did, when it was not the app
     if (f.decision)
-      await app.api("POST", `/api/v1/reviews/${review.id}/decision`, {
-        data: f.decision,
-        ...(f.note ? { agent_note: f.note } : {}),
-      });
+      await app.api(
+        "POST",
+        `/api/v1/reviews/${review.id}/decision`,
+        { data: f.decision, ...(f.note ? { agent_note: f.note } : {}), ...(f.decided_with?.says ?? {}) },
+        f.decided_with?.client,
+      );
     if (f.discard) await app.api("POST", `/api/v1/reviews/${review.id}/discard`, { reason: f.discard });
-    if (f.withdraw) await app.api("POST", `/api/v1/reviews/${review.id}/withdraw`, { reason: f.withdraw });
+    // the agent that asked withdraws, with the pinrail command
+    if (f.withdraw)
+      await app.api("POST", `/api/v1/reviews/${review.id}/withdraw`, { reason: f.withdraw, by: f.requested_by }, "cli");
     plan[review.id] = { created: ms(f.age), ...(f.decided ? { outcome: ms(f.decided) } : {}) };
   }
   const ids = await app.pin(plan);

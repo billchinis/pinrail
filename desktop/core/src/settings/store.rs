@@ -30,6 +30,8 @@ enum Kind {
     Port,
     /// a positive integer, or null
     NullableDays,
+    /// a version such as 0.3.0, or null
+    NullableVersion,
 }
 
 /// A setting: its JSON pointer, its kind, its default, and one line saying
@@ -142,6 +144,12 @@ const LEAVES: &[Leaf] = &[
         "Look for a new version of Pinrail at start and every few hours, and download it in the background. It is installed when Pinrail restarts.",
     ),
     (
+        "/whats_new/seen",
+        Kind::NullableVersion,
+        || Value::Null,
+        "The release of Pinrail whose notes were last shown. A newer release with notes shows them once when it first starts.",
+    ),
+    (
         "/welcome/seen",
         Kind::Bool,
         || json!(false),
@@ -179,6 +187,7 @@ impl Kind {
             Kind::NullableHours => "`{\"from\": \"HH:MM\", \"to\": \"HH:MM\"}`, or `null`".into(),
             Kind::Port => "a port, 1 to 65535".into(),
             Kind::NullableDays => "a positive number of days, or `null`".into(),
+            Kind::NullableVersion => "a version such as `\"0.3.0\"`, or `null`".into(),
         }
     }
 }
@@ -635,7 +644,21 @@ fn check(kind: Kind, value: &Value) -> Option<String> {
             Value::Number(n) if n.as_u64().is_some_and(|d| d >= 1) => None,
             _ => wrong("a number of days, or null"),
         },
+        Kind::NullableVersion => match value {
+            Value::Null => None,
+            Value::String(s) if is_version(s) => None,
+            _ => wrong("a version such as 0.3.0, or null"),
+        },
     }
+}
+
+/// Three dot-separated numbers, as `0.3.0`.
+fn is_version(text: &str) -> bool {
+    let parts: Vec<&str> = text.split('.').collect();
+    parts.len() == 3
+        && parts
+            .iter()
+            .all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()))
 }
 
 fn is_clock(s: &str) -> bool {

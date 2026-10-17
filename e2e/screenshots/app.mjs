@@ -8,6 +8,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
@@ -53,9 +54,13 @@ export async function startApp({ build = true } = {}) {
   const data = path.join(root, "e2e", ".state", "screenshots-data");
   fs.rmSync(data, { recursive: true, force: true });
   fs.mkdirSync(data, { recursive: true });
-  // a returning person's data: the setup already seen, so its dialog does
-  // not cover the screens
-  fs.writeFileSync(path.join(data, "settings.json"), JSON.stringify({ welcome: { seen: true } }));
+
+  // a returning person's data: the setup and What's new already seen, so
+  // neither dialog covers the screens
+  fs.writeFileSync(
+    path.join(data, "settings.json"),
+    JSON.stringify({ welcome: { seen: true }, whats_new: { seen: "999.0.0" } }),
+  );
 
   const corePort = await freePort();
   const uiPort = await freePort();
@@ -99,11 +104,14 @@ export async function startApp({ build = true } = {}) {
   });
   await waitFor(ui, "the shell");
 
-  const api = async (method, route, body) => {
+  // `client` is how the request says it was sent: from the shell's origin by
+  // default, so what the seed decides reads as decided in the app; "cli" as
+  // the pinrail command sends it; "api" as any other program does
+  const api = async (method, route, body, client = "app") => {
+    const sent = { app: { origin: ui }, cli: { "x-pinrail-client": "cli" }, api: {} }[client];
     const res = await fetch(`${core}${route}`, {
       method,
-      // from the shell's origin, so what the seed decides reads as decided in the app
-      headers: method === "GET" ? {} : { "content-type": "application/json", origin: ui },
+      headers: method === "GET" ? {} : { "content-type": "application/json", ...sent },
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await res.text();
@@ -155,7 +163,7 @@ const iso = (ms) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, ".000Z");
  * milliseconds before NOW (outcome only when it ended). Every row takes the
  * pinned time; events keep their order, spaced a second apart from the
  * review's creation; installed plugins are dated an hour before the oldest
- * review; whoever decided or discarded is PERSON. Returns the old id → new
+ * review; whoever decided, discarded or withdrew in the app is PERSON. Returns the old id → new
  * id map.
  */
 function pinDatabase(file, plan) {
@@ -199,8 +207,10 @@ function pinDatabase(file, plan) {
       name,
     );
   }
-  // the person deciding is the fixtures' person, not whoever runs this
-  db.prepare("UPDATE outcomes SET by = ? WHERE kind IN ('decided', 'discarded')").run(PERSON);
+  // what was done in the app was done by the fixtures' person, not by
+  // whoever runs this; what an agent or a program did keeps its name
+  db.prepare("UPDATE outcomes SET by = ? WHERE via = 'app'").run(PERSON);
+  db.prepare("UPDATE events SET actor = ? WHERE actor = ?").run(PERSON, os.userInfo().username);
   db.prepare("UPDATE events SET at = ? WHERE review_id IS NULL").run(iso(NOW - oldest - 3_600_000));
   db.exec("COMMIT");
   db.close();

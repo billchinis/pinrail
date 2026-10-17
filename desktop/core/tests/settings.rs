@@ -28,6 +28,7 @@ async fn every_setting_is_listed_at_its_default() {
     assert_eq!(body["port"], 4747);
     assert!(body["history"]["keep_days"].is_null());
     assert_eq!(body["inbox"]["open_in"], "panel");
+    assert!(body["whats_new"]["seen"].is_null());
     assert!(
         !app.dir.path().join("settings.json").exists(),
         "nothing is written until something changes"
@@ -101,6 +102,29 @@ async fn a_change_that_changes_nothing_announces_nothing() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert!(rx.try_recv().is_err());
+}
+
+/// The release whose notes were last shown: a version, or null.
+#[tokio::test]
+async fn the_last_release_shown_is_a_version() {
+    let app = app();
+    let patch = |seen: Value| json!({"whats_new": {"seen": seen}});
+    let (status, body) = call(
+        &app,
+        "PATCH",
+        "/api/v1/settings",
+        Some(patch(json!("0.3.0"))),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["whats_new"]["seen"], "0.3.0");
+    for bad in [json!("soon"), json!("0.3"), json!(3)] {
+        let (status, body) = call(&app, "PATCH", "/api/v1/settings", Some(patch(bad))).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert_eq!(body["violations"][0]["path"], "/whats_new/seen");
+    }
+    let (status, _) = call(&app, "PATCH", "/api/v1/settings", Some(patch(Value::Null))).await;
+    assert_eq!(status, StatusCode::OK);
 }
 
 #[tokio::test]

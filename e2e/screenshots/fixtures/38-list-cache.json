@@ -1,0 +1,39 @@
+{
+  "plugin": "list",
+  "title": "Nightly cache warm-up list",
+  "origin": {
+    "repo": "northwind/infra",
+    "workflow": "cache"
+  },
+  "requested_by": "cache-bot",
+  "age": "6h",
+  "decided": "6h",
+  "decided_with": {
+    "client": "api"
+  },
+  "decision": {
+    "decisions": [
+      {
+        "id": 1,
+        "action": "accept"
+      }
+    ],
+    "undecided": []
+  },
+  "payload": {
+    "summary": "The pages to warm before the morning traffic.",
+    "groups": [
+      {
+        "title": "Pages",
+        "items": [
+          {
+            "id": 1,
+            "severity": "minor",
+            "title": "Warm /pricing and /docs",
+            "body": "Both were cold at 08:00 yesterday."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "version": "0.3.0",
+  "cards": [
+    {
+      "title": "Reviews open beside the inbox",
+      "text": "Click a review and it opens in a panel next to the list, which stays in view. J and K move to the next and previous review, even while you work in the view. Settings › General can open reviews as a page of their own again.",
+      "image": "inbox-panel",
+      "alt": "The inbox with a review open in a panel on its right",
+      "focus": "left top",
+      "action": { "label": "Open the inbox", "to": "/" }
+    },
+    {
+      "title": "See where a decision came from",
+      "text": "A CLI or API badge marks a decision, a discard or a withdrawal that was not made in the app, with the details on hover. The badge turns amber when the agent that asked also decided.",
+      "image": "history-source",
+      "alt": "The history, with a CLI badge on a review an agent decided, and its tooltip",
+      "focus": "center top",
+      "action": { "label": "Open the history", "to": "/history" }
+    },
+    {
+      "title": "Official plugins update with the app",
+      "text": "When Pinrail updates, the official plugins you installed move to the versions it carries the next time it starts. Reviews keep the version they were submitted to.",
+      "image": "plugins-official",
+      "alt": "Settings, Plugins: the installed official plugins and their versions",
+      "focus": "center top",
+      "action": { "label": "Open Plugins", "settings": "plugins" }
+    },
+    {
+      "title": "N and P move between items",
+      "text": "Every plugin now moves to the next and previous item with N and P, and Shift moves further. J and K belong to the inbox.",
+      "image": "review-shortcuts",
+      "alt": "The keyboard shortcuts of a code review, with N and P for the next and previous proposal",
+      "focus": "center center"
+    }
+  ]
+}

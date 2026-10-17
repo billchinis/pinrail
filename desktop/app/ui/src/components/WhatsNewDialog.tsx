@@ -1,0 +1,139 @@
+// What's new: the cards of one or more releases, one at a time, newest
+// release first. Each card has a picture in the current theme, a title, a
+// sentence or two, and may open what it is about. ← and → step through the
+// cards; Esc or the close button ends it, as Done does on the last card.
+
+import { Sparkles, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { pictureOf, type CardAction, type Release } from "../lib/whatsNew";
+import { useTheme } from "../lib/theme";
+import { Tooltip } from "./Tooltip";
+
+export function WhatsNewDialog({
+  releases,
+  onAction,
+  onClose,
+}: {
+  releases: Release[];
+  /** opens what a card's button names, after the dialog has closed */
+  onAction: (action: CardAction) => void;
+  onClose: () => void;
+}) {
+  const theme = useTheme();
+  const cards = useMemo(
+    () => releases.flatMap((r) => r.cards.map((card) => ({ ...card, version: r.version }))),
+    [releases],
+  );
+  const [at, setAt] = useState(0);
+  const card = cards[Math.min(at, cards.length - 1)];
+  const last = at >= cards.length - 1;
+  const next = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    next.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setAt((n) => Math.min(n + 1, cards.length - 1));
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setAt((n) => Math.max(n - 1, 0));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cards.length, onClose]);
+
+  if (!card) return null;
+  const picture = card.image ? pictureOf(card.version, card.image, theme) : null;
+
+  return (
+    <div className="app-dialog-backdrop whats-new-backdrop" onClick={onClose}>
+      <section
+        className="whats-new"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="whats-new-title"
+        data-testid="whats-new"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="whats-new-head">
+          <span className="whats-new-tag">New in {card.version}</span>
+          <h2 id="whats-new-title">What's new in Pinrail</h2>
+          <Tooltip label="Close" keys={["Esc"]}>
+            <button type="button" className="bar-button" onClick={onClose} aria-label="Close">
+              <X size={16} />
+            </button>
+          </Tooltip>
+        </header>
+        <div className="whats-new-picture">
+          {picture ? (
+            <img src={picture} alt={card.alt ?? ""} style={{ objectPosition: card.focus ?? "center top" }} />
+          ) : (
+            <Sparkles size={40} strokeWidth={1.25} aria-hidden="true" />
+          )}
+        </div>
+        <div className="whats-new-text" aria-live="polite">
+          <h3 data-testid="whats-new-card">{card.title}</h3>
+          <p>{card.text}</p>
+        </div>
+        <footer className="whats-new-foot">
+          {cards.length > 1 ? (
+            <>
+              <div className="whats-new-dots" role="tablist" aria-label="Cards">
+                {cards.map((c, i) => (
+                  <button
+                    key={`${c.version}:${i}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={i === at}
+                    aria-label={c.title}
+                    className={i === at ? "is-on" : ""}
+                    onClick={() => setAt(i)}
+                  />
+                ))}
+              </div>
+              <span className="whats-new-count">
+                {at + 1} of {cards.length}
+              </span>
+            </>
+          ) : null}
+          <span className="whats-new-spacer" />
+          {card.action ? (
+            <button
+              type="button"
+              className="chrome-button"
+              onClick={() => {
+                onClose();
+                onAction(card.action!);
+              }}
+            >
+              {card.action.label}
+            </button>
+          ) : null}
+          {cards.length > 1 ? (
+            <button type="button" className="chrome-button" disabled={at === 0} onClick={() => setAt(at - 1)}>
+              Back
+            </button>
+          ) : null}
+          <button
+            ref={next}
+            type="button"
+            className="chrome-button button-primary"
+            data-testid="whats-new-next"
+            onClick={() => (last ? onClose() : setAt(at + 1))}
+          >
+            {last ? "Done" : "Next"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}

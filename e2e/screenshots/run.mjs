@@ -12,8 +12,9 @@
 // <name>-dark.png where they are used: into website/public/screenshots when
 // a docs page shows it as screenshot:<name>, and, in the light theme only,
 // into website/src/assets/screenshots when the scene marks it `site: true`,
-// for the landing pages, where Astro optimizes it. A shot used by neither
-// fails the run. With --out, every shot goes into that folder instead.
+// for the landing pages, where Astro optimizes it, and into
+// desktop/app/ui/src/whats-new/<version>/ when a release's What's new card
+// names it as its image. A shot used by none of them fails the run. With --out, every shot goes into that folder instead.
 //
 // made.json records the files a full run made. The next full run that
 // succeeds removes the ones it no longer makes, such as a renamed scene's;
@@ -71,6 +72,19 @@ function docsShots(dir = path.join(root, "docs")) {
   return names;
 }
 const inDocs = docsShots();
+
+/** The pictures What's new shows, each into the folder of every release whose card names it. */
+function whatsNewShots(dir = path.join(root, "desktop", "app", "ui", "src", "whats-new")) {
+  const where = new Map();
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const release = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
+    for (const card of release.cards) {
+      if (card.image) where.set(card.image, [...(where.get(card.image) ?? []), path.join(dir, release.version)]);
+    }
+  }
+  return where;
+}
+const inWhatsNew = whatsNewShots();
 const only = flag("--only");
 const chosen = scenes.filter((s) => !only || s.name.startsWith(only));
 if (!chosen.length) throw new Error(`no scene starts with ${only}`);
@@ -103,12 +117,17 @@ try {
       // `site: true` saves the light shot into the website's assets, for the
       // landing pages, which are light
       const shot = async (name, target = page, { site = false, ...options } = {}) => {
-        if (!elsewhere && !inDocs.has(name) && !site) {
-          throw new Error(`${name} is shown by no docs page, and not marked site: true`);
+        if (!elsewhere && !inDocs.has(name) && !inWhatsNew.has(name) && !site) {
+          throw new Error(`${name} is shown by no docs page or What's new card, and not marked site: true`);
         }
         const folders = elsewhere
           ? [out]
-          : [...(inDocs.has(name) ? [out] : []), ...(site && theme === "light" ? [siteAssets] : [])];
+          : [
+              ...(inDocs.has(name) ? [out] : []),
+              ...(site && theme === "light" ? [siteAssets] : []),
+              ...(inWhatsNew.get(name) ?? []),
+            ];
+        for (const folder of folders) fs.mkdirSync(folder, { recursive: true });
         if (!folders.length) return;
         await page.evaluate(() => document.fonts.ready);
         await scrub(page, [

@@ -34,6 +34,8 @@ export type Settings = {
   updates: { check: boolean };
   /** the welcome screen was closed; until then the app opens on it */
   welcome: { seen: boolean };
+  /** the release whose notes were last shown, or null before any */
+  whats_new: { seen: string | null };
   /** launch at login; null when the app cannot say (a browser) */
   autostart: boolean | null;
 };
@@ -54,6 +56,7 @@ type Patch = {
   history?: Partial<Settings["history"]>;
   updates?: Partial<Settings["updates"]>;
   welcome?: Partial<Settings["welcome"]>;
+  whats_new?: Partial<Settings["whats_new"]>;
   autostart?: boolean;
 };
 
@@ -83,6 +86,7 @@ type Served = Pick<
   | "history"
   | "updates"
   | "welcome"
+  | "whats_new"
 >;
 const fromServer = (s: ServerSettings): Served => ({
   appearance: { theme: s.appearance.theme, text_size: s.appearance.text_size },
@@ -103,6 +107,7 @@ const fromServer = (s: ServerSettings): Served => ({
   history: { keep_days: s.history?.keep_days ?? null },
   updates: { check: s.updates?.check ?? true },
   welcome: { seen: s.welcome?.seen ?? false },
+  whats_new: { seen: s.whats_new?.seen ?? null },
 });
 
 const mergeLinks = (current: Settings["links"], patch?: Patch["links"]): Settings["links"] => {
@@ -139,6 +144,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     history: { keep_days: null },
     updates: { check: true },
     welcome: { seen: false },
+    whats_new: { seen: null },
     autostart: null,
   }));
   const [loaded, setLoaded] = useState(false);
@@ -219,7 +225,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         patch.port !== undefined ||
         patch.history ||
         patch.updates ||
-        patch.welcome
+        patch.welcome ||
+        patch.whats_new
       ) {
         const base = current.current;
         const next: Served = {
@@ -236,6 +243,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           history: { ...base.history, ...patch.history },
           updates: { ...base.updates, ...patch.updates },
           welcome: { ...base.welcome, ...patch.welcome },
+          whats_new: { ...base.whats_new, ...patch.whats_new },
         };
         apply(next);
         current.current = { ...base, ...next };
@@ -254,6 +262,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (patch.history) body.history = patch.history;
         if (patch.updates) body.updates = patch.updates;
         if (patch.welcome) body.welcome = patch.welcome;
+        if (patch.whats_new) body.whats_new = patch.whats_new;
         const mine = ++sent.current;
         unanswered.current++;
         try {

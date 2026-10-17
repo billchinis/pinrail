@@ -47,7 +47,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `cargo build -q -p pinrail-desktop && cargo build -q --manifest-path ../cli/Cargo.toml && rm -rf "${data}" && mkdir -p "${data}" && echo '{"welcome":{"seen":true}}' > "${data}/settings.json" && ./target/debug/Pinrail --headless --port ${corePort} --data-dir "${data}" --sdk-dir "${path.join(root, "desktop", "app", "sdk", "v1")}" --catalog-dir "${catalog}"`,
+      command: `cargo build -q -p pinrail-desktop && cargo build -q --manifest-path ../cli/Cargo.toml && rm -rf "${data}" && mkdir -p "${data}" && echo '{"welcome":{"seen":true},"whats_new":{"seen":"999.0.0"}}' > "${data}/settings.json" && ./target/debug/Pinrail --headless --port ${corePort} --data-dir "${data}" --sdk-dir "${path.join(root, "desktop", "app", "sdk", "v1")}" --catalog-dir "${catalog}"`,
       cwd: path.join(root, "desktop"),
       env: { PINRAIL_SHELL_ORIGIN: `http://127.0.0.1:${uiPort}` },
       url: `http://127.0.0.1:${corePort}/api/v1/info`,
