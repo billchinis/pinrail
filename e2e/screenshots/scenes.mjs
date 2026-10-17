@@ -101,6 +101,23 @@ export const scenes = [
     },
   },
   {
+    name: "note-dictation",
+    async run({ page, app, reviews, shot }) {
+      await card(page);
+      await page.goto(`${app.ui}/#/?open=${reviews["16-list-cloud"]}`);
+      await page.frameLocator("#plugin-frame").locator("body").waitFor();
+      await page
+        .getByRole("textbox", { name: "Note to the agent" })
+        .fill("Keep the staging bucket, the demo data lives there");
+      // the microphone as it looks while listening, which a headless browser cannot do
+      await page
+        .getByRole("button", { name: "Dictate the note" })
+        .evaluate((button) => button.classList.add("is-listening"));
+      await settle(page, 500);
+      await shot("note-dictation");
+    },
+  },
+  {
     name: "review-shortcuts",
     async run({ page, app, reviews, shot }) {
       await card(page);

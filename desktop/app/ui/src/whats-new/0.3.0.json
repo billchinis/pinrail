@@ -23,6 +23,12 @@
       "action": { "label": "Open Plugins", "settings": "plugins" }
     },
     {
+      "title": "Dictate your note to the agent",
+      "text": "In the macOS app, click the microphone in a review's note box and speak. The words appear as you say them, in your system's language. macOS asks once for access to the microphone and to speech recognition.",
+      "image": "note-dictation",
+      "alt": "A review in the side panel, with a note in the box and the microphone listening"
+    },
+    {
       "title": "J and K are reserved for Pinrail",
       "text": "J and K always move through the inbox, so plugins can no longer use them. The plugins that did now use N (next) and P (previous) to move between items.",
       "image": "review-shortcuts",
