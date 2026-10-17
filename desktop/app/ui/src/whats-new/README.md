@@ -28,3 +28,8 @@ mise run screenshots -- --only inbox-panel
 
 `src/lib/whatsNew.test.ts` fails when a card names a picture that is not
 here in both themes, and when a file here is not a picture a card shows.
+
+The app carries the notes of the last three releases only. When a release
+is made, `scripts/set-version.mjs` removes the notes and pictures of older
+releases, and the release commit records the removal. Notes for the next
+release can be written beforehand: they are kept until their release.

@@ -73,4 +73,10 @@ describe("the pictures the app carries", () => {
     const folders = import.meta.glob("../whats-new/*/*", { query: "?url", import: "default" });
     expect(Object.keys(folders).filter((file) => !file.endsWith(".webp"))).toEqual([]);
   });
+
+  test("are those of the last few releases only", () => {
+    // three releases, and the notes of the next one while they are written;
+    // scripts/set-version.mjs removes the oldest when a release is made
+    expect(RELEASES.length).toBeLessThanOrEqual(4);
+  });
 });

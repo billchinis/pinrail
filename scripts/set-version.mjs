@@ -1,6 +1,7 @@
 // Sets the version everywhere it is written, before a release is tagged,
 // and names the release in each official plugin's changelog: a section
 // headed "## [1.1.0] - Unreleased" becomes "## [1.1.0] - Pinrail 0.2.0".
+// It also removes What's new notes older than the last three releases.
 //
 //   node scripts/set-version.mjs 0.2.0
 //   node scripts/set-version.mjs 0.2.0 --tag   # also commits and tags v0.2.0
@@ -12,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { catalog, stampChangelogs } from "./plugin-versions.mjs";
+import { prune } from "./whats-new.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const run = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: "inherit" });
@@ -76,6 +78,11 @@ write("desktop/app/src-tauri/tauri.conf.json", /("version":\s*)"[^"]*"/, `$1"${v
 run("npm", ["version", version, "--no-git-tag-version", "--allow-same-version"], path.join(root, "desktop", "app"));
 
 for (const file of stamping ? stampChangelogs(root, plugins, version) : []) console.log(`named ${version} in ${file}`);
+// What's new keeps the last releases' notes; the release commit removes the rest
+for (const file of stamping ? prune(root, version) : []) {
+  released.push(file);
+  console.log(`removed ${file}`);
+}
 
 // cargo writes the lock files, so a release still builds --locked
 run("cargo", ["update", "--workspace", "--offline", "--quiet"], path.join(root, "desktop"));

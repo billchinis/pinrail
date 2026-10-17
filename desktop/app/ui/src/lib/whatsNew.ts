@@ -3,7 +3,8 @@
 // whats-new/<version>.json, and its pictures beside it in
 // whats-new/<version>/, as <image>-light.webp and <image>-dark.webp, which
 // the screenshot run makes (e2e/screenshots). A release with no file shows
-// nothing.
+// nothing. The app carries the notes of the last few releases only:
+// scripts/set-version.mjs removes older ones when a release is made.
 
 /** What a card's button opens: a screen of the app, or a section of Settings. */
 export type CardAction = { label: string; to?: string; settings?: string };
