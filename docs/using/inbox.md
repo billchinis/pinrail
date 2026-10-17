@@ -30,7 +30,7 @@ Open a review with <kbd>Enter</kbd> or a click. It opens in a panel beside the i
 To open reviews as a page of their own instead, set *Settings › General › Opening a review* to *As a page*.
 
 1. **Decide in the view.** Use the controls that the plugin provides, for example to accept, reject, edit or comment. Your work is saved as a draft as you go, so you can open another review and come back to it.
-2. **Add a note to the agent**, if you want to, in the box below the view.
+2. **Add a note to the agent**, if you want to, in the box below the view. In the macOS app you can dictate it: click the microphone, speak, and click it again to stop. The first time, macOS asks for access to the microphone and to speech recognition.
 3. **Hand over** with the button, or <kbd>⌘↵</kbd>. The button says what will happen, such as *Hand over 3 of 5*. In the panel, Pinrail then opens the next review in the list, and closes the panel after the last one. On a review's page, Pinrail returns to the inbox.
 
 :::caution[Drafts last only while Pinrail runs]

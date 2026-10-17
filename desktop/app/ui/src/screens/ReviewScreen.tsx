@@ -7,6 +7,7 @@ import {
   Expand,
   ExternalLink,
   Maximize2,
+  Mic,
   Minimize2,
   PanelRight,
   RefreshCw,
@@ -30,6 +31,7 @@ import { WaitMark } from "../components/WaitMark";
 import { LinkDialog, type LinkChoice } from "../components/LinkDialog";
 import { allowedWithoutAsking, allowing, linkRequest, sourceOf, type LinkRequest } from "../lib/links";
 import { openExternal, overlayTitleBar } from "../lib/native";
+import { canDictate, useDictation } from "../lib/dictation";
 import { Tooltip } from "../components/Tooltip";
 import { MOD, SHIFT, hasMod, modalOpen } from "../lib/keys";
 import { comboFromEvent, isShadowed } from "../lib/shortcuts";
@@ -134,6 +136,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
   const [flash, setFlash] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState(false);
   const [note, setNote] = useState("");
+  const noteBox = useRef<HTMLTextAreaElement>(null);
   const [maximized, setMaximized] = useState(false);
   // the find bar, and a count that focuses it each time it is asked for
   const [finding, setFinding] = useState(false);
@@ -622,6 +625,14 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
       // ignore
     }
   };
+  // dictation writes into the note as it hears it, and the box grows with it
+  const dictation = useDictation(onNote, (message) => toast(message, "danger"));
+  useEffect(() => {
+    const el = noteBox.current;
+    if (!el || !dictation.listening) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [note, dictation.listening]);
 
   if (error) {
     return (
@@ -926,6 +937,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
       {plugin && !readonly ? (
         <div className={`composer ${bridge.submitting ? "is-busy" : ""}`}>
           <textarea
+            ref={noteBox}
             rows={1}
             value={note}
             aria-label="Note to the agent"
@@ -943,6 +955,23 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
                 ? "The note travels with your decision"
                 : "Reconnecting — hand-over resumes when the server is back"}
             </span>
+            {canDictate ? (
+              <Tooltip label={dictation.listening ? "Stop dictating" : "Dictate the note"} side="top">
+                <button
+                  type="button"
+                  className={`bar-button composer-dictate ${dictation.listening ? "is-listening" : ""}`}
+                  aria-label={dictation.listening ? "Stop dictating" : "Dictate the note"}
+                  aria-pressed={dictation.listening}
+                  onClick={() => {
+                    if (dictation.listening) dictation.stop();
+                    else dictation.start(note);
+                    noteBox.current?.focus();
+                  }}
+                >
+                  <Mic size={15} />
+                </button>
+              </Tooltip>
+            ) : null}
             <Tooltip
               label={live.connected ? "Hand over to the agent" : "Reconnect to hand over"}
               keys={[MOD, "Enter"]}

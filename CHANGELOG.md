@@ -29,6 +29,10 @@ The `pinrail` command ships inside the app and carries the app's version.
 - The history shows who withdrew or discarded a review and how, with the
   reason they gave in a tooltip. Pinrail records the agent that withdrew
   a review, as it does for a discard.
+- In the macOS app, the note to the agent can be dictated: the
+  microphone in the note box turns speech into text as you speak, in
+  your system's language. macOS asks once for access to the microphone
+  and to speech recognition.
 
 ### Changed
 

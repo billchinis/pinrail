@@ -2462,6 +2462,15 @@ body.is-resizing iframe {
   font-size: 11.5px;
   color: var(--faint);
 }
+/* dictation, beside the hand-over; red while it listens */
+.composer-dictate {
+  margin-left: auto;
+  margin-right: -6px;
+}
+.composer-dictate.is-listening {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 12%, transparent);
+}
 .handover-button {
   padding: 5px 8px 5px 12px;
   border: 0;

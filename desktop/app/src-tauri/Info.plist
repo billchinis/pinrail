@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- what macOS shows when dictating a note first asks for the microphone and speech recognition -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Pinrail listens while you dictate a note to the agent.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Pinrail turns the note you dictate into text.</string>
+</dict>
+</plist>

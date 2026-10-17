@@ -54,7 +54,8 @@
       "../sdk/v1": "sdk/v1"
     },
     "macOS": {
-      "minimumSystemVersion": "13.0"
+      "minimumSystemVersion": "13.0",
+      "entitlements": "./Entitlements.plist"
     }
   }
 }
