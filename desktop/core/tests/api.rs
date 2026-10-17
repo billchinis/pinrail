@@ -170,7 +170,7 @@ async fn submit_returns_every_field_of_the_envelope() {
     );
     assert!(review["id"].as_str().unwrap().starts_with("r_"));
     assert_eq!(review["plugin"], "list");
-    assert_eq!(review["plugin_version"], "1.0.0");
+    assert_eq!(review["plugin_version"], carried_list());
     assert!(review["plugin_bundle"].is_string());
     assert_eq!(review["status"], "pending");
     assert_eq!(
@@ -793,7 +793,10 @@ async fn plugins_are_listed_and_installed_one_by_one() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     let (_, catalog) = call(&app, "GET", "/api/v1/plugins/catalog", None).await;
-    assert_eq!(entry(&catalog, "forgeplane/list")["installed"], "1.0.0");
+    assert_eq!(
+        entry(&catalog, "forgeplane/list")["installed"],
+        carried_list()
+    );
     let (_, body) = call(&app, "GET", "/api/v1/plugins", None).await;
     assert_eq!(names(&body), vec!["feedback", "list"]);
     assert_eq!(body["plugins"][0]["usable"], true);
@@ -880,12 +883,12 @@ async fn a_review_is_shown_from_its_bundle_with_the_sandbox_csp() {
     let app = app();
     let review = submit(&app, submission()).await;
     assert_eq!(review["plugin"], "list");
-    assert_eq!(review["plugin_version"], "1.0.0");
+    assert_eq!(review["plugin_version"], carried_list());
     let id = review["id"].as_str().unwrap();
     let (status, view) = call(&app, "POST", &format!("/api/v1/reviews/{id}/view"), None).await;
     assert_eq!(status, StatusCode::OK, "{view}");
     assert_eq!(view["plugin"]["name"], "list");
-    assert_eq!(view["plugin"]["version"], "1.0.0");
+    assert_eq!(view["plugin"]["version"], carried_list());
     let bundle = current_bundle(&app, "list").unwrap();
     assert_eq!(view["url"], format!("/bundles/{bundle}/view/index.html"));
 
@@ -2655,6 +2658,13 @@ fn files_under_listing(listing: &Listing) -> Vec<String> {
     listing.files.iter().map(|f| f.path.clone()).collect()
 }
 
+/// The version of `list` the app carries.
+fn carried_list() -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/list/manifest.json");
+    let manifest: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    manifest["version"].as_str().unwrap().to_owned()
+}
+
 fn plugin_copy(root: &std::path::Path, name: &str, version: &str) -> std::path::PathBuf {
     let from = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../plugins")
@@ -3541,7 +3551,7 @@ async fn plugins_describe_themselves_and_a_submission_validates_without_being_st
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["valid"], true);
     assert_eq!(body["plugin"], "list");
-    assert_eq!(body["plugin_version"], "1.0.0");
+    assert_eq!(body["plugin_version"], carried_list());
     let (_, listing) = call(&app, "GET", "/api/v1/reviews", None).await;
     assert_eq!(listing["total"], 0, "nothing was stored");
 

@@ -511,17 +511,18 @@ mod tests {
         assert!(r.fetch("list").is_err());
 
         crate::plugins::install::install_offered(&db, &r, "forgeplane/list", None).unwrap();
+        let offered = r.offered("list").unwrap();
         let list = r.fetch("list").unwrap();
-        assert_eq!(list.version, "1.0.0");
+        assert_eq!(list.version, offered.version);
         let install = list.install.as_ref().unwrap();
         assert_eq!(
             (install.source_kind.as_str(), install.source.as_str()),
             ("index", "forgeplane/list")
         );
         let bundle = install.bundle.clone().unwrap();
-        assert_eq!(bundle, r.offered("list").unwrap().hash);
+        assert_eq!(bundle, offered.hash);
         assert_eq!(list.path, r.bundles().path(&bundle));
-        assert_eq!(r.fetch_bundle(&bundle).unwrap().version, "1.0.0");
+        assert_eq!(r.fetch_bundle(&bundle).unwrap().version, offered.version);
         assert!(r.fetch_bundle(&"0".repeat(64)).is_err());
         // a name with a publisher is no name
         assert!(r.fetch("forgeplane/list").is_err());

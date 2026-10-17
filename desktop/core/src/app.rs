@@ -252,6 +252,22 @@ mod tests {
     use crate::plugins::carried;
     use serde_json::json;
 
+    /// The version of `list` the app carries.
+    fn carried_list() -> String {
+        let (_, files) = carried()
+            .into_iter()
+            .find(|(folder, _)| folder == "list")
+            .unwrap();
+        let (_, manifest) = files
+            .into_iter()
+            .find(|(path, _)| path == "manifest.json")
+            .unwrap();
+        serde_json::from_slice::<Value>(&manifest).unwrap()["version"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    }
+
     /// The app's catalog with `list` at another version; `new_line` also
     /// gives its decisions another shape, as a new major version may.
     fn with_list(version: &str, new_line: bool) -> Catalog {
@@ -265,8 +281,12 @@ mod tests {
                     .into_iter()
                     .map(|(path, bytes)| match path.as_str() {
                         "manifest.json" => {
+                            // the same bytes at the carried version, so the bundle is the same
                             let text = String::from_utf8(bytes).unwrap();
-                            let bumped = text.replace("\"1.0.0\"", &format!("\"{version}\""));
+                            let bumped = text.replace(
+                                &format!("\"{}\"", carried_list()),
+                                &format!("\"{version}\""),
+                            );
                             (path, bumped.into_bytes())
                         }
                         "schemas/decision.schema.json" if new_line => (
@@ -335,7 +355,10 @@ mod tests {
         let installed = install(&app, "forgeplane/list");
         assert_eq!(installed["install"]["source_kind"], "index");
         assert_eq!(installed["install"]["source"], "forgeplane/list");
-        assert_eq!(offered_entry(&app, "forgeplane/list")["installed"], "1.0.0");
+        assert_eq!(
+            offered_entry(&app, "forgeplane/list")["installed"],
+            carried_list()
+        );
         // an agent asking with it is told how to install it
         for error in [
             app.reviews()
@@ -374,8 +397,8 @@ mod tests {
                 )
                 .unwrap()
         };
-        let old = submit(&app, "With 1.0.0");
-        assert_eq!(old.plugin_version, "1.0.0");
+        let old = submit(&app, "With the carried release");
+        assert_eq!(old.plugin_version, carried_list());
         assert_eq!(row(&app, "list")["update"], Value::Null);
         drop(app);
 
@@ -409,7 +432,7 @@ mod tests {
             .plugins()
             .fetch_review(&old.plugin, old.plugin_bundle.as_deref())
             .unwrap();
-        assert_eq!(rendered.version, "1.0.0");
+        assert_eq!(rendered.version, carried_list());
         drop(app);
 
         let app = Pinrail::open(config).unwrap();
@@ -429,7 +452,8 @@ mod tests {
         drop(app);
 
         // the same release from another catalog makes the same record
-        let app = Pinrail::open_with(config.clone(), vec![with_list("1.0.0", false)]).unwrap();
+        let app =
+            Pinrail::open_with(config.clone(), vec![with_list(&carried_list(), false)]).unwrap();
         let from_other = install(&app, "forgeplane/list")["install"].clone();
         for key in ["source_kind", "source", "bundle", "link"] {
             assert_eq!(from_one[key], from_other[key], "{key}");
@@ -462,7 +486,7 @@ mod tests {
         let at = |version: &str| {
             runtime.block_on(app.plugins().install_offered_at("list", Some(version)))
         };
-        assert_eq!(at("1.0.0").unwrap()["version"], "1.0.0");
+        assert_eq!(at(&carried_list()).unwrap()["version"], carried_list());
         assert_eq!(row(&app, "list")["update"], "1.4.0");
         assert!(at("1.2.0").is_err());
         assert_eq!(at("1.4.0").unwrap()["version"], "1.4.0");

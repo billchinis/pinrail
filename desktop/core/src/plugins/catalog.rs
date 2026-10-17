@@ -252,9 +252,9 @@ mod tests {
             .into_iter()
             .map(|(path, bytes)| match path.as_str() {
                 "manifest.json" => {
-                    let text = String::from_utf8(bytes).unwrap();
-                    let bumped = text.replace("\"1.0.0\"", &format!("\"{version}\""));
-                    (path, bumped.into_bytes())
+                    let mut manifest: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                    manifest["version"] = version.into();
+                    (path, serde_json::to_vec(&manifest).unwrap())
                 }
                 _ => (path, bytes),
             })
@@ -323,7 +323,7 @@ mod tests {
         let list = listed.iter().find(|e| e.name == "list").unwrap();
         assert_eq!(list.version, "1.2.0");
         assert_eq!(at(&catalogs, "list", "0.9.0").unwrap().version, "0.9.0");
-        assert!(at(&catalogs, "list", "1.1.0").is_none());
+        assert!(at(&catalogs, "list", "1.1.5").is_none());
     }
 
     /// A folder of plugin folders, as tests give one, offers each in the

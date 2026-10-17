@@ -258,6 +258,13 @@ async fn linking_and_removal_record_and_announce_changes() {
     ));
 }
 
+/// The version of `list` the app carries.
+fn carried_list() -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/list/manifest.json");
+    let manifest: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    manifest["version"].as_str().unwrap().to_owned()
+}
+
 /// A plugin linked under the name of an official one takes its place and
 /// keeps it across a restart; once it is removed, the official one is
 /// installed again by choice.
@@ -274,14 +281,15 @@ async fn a_plugin_of_an_official_name_takes_its_place() {
             None,
         )
         .unwrap();
-    assert_eq!(official.plugin_version, "1.0.0");
+    let carried = carried_list();
+    assert_eq!(official.plugin_version, carried);
 
     let mine = plugin(&dir.path().join("sources"), "list", "2.0.0");
     let row = link(&app, &mine).await.unwrap();
     assert_eq!(row["name"], "list");
     assert_eq!(row["install"]["source_kind"], "folder");
     assert_eq!(row["install"]["link"], true);
-    assert_eq!(row["replaced_version"], "1.0.0");
+    assert_eq!(row["replaced_version"], carried);
     let local = app
         .reviews()
         .submit(&json!({"plugin": "list", "title": "Mine"}), None)
@@ -307,7 +315,7 @@ async fn a_plugin_of_an_official_name_takes_its_place() {
         .plugins()
         .fetch_review("list", official.plugin_bundle.as_deref())
         .unwrap();
-    assert_eq!(kept.version, "1.0.0");
+    assert_eq!(kept.version, carried);
     drop(reopened);
     let again = Pinrail::open(config).unwrap();
     assert!(matches!(
@@ -320,7 +328,7 @@ async fn a_plugin_of_an_official_name_takes_its_place() {
         .await
         .unwrap();
     let described = again.plugins().describe(Some("list")).unwrap();
-    assert_eq!(described["plugins"][0]["version"], "1.0.0");
+    assert_eq!(described["plugins"][0]["version"], carried);
 }
 
 #[test]
