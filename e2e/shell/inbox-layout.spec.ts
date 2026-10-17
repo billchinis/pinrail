@@ -20,9 +20,14 @@ test("the inbox is grouped by project or one list, newest first, and remembers w
   // with no project headings, each row says its project
   await expect(rows.nth(1).getByTestId("review-row-project")).toHaveText("acme/api");
 
-  // J walks the list as it is drawn
+  // J walks the list as it is drawn, and goes round at the ends
   await page.keyboard.press("j");
   await expect(rows.nth(1)).toHaveClass(/is-focused/);
+  await page.keyboard.press("j");
+  await page.keyboard.press("j");
+  await expect(rows.nth(0)).toHaveClass(/is-focused/);
+  await page.keyboard.press("k");
+  await expect(rows.nth(2)).toHaveClass(/is-focused/);
 
   // the choice outlasts a reload
   await page.reload();

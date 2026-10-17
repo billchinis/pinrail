@@ -266,7 +266,7 @@ export function Inbox() {
 
   // With a review open beside the list, J and K move to the next and
   // previous review, from the list or from the view, which passes them up;
-  // ⌥↓ and ⌥↑ do too, and go round at the ends. The listener captures, so
+  // ⌥↓ and ⌥↑ do too. All of them go round at the ends. The listener captures, so
   // it runs before the layout's walk of the waiting reviews, which then
   // leaves the key alone.
   useEffect(() => {
@@ -282,12 +282,7 @@ export function Inbox() {
       event.preventDefault();
       const at = list.findIndex((r) => r.id === openId);
       const down = event.key === "ArrowDown" || event.key === "j";
-      const next =
-        at < 0
-          ? 0
-          : walk
-            ? (at + (down ? 1 : list.length - 1)) % list.length
-            : Math.min(Math.max(at + (down ? 1 : -1), 0), list.length - 1);
+      const next = at < 0 ? 0 : (at + (down ? 1 : list.length - 1)) % list.length;
       if (list[next].id !== openId) openInPanel(list[next].id, { replace: true });
     };
     window.addEventListener("keydown", onWalk, true);
@@ -329,8 +324,9 @@ export function Inbox() {
       }
       if (discarding) return;
       if (event.key === "j" || event.key === "k") keyboard.current = true;
-      if (event.key === "j") setFocused((f) => Math.min(f + 1, shown.length - 1));
-      if (event.key === "k") setFocused((f) => Math.max(f - 1, 0));
+      // round at the ends, from the last row to the first and back
+      if (shown.length && event.key === "j") setFocused((f) => (f + 1) % shown.length);
+      if (shown.length && event.key === "k") setFocused((f) => (f - 1 + shown.length) % shown.length);
       if (event.key === "Enter" && shown[focused]) navigate(hrefFor(shown[focused].id));
     };
     window.addEventListener("keydown", onKey);

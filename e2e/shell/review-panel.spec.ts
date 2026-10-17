@@ -78,8 +78,10 @@ test("J and K move to the next and previous review, from the list and from the v
   await expect(title).toHaveText("Panel keys: newest");
   await page.locator("body").press("j");
   await expect(title).toHaveText("Panel keys: oldest");
-  // at the end of the list it stays
+  // at the end of the list it goes round to the first, and back
   await page.locator("body").press("j");
+  await expect(title).toHaveText("Panel keys: newest");
+  await page.locator("body").press("k");
   await expect(title).toHaveText("Panel keys: oldest");
 
   // with the view in focus, the view passes them up

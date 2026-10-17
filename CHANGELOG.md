@@ -50,6 +50,9 @@ The `pinrail` command ships inside the app and carries the app's version.
   and K step through the list from it, while the view has the keyboard
   too. *Settings › General › Opening a review* switches back to opening
   reviews as a page.
+- J and K go round at the ends of the inbox: J on the last review goes
+  to the first, and K on the first to the last, in the list and in the
+  panel.
 - The official plugins fit a narrow frame, such as the inbox's side
   panel. Their sidebars, such as the code review's file tree and the
   Markdown review's outline and comments, open as drawers over the
