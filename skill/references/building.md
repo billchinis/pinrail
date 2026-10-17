@@ -116,7 +116,8 @@ plugin.handOverLabel("Hand over: yes"); // the words on the hand-over button
   comment, with `data-pinrail-dictate`. In the macOS app the SDK puts a
   microphone after it, or inside an element marked
   `data-pinrail-dictate-for="<the field's id>"`. The dictated text arrives
-  as `input` events.
+  as `input` events. Give the field an `id`, so a dictation carries on when
+  the view draws the field again.
 - Rendering: `Pinrail.escape(text)`, `Pinrail.icon(name)`, and
   `Pinrail.markdown(text)` once the page also loads
   `<script src="/sdk/v1/markdown.js"></script>` after the SDK.

@@ -103,3 +103,53 @@ test("a placeholder that names the field holds its microphone, wherever the view
   await expect(f.locator("#slot").getByRole("button", { name: "Dictate" })).toBeVisible();
   await expect(f.getByRole("button", { name: "Dictate" })).toHaveCount(1);
 });
+
+test("a field the view draws again on every change keeps the dictation, by its id", async ({ page }) => {
+  const dir = notePlugin();
+  // this view draws its field again on each input, as many views do
+  fs.writeFileSync(
+    path.join(dir, "view", "index.html"),
+    `<!doctype html>
+<meta charset="utf-8">
+<script src="/sdk/v1/pinrail-plugin.js"></script>
+<div id="row"></div>
+<script>
+const plugin = Pinrail.connect({});
+let note = "";
+function draw() {
+  document.getElementById("row").innerHTML =
+    '<textarea id="note" aria-label="note" data-pinrail-dictate></textarea><span id="slot" data-pinrail-dictate-for="note"></span>';
+  const field = document.getElementById("note");
+  field.value = note;
+  field.addEventListener("input", (e) => { note = e.target.value; plugin.draft({ note }); draw(); });
+}
+draw();
+</script>`,
+  );
+  const plugin = await mountPlugin(page, dir, { review: reviewFrom({ payload: {} }), dictation: true });
+  const f = plugin.frame;
+  await f.getByRole("button", { name: "Dictate" }).click();
+  await plugin.say("one");
+  await plugin.say("one two");
+  await plugin.say("one two three");
+  await expect(f.getByRole("textbox", { name: "note" })).toHaveValue("one two three");
+  await expect(f.locator("#slot").getByRole("button", { name: "Stop dictating" })).toBeVisible();
+  await expect.poll(() => plugin.lastDraft()).toEqual({ note: "one two three" });
+});
+
+test("pressing the microphone leaves the focus in the field, so the view does not take it as leaving it", async ({
+  page,
+}) => {
+  const plugin = await mountPlugin(page, notePlugin(), { review: reviewFrom({ payload: {} }), dictation: true });
+  const f = plugin.frame;
+  const note = f.getByRole("textbox", { name: "note" });
+  await note.click();
+  await note.evaluate((el) => el.addEventListener("blur", () => ((window as any).__blurred = true)));
+  const box = (await f.getByRole("button", { name: "Dictate" }).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  expect(await note.evaluate(() => (window as any).__blurred ?? false)).toBe(false);
+  await page.mouse.up();
+  await expect(note).toBeFocused();
+  await expect.poll(() => plugin.dictating()).toBe(true);
+});

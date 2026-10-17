@@ -925,3 +925,19 @@ test("dictating into another field ends the one before, and a field drawn again 
   // asked to stop once, not for every word
   assert.equal(env.posted.filter((p) => p.msg.type === "dictation_stop" && p.msg.req === second).length, 1);
 });
+
+test("a dictation follows the field a view draws in the place of its own, by the environment's lookup", () => {
+  const env = dictationEnv();
+  const replacement = field();
+  env.again = () => replacement;
+  const plugin = Pinrail.createPlugin(env, {});
+  env.deliver(init({ capabilities: ["dictation"] }));
+  const first = field();
+  plugin.dictate(first);
+  const req = env.last("dictation_start").msg.req;
+  env.deliver(shell({ type: "dictation", req, text: "one" }));
+  first.isConnected = false;
+  assert.equal(plugin.dictating, replacement);
+  env.deliver(shell({ type: "dictation", req, text: "one two" }));
+  assert.equal(replacement.value, "one two");
+});

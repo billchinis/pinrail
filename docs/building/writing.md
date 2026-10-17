@@ -252,7 +252,7 @@ To put the microphone somewhere else, such as in a toolbar or over the field's c
 <textarea id="comment-3" data-pinrail-dictate></textarea>
 ```
 
-A click on the microphone starts dictation, and a second click stops it. The words go in at the cursor as they are heard, and the field gets an `input` event for each change, so the handler that already keeps your draft as the person types keeps the dictated text too. The button shows only where the app can turn speech into text, and not in a read-only review. It also follows your fields when you draw them again.
+A click on the microphone starts dictation, and a second click stops it. The words go in at the cursor as they are heard, and the field gets an `input` event for each change, so the handler that already keeps your draft as the person types keeps the dictated text too. The button shows only where the app can turn speech into text, and not in a read-only review. It also follows your fields when you draw them again. Give a dictated field an `id` if your view draws it again while the person speaks, for example on each change: the dictation then carries on in the new field with the same `id`.
 
 The view never listens itself: the app does, and shows that it is listening, so no plugin can record without the person seeing it. For a control of your own, use the same calls:
 

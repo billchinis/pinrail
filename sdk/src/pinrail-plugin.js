@@ -377,9 +377,21 @@
       if (speaking) post({ type: "dictation_stop", req: speaking.req });
     }
 
+    /* A view that draws its field again, as many do on each change, puts a
+       new one with the same id in its place: the dictation follows it.
+       True when it moved. */
+    function follow() {
+      if (!speaking || speaking.field.isConnected !== false || !env.again) return false;
+      const next = env.again(speaking.field);
+      if (!next || next === speaking.field) return false;
+      speaking.field = next;
+      return true;
+    }
+
     function hear(text) {
+      if (follow()) heard();
       const { field, before, after } = speaking;
-      // a field the view has drawn again is gone: nothing goes into it
+      // a field gone for good takes nothing more
       if (field.isConnected === false) {
         if (!speaking.stopping) stopDictating();
         speaking.stopping = true;
@@ -440,6 +452,7 @@
       },
       /** the field a dictation writes into, or null */
       get dictating() {
+        follow();
         return speaking ? speaking.field : null;
       },
       /* Starts dictating into a text field, at its cursor, or stops when it
@@ -898,6 +911,8 @@
       },
       // dictated text, as the view's own handlers hear typing
       changed: (field) => field.dispatchEvent(new win.Event("input", { bubbles: true })),
+      // the field a view drew in the place of one that is gone: the same id
+      again: (field) => (field.id ? doc.getElementById(field.id) : null),
       dispatchKey: (key) => {
         const event = new win.KeyboardEvent("keydown", Object.assign({ bubbles: true, cancelable: true }, key));
         // so a handler can tell a forwarded key from one typed in the frame
@@ -1034,9 +1049,12 @@
       button.innerHTML = MIC;
       fieldOf.set(button, field);
       buttonOf.set(field, button);
+      // the field keeps the focus while the button is pressed: a view that
+      // closes or tidies a field when it loses focus is left alone
+      button.addEventListener("mousedown", (event) => event.preventDefault());
       button.addEventListener("click", () => {
         void plugin.dictate(field);
-        field.focus();
+        field.focus({ preventScroll: true });
       });
       return button;
     }

@@ -17,7 +17,8 @@ change to the protocol is a new major and a new path.
   `data-pinrail-dictate-for` with the field's id, and `plugin.dictate(field)`, `plugin.stopDictating()`,
   `plugin.canDictate` and `plugin.dictating` serve a control of the
   view's own. The text goes in at the cursor, with an `input` event for
-  each change. The host takes a `dictation` listener and reports
+  each change. A field the view draws again with the same `id` keeps the
+  dictation. The host takes a `dictation` listener and reports
   `onDictation`. The test harness mounts a view with `dictation: true`,
   and speaks into it with `say(text)` and `endDictation(error)`.
 
