@@ -6,6 +6,11 @@ carries it.
 
 ## [1.1.0] - Unreleased
 
+### Added
+
+- A free-text answer and a question's comment can be dictated in the
+  macOS app, from a microphone in the field's corner.
+
 ### Changed
 
 - The next and previous question are N and P. J and K now move through

@@ -526,3 +526,32 @@ test("where the questions are narrow, an answered question's buttons go under it
   expect(prompt!.height).toBeLessThan(30);
   expect(meta!.y).toBeGreaterThanOrEqual(prompt!.y + prompt!.height);
 });
+
+test("a free-text answer and a comment can be dictated, from a microphone in their corner", async ({ page }) => {
+  const plugin = await mount(page, "02-launch.json", { dictation: true });
+  const f = plugin.frame;
+  const answer = f.locator("textarea.text-answer").first();
+  const id = (await answer.getAttribute("data-answer"))!;
+  const question = q(f, id);
+  await question.locator(".dictate-mic").getByRole("button", { name: "Dictate" }).click();
+  // the view keeps its field while the words come in
+  await plugin.say("practical and specific");
+  await plugin.say("practical and specific, for small teams");
+  await expect(answer).toHaveValue("practical and specific, for small teams");
+  await expect.poll(async () => JSON.stringify(await plugin.lastDraft())).toContain("for small teams");
+  await question.getByRole("button", { name: "Stop dictating" }).click();
+  await expect.poll(() => plugin.dictating()).toBe(false);
+
+  // a comment, once opened
+  const first = f.locator("[data-question]").first();
+  await first.getByRole("button", { name: /Add a comment/ }).click();
+  await first.locator(".dictate-mic").getByRole("button", { name: "Dictate" }).click();
+  await plugin.say("only if the partners agree");
+  await expect(first.locator("textarea.question-comment")).toHaveValue("only if the partners agree");
+});
+
+test("without the app's dictation, or read-only, the fields have no microphone", async ({ page }) => {
+  const plugin = await mount(page, "02-launch.json");
+  await expect(plugin.frame.locator("textarea.text-answer").first()).toBeVisible();
+  await expect(plugin.frame.getByRole("button", { name: "Dictate" })).toHaveCount(0);
+});

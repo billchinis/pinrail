@@ -597,6 +597,20 @@ input:disabled {
   line-height: 1.65;
   resize: none;
 }
+/* a field that can be dictated, with the app's microphone in its corner
+   where the app can dictate */
+.dictate-field {
+  position: relative;
+  display: block;
+}
+.dictate-field:has(.pinrail-dictate) textarea {
+  padding-right: 38px;
+}
+.dictate-mic {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
 .text-limit {
   margin-top: 4px;
   min-height: 1px;
