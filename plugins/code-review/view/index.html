@@ -3234,8 +3234,11 @@
         const typing =
           tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target && e.target.isContentEditable);
         if (e.key === "Escape") {
-          // the key is ours: nothing else acts on it, and the field it was typed in
-          // lets go of focus before it goes
+          // Ours only when there is something to cancel: a field being typed
+          // in, a comment, or a confirmation. Otherwise it goes up to the
+          // app, which closes the inbox's panel with it.
+          if (!typing && !S.composer && !S.confirmBulk && !S.confirmSubmitArm) return;
+          // the field it was typed in lets go of focus before it goes
           e.preventDefault();
           if (typing && e.target.blur) e.target.blur();
           if (typing && e.target.hasAttribute && e.target.hasAttribute("data-note-ta")) {

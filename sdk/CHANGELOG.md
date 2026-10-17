@@ -30,6 +30,10 @@ change to the protocol is a new major and a new path.
 
 ### Changed
 
+- Esc goes up to the app from a view that leaves it alone, outside a
+  text field, so the app can close its panel with it. A view that uses
+  Esc, for example to close a dialog of its own, keeps it with
+  `preventDefault`.
 - J and K belong to the app, which moves through the inbox with them
   while a review is open beside it. Pressed in a view outside a text
   field, they go up to the app as `key` messages, as `?`, `[` and `]` do.

@@ -84,11 +84,6 @@
       "keys": "o",
       "does": "Semantic or alphabetical file order",
       "group": "View"
-    },
-    {
-      "keys": "escape",
-      "does": "Close dialogs and composers",
-      "group": "View"
     }
   ],
   "settings_schema": {

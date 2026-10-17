@@ -391,14 +391,9 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
         setMaximized(false);
         return;
       }
-      // the panel closes on Escape, unless the view claims the key
-      if (
-        event.key === "Escape" &&
-        onClose &&
-        !finding &&
-        !plugin?.shortcuts?.some((s) => s.keys.toLowerCase() === "escape") &&
-        !modalOpen()
-      ) {
+      // the panel closes on Escape; a view that uses the key keeps it, and
+      // passes up only an Escape it left alone
+      if (event.key === "Escape" && onClose && !finding && !modalOpen()) {
         const target = event.target as HTMLElement | null;
         if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")) {
           onClose();

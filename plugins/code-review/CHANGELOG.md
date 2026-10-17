@@ -17,6 +17,9 @@ carries it.
 
 ### Changed
 
+- Esc closes what the view has open, such as a comment, a note or a
+  confirmation, and otherwise goes to the app, which closes the inbox's
+  panel with it. It is no longer one of the view's declared shortcuts.
 - The next and previous undecided proposal are N and P, and every
   proposal is Shift+N and Shift+P. J and K now move through the inbox.
 - The view fits a narrow frame, such as the inbox's side panel. Below

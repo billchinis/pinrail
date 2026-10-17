@@ -1,10 +1,54 @@
 import { expect, test, type Page } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
 import { clearInbox, createReview, openReviewsIn, settingsDialog } from "./helpers";
 
 const panel = (page: Page) => page.getByTestId("review-panel");
 const row = (page: Page, title: string) => page.getByTestId("review-row").filter({ hasText: title });
 
 test.afterEach(({ request }) => openReviewsIn(request, "panel"));
+
+test("Escape closes the panel from inside the view too, once the view leaves the key alone", async ({ page }) => {
+  await clearInbox(page.request);
+  await createReview(page.request, { title: "Panel: Escape in the view" });
+  await page.goto("/#/");
+  await row(page, "Panel: Escape in the view").click();
+  const frame = page.frameLocator("#plugin-frame");
+  await expect(frame.locator("body")).toContainText("One proposal.");
+  await frame.locator("body").click();
+  await page.keyboard.press("Escape");
+  await expect(panel(page)).toHaveCount(0);
+});
+
+test("a code review closes with Escape when it has nothing of its own to cancel", async ({ page }) => {
+  await clearInbox(page.request);
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "..", "plugins", "code-review", "fixtures", "webhooks.json"), "utf8"),
+  );
+  await createReview(page.request, {
+    title: "Panel: Escape in a code review",
+    plugin: "code-review",
+    payload: fixture.payload,
+  });
+  await page.goto("/#/");
+  const frame = page.frameLocator("#plugin-frame");
+
+  // with the app in focus
+  await row(page, "Panel: Escape in a code review").click();
+  await expect(frame.locator(".card").first()).toBeVisible();
+  await page.locator("body").press("Escape");
+  await expect(panel(page)).toHaveCount(0);
+
+  // inside the view: the first Escape closes its open note, the next the panel
+  await row(page, "Panel: Escape in a code review").click();
+  await frame.locator(".card").first().getByRole("button", { name: "Add instruction" }).click();
+  await expect(frame.locator("textarea.note-ta")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(frame.locator("textarea.note-ta")).toHaveCount(0);
+  await expect(panel(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel(page)).toHaveCount(0);
+});
 
 test("a review opens beside the inbox, and closes with its button or Escape", async ({ page }) => {
   await clearInbox(page.request);

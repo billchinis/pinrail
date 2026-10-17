@@ -23,7 +23,7 @@ The summary is a set of counts, such as *1 blocker · 2 major · 1 nit* for a co
 Open a review with <kbd>Enter</kbd> or a click. It opens in a panel beside the inbox, which stays in view. Depending on the plugin, the view shows a list, a diff, draft emails or a form.
 
 - **Open as a page** with the button at the right of the panel's header, when the view needs more room. The page has a button that shows the review in the panel again.
-- **Close the panel** with its *Close* button, or press <kbd>Esc</kbd>. If the plugin uses <kbd>Esc</kbd> itself, use the button.
+- **Close the panel** with its *Close* button, or press <kbd>Esc</kbd>, from the view too. When the view has something of its own open, such as a comment, the first <kbd>Esc</kbd> closes that, and the next closes the panel.
 - **Go to the next or previous review** with <kbd>J</kbd> and <kbd>K</kbd>, in the order the inbox lists them. They work while you work in the view too, unless you are typing in a field, and go round at the ends of the list: <kbd>J</kbd> on the last review goes to the first. <kbd>⌥↓</kbd> and <kbd>⌥↑</kbd> do the same.
 - **Resize the panel** by dragging its left edge. Pinrail remembers the width.
 

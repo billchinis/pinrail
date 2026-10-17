@@ -50,6 +50,10 @@ The `pinrail` command ships inside the app and carries the app's version.
   and K step through the list from it, while the view has the keyboard
   too. *Settings › General › Opening a review* switches back to opening
   reviews as a page.
+- Esc closes the inbox's panel from inside the review's view too. When
+  the view has something of its own open, such as a comment, the first
+  Esc closes that and the next closes the panel. A plugin that uses Esc
+  no longer stops it from closing the panel.
 - J and K go round at the ends of the inbox: J on the last review goes
   to the first, and K on the first to the last, in the list and in the
   panel.

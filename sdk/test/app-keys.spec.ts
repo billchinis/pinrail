@@ -64,3 +64,35 @@ test("⌘D or Ctrl+D goes up from anywhere in a view, a text field too", async (
   await page.waitForTimeout(100);
   expect(await discards()).toBe(2);
 });
+
+test("Esc goes up from a view that leaves it alone, so the app can close its panel", async ({ page }) => {
+  const dir = view();
+  // this view closes a dialog of its own with Esc while one is open
+  const file = path.join(dir, "view", "index.html");
+  fs.writeFileSync(
+    file,
+    fs.readFileSync(file, "utf8").replace(
+      "// this view answers ] itself",
+      `window.dialogOpen = true;
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && window.dialogOpen) { e.preventDefault(); window.dialogOpen = false; } });
+  // this view answers ] itself`,
+    ),
+  );
+  const plugin = await mountPlugin(page, dir, { review: { payload: {} } });
+  const f = plugin.frame;
+  await expect(f.locator("#ready")).toHaveText("ready");
+  const escapes = async () =>
+    (await plugin.messages()).filter((m: any) => m.type === "key" && m.key === "Escape").length;
+
+  await f.locator("#ready").click();
+  await page.keyboard.press("Escape"); // closes the view's dialog
+  await page.waitForTimeout(100);
+  expect(await escapes()).toBe(0);
+  await page.keyboard.press("Escape"); // nothing left to close: the app's
+  await expect.poll(escapes).toBe(1);
+
+  await f.locator("#field").click();
+  await page.keyboard.press("Escape"); // in a field, the field's
+  await page.waitForTimeout(100);
+  expect(await escapes()).toBe(1);
+});

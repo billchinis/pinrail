@@ -995,8 +995,10 @@
   }
 
   // the keys the app answers on the review screen, which a view passes up:
-  // help, the rounds, and J and K, which move through the inbox
-  const APP_KEYS = ["?", "[", "]", "j", "k"];
+  // help, the rounds, J and K, which move through the inbox, and Esc, which
+  // closes the inbox's panel. A view that uses one, such as Esc to close a
+  // dialog of its own, keeps it with preventDefault.
+  const APP_KEYS = ["?", "[", "]", "j", "k", "Escape"];
 
   /* A document connects once. A second connect() is a mistake to catch
      where it happens: the app would take its second `ready` for another

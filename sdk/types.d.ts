@@ -198,7 +198,7 @@ export type PluginMessage =
   | {
       pinrail: Protocol;
       type: "key";
-      key: "?" | "[" | "]";
+      key: "?" | "[" | "]" | "j" | "k" | "Escape";
       code: string;
       metaKey: false;
       ctrlKey: false;
