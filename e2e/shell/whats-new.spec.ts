@@ -72,3 +72,33 @@ test("a release with no notes shows nothing, and counts as seen", async ({ page 
   await expect.poll(() => seenNow(page)).toBe("0.3.1");
   await expect(page.getByTestId("whats-new")).toHaveCount(0);
 });
+
+test("the newest notes open again from ⌘K and from Settings › About, without changing what was seen", async ({
+  page,
+}) => {
+  // a development build previews them, though the app runs an older release
+  await page.goto("/#/");
+  await expect(page.getByTestId("inbox-total")).toBeVisible();
+  const dialog = page.getByTestId("whats-new");
+  await expect(dialog).toHaveCount(0);
+
+  await page.keyboard.press("ControlOrMeta+k");
+  const palette = page.getByRole("dialog", { name: "Search" });
+  await palette.getByRole("textbox").fill("What's new");
+  await palette.getByRole("option", { name: /What's new in Pinrail/ }).click();
+  await expect(dialog).toContainText("New in 0.3.0");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+
+  await page.keyboard.press("ControlOrMeta+,");
+  await settingsDialog(page)
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "About" })
+    .click();
+  await settingsDialog(page).getByRole("button", { name: "What's new" }).click();
+  await expect(settingsDialog(page)).toHaveCount(0);
+  await expect(dialog.getByTestId("whats-new-card")).toHaveText("Reviews open beside the inbox");
+  await dialog.getByRole("button", { name: "Close" }).click();
+
+  expect(await seenNow(page)).toBe("999.0.0");
+});

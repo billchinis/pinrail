@@ -44,6 +44,18 @@ export function releasesToShow(releases: Release[], running: string, seen: strin
     .sort((a, b) => compareVersions(b.version, a.version));
 }
 
+/**
+ * The notes What's new opens when asked for: the newest release's, up to
+ * the running one. A development build previews the newest notes of all,
+ * so they can be checked before their release.
+ */
+export function latestNotes(releases: Release[], running: string, preview: boolean): Release[] {
+  return releases
+    .filter((r) => preview || compareVersions(r.version, running) <= 0)
+    .sort((a, b) => compareVersions(b.version, a.version))
+    .slice(0, 1);
+}
+
 const files = import.meta.glob<Release>("../whats-new/*.json", { eager: true, import: "default" });
 const pictures = import.meta.glob<string>("../whats-new/*/*.png", {
   eager: true,

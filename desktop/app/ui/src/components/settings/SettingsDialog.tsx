@@ -134,12 +134,15 @@ export function SettingsDialog({
   plugin,
   onSection,
   onClose,
+  onWhatsNew,
 }: {
   open: boolean;
   section: SettingsSection;
   plugin?: string | null;
   onSection: (s: SettingsSection) => void;
   onClose: () => void;
+  /** opens the newest release's notes, when there are some */
+  onWhatsNew?: () => void;
 }) {
   const navigate = useNavigate();
   const { settings, update, native } = useSettings();
@@ -556,7 +559,13 @@ export function SettingsDialog({
                       ? `Version ${info.version} · server started ${new Date(info.started_at).toLocaleString()}`
                       : "…"
                   }
-                />
+                >
+                  {onWhatsNew ? (
+                    <button type="button" className="chrome-button" onClick={onWhatsNew}>
+                      What's new
+                    </button>
+                  ) : null}
+                </SettingsRow>
                 <UpdatesRows />
                 <SettingsRow label="Plugins" description="To write your own, see pinrail.dev/docs/building/writing" />
                 <SettingsRow label="License" description="Apache License 2.0" note={noticesError ?? undefined}>

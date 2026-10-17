@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { FILES, RELEASES, compareVersions, pictureOf, releasesToShow, type Release } from "./whatsNew";
+import { FILES, RELEASES, compareVersions, latestNotes, pictureOf, releasesToShow, type Release } from "./whatsNew";
 
 const release = (version: string): Release => ({ version, cards: [{ title: version, text: "" }] });
 const shown = (releases: Release[]) => releases.map((r) => r.version);
@@ -24,6 +24,19 @@ describe("the releases to show", () => {
   test("compare their versions by number, not as text", () => {
     expect(compareVersions("0.10.0", "0.9.0")).toBeGreaterThan(0);
     expect(compareVersions("1.0.0", "1.0.0")).toBe(0);
+  });
+});
+
+describe("the notes opened when asked for", () => {
+  const all = [release("0.3.0"), release("0.5.0"), release("0.4.0")];
+
+  test("are the newest release's up to the running one", () => {
+    expect(shown(latestNotes(all, "0.4.2", false))).toEqual(["0.4.0"]);
+    expect(shown(latestNotes(all, "0.2.0", false))).toEqual([]);
+  });
+
+  test("are the newest of all in a development build", () => {
+    expect(shown(latestNotes(all, "0.2.0", true))).toEqual(["0.5.0"]);
   });
 });
 

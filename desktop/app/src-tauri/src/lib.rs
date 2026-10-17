@@ -529,6 +529,7 @@ pub fn run() {
                     | "back"
                     | "forward"
                     | "feedback"
+                    | "whats-new"
             ) {
                 let _ = app.emit(COMMAND_EVENT, id.to_string());
             }
@@ -597,8 +598,8 @@ pub fn run() {
 }
 
 /// The standard menus plus a Navigate menu, whose accelerators reach the
-/// shell even while a plugin view has the keyboard, and Send Feedback in the
-/// Help menu.
+/// shell even while a plugin view has the keyboard, and What's New and Send
+/// Feedback in the Help menu.
 fn app_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let menu = Menu::default(app)?;
     let navigate = Submenu::with_items(
@@ -665,6 +666,13 @@ fn app_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             app,
             "feedback",
             "Send Feedback…",
+            true,
+            None::<&str>,
+        )?)?;
+        help.prepend(&MenuItem::with_id(
+            app,
+            "whats-new",
+            "What's New in Pinrail",
             true,
             None::<&str>,
         )?)?;

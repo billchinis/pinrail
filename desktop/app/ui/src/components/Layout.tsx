@@ -13,6 +13,7 @@ import {
   PanelLeft,
   Search,
   Settings,
+  Sparkles,
   Sun,
   SunMoon,
 } from "lucide-react";
@@ -37,7 +38,7 @@ import { PluginIcon } from "./PluginIcon";
 import { UpdateNotice } from "./UpdateNotice";
 import { FIRST_REVIEW, WelcomeDialog, type WelcomeAt } from "./welcome/WelcomeDialog";
 import { WhatsNewDialog } from "./WhatsNewDialog";
-import { RELEASES, compareVersions, releasesToShow, type CardAction, type Release } from "../lib/whatsNew";
+import { RELEASES, compareVersions, latestNotes, releasesToShow, type CardAction, type Release } from "../lib/whatsNew";
 
 /** How many waiting reviews the sidebar lists before pointing at the inbox. */
 const WAITING_SHOWN = 5;
@@ -102,6 +103,45 @@ export function Layout({ children }: { children: ReactNode }) {
     </Tooltip>
   );
 
+  // What's new, once per release that has notes: asked when the settings
+  // first arrive. A fresh install has nothing new to show, and starts
+  // counting from the release it installed.
+  const [whatsNew, setWhatsNew] = useState<Release[] | null>(null);
+  const [running, setRunning] = useState<string | null>(null);
+  const newsAsked = useRef(false);
+  useEffect(() => {
+    if (!loaded || newsAsked.current) return;
+    newsAsked.current = true;
+    const fresh = !prefs.welcome.seen;
+    const seen = prefs.whats_new.seen;
+    api
+      .info()
+      .then(({ version }) => {
+        setRunning(version);
+        const releases = releasesToShow(RELEASES, version, seen, fresh);
+        if (releases.length) setWhatsNew(releases);
+        // a release with nothing new still counts as seen; never one older than recorded
+        else if (!seen || compareVersions(seen, version) < 0) void update({ whats_new: { seen: version } });
+      })
+      .catch(() => {});
+  }, [loaded, prefs.welcome.seen, prefs.whats_new.seen, update]);
+  // asked for from the menu, the palette or Settings › About
+  const latest = running ? latestNotes(RELEASES, running, import.meta.env.DEV) : [];
+  const openWhatsNew = () => {
+    if (latest.length) setWhatsNew(latest);
+  };
+  const openWhatsNewRef = useRef(openWhatsNew);
+  openWhatsNewRef.current = openWhatsNew;
+  const closeWhatsNew = () => {
+    const seen = prefs.whats_new.seen;
+    if (running && (!seen || compareVersions(seen, running) < 0)) void update({ whats_new: { seen: running } });
+    setWhatsNew(null);
+  };
+  const openFromWhatsNew = (action: CardAction) => {
+    if (action.settings) setSettings(action.settings as SettingsSection);
+    else if (action.to) navigate(action.to);
+  };
+
   const actions: PaletteAction[] = [
     { id: "inbox", label: "Go to inbox", keys: NAV[0].keys, icon: Inbox, run: () => navigate("/") },
     {
@@ -132,6 +172,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { id: "shortcuts", label: "Keyboard shortcuts", keys: ["?"], icon: Keyboard, run: () => setHelp(true) },
     { id: "settings", label: "Open settings", keys: [MOD, ","], icon: Settings, run: () => setSettings("general") },
     { id: "welcome", label: "Set up Pinrail", icon: Hand, run: () => setWelcome({ step: 0 }) },
+    ...(latest.length ? [{ id: "whats-new", label: "What's new in Pinrail", icon: Sparkles, run: openWhatsNew }] : []),
     { id: "feedback", label: "Send feedback…", icon: MessageSquare, run: () => setFeedback(true) },
     ...(reviewShown(location.pathname, location.search)
       ? [
@@ -155,35 +196,6 @@ export function Layout({ children }: { children: ReactNode }) {
     welcomed.current = true;
     if (!prefs.welcome.seen) setWelcome({ step: 0 });
   }, [loaded, prefs.welcome.seen]);
-  // What's new, once per release that has notes: asked when the settings
-  // first arrive. A fresh install has nothing new to show, and starts
-  // counting from the release it installed.
-  const [whatsNew, setWhatsNew] = useState<{ releases: Release[]; running: string } | null>(null);
-  const newsAsked = useRef(false);
-  useEffect(() => {
-    if (!loaded || newsAsked.current) return;
-    newsAsked.current = true;
-    const fresh = !prefs.welcome.seen;
-    const seen = prefs.whats_new.seen;
-    api
-      .info()
-      .then(({ version }) => {
-        const releases = releasesToShow(RELEASES, version, seen, fresh);
-        if (releases.length) setWhatsNew({ releases, running: version });
-        // a release with nothing new still counts as seen; never one older than recorded
-        else if (!seen || compareVersions(seen, version) < 0) void update({ whats_new: { seen: version } });
-      })
-      .catch(() => {});
-  }, [loaded, prefs.welcome.seen, prefs.whats_new.seen, update]);
-  const closeWhatsNew = () => {
-    if (whatsNew) void update({ whats_new: { seen: whatsNew.running } });
-    setWhatsNew(null);
-  };
-  const openFromWhatsNew = (action: CardAction) => {
-    if (action.settings) setSettings(action.settings as SettingsSection);
-    else if (action.to) navigate(action.to);
-  };
-
   const closeWelcome = () => {
     setWelcome(null);
     setAway(null);
@@ -334,6 +346,9 @@ export function Layout({ children }: { children: ReactNode }) {
           break;
         case "feedback":
           setFeedback(true);
+          break;
+        case "whats-new":
+          openWhatsNewRef.current();
           break;
       }
     };
@@ -501,11 +516,17 @@ export function Layout({ children }: { children: ReactNode }) {
           setSettings(null);
           setSettingsPlugin(null);
         }}
+        onWhatsNew={
+          latest.length
+            ? () => {
+                setSettings(null);
+                openWhatsNew();
+              }
+            : undefined
+        }
       />
       {help ? <ShortcutsDialog plugin={topbar?.plugin} onClose={() => setHelp(false)} /> : null}
-      {whatsNew ? (
-        <WhatsNewDialog releases={whatsNew.releases} onAction={openFromWhatsNew} onClose={closeWhatsNew} />
-      ) : null}
+      {whatsNew ? <WhatsNewDialog releases={whatsNew} onAction={openFromWhatsNew} onClose={closeWhatsNew} /> : null}
       {feedback ? (
         <FeedbackDialog
           draft={unsent?.draft}

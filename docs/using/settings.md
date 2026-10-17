@@ -100,6 +100,7 @@ This section shows the version, the update status, where to start writing a plug
 
 | Setting | What it does |
 |---|---|
+| **What's new** | Shows the cards about the newest release again. Pinrail shows them by itself the first time a new release starts. They also open from *Help › What's New in Pinrail* and from <kbd>⌘K</kbd>. |
 | **Updates** | Shows the update status. *Check for updates* checks now, and *Restart to update* installs a downloaded version. |
 | **Check automatically** | Look for a new version when Pinrail starts and every few hours, and download it in the background. On by default. |
 

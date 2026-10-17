@@ -16,7 +16,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 - What's new: the first time a new release starts, Pinrail shows a few
   cards about what changed, one at a time, each with a screenshot and a
   button that opens the change. A release without notes shows nothing,
-  and a fresh install starts counting from the release it installed.
+  and a fresh install starts counting from the release it installed. The
+  newest notes open again from Settings › About, Help › What's New in
+  Pinrail and ⌘K.
 
 - Pinrail records whether a decision or a discard was made in the app,
   with `pinrail decide` or `pinrail discard`, or by another program
