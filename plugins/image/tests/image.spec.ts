@@ -468,3 +468,14 @@ test("without the app's dictation the note has no microphone", async ({ page }) 
   await expect(plugin.frame.locator("#note")).toBeVisible();
   await expect(plugin.frame.getByRole("button", { name: "Dictate" })).toHaveCount(0);
 });
+
+test("in a narrow but short frame the stage still takes the full width", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  const plugin = await mountPlugin(page, dir, { review: round() });
+  await ready(plugin);
+  const f = plugin.frame;
+  const stage = (await f.locator(".stage").boundingBox())!;
+  const sheet = (await f.locator(".sheet-inner").boundingBox())!;
+  // the stage spans the sheet's content, its padding aside
+  expect(stage.width).toBeGreaterThan(sheet.width - 80);
+});

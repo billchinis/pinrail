@@ -164,7 +164,7 @@
     .work { display: block; }
     .sheet { overflow: visible; }
     .notes-body { max-height: none; }
-    .stage { height: auto; aspect-ratio: 1; min-height: 280px; max-height: 70vh; }
+    .stage { height: clamp(280px, 100vw - 28px, 70vh); }
     .rail { grid-auto-flow: column; grid-auto-columns: 150px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--pinrail-border); }
     .rail-label { display: none; }
     .below { grid-template-columns: 1fr; }
