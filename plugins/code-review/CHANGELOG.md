@@ -6,6 +6,12 @@ carries it.
 
 ## [1.2.0] - Unreleased
 
+### Added
+
+- Arrows in the toolbar move to the previous and next undecided
+  proposal, as P and N do, between a count of where the focus is among
+  the proposals.
+
 ### Changed
 
 - The next and previous undecided proposal are N and P, and every

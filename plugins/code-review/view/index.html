@@ -1359,6 +1359,25 @@
         background: var(--pinrail-bg-hover);
         color: var(--pinrail-text);
       }
+      /* the arrows through the proposals, and where the focus is among them */
+      .stepper {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 4px;
+        padding-left: 6px;
+        border-left: 1px solid var(--pinrail-border);
+      }
+      .stepper button.tool {
+        padding: 5px;
+      }
+      .step-count {
+        min-width: 44px;
+        text-align: center;
+        font: 11px var(--pinrail-mono);
+        color: var(--pinrail-dim);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
       button.tool.armed.accept {
         color: var(--pinrail-success);
         background: color-mix(in oklab, var(--pinrail-success) 12%, transparent);
@@ -2671,6 +2690,17 @@
           const label = `${verb} remaining (${undecided})`;
           return `<button class="tool${armed ? ` armed ${kind}` : ""}" data-act="bulk-${kind}" title="${label}">${ico(icon)}${armed ? `Really ${verb.toLowerCase()} ${undecided}?` : `<span class="label">${label}</span>`}</button>`;
         };
+        // the arrows do what n and p do: the undecided proposals, then all of them
+        const order = orderedIds();
+        const every = RO() || !undecided;
+        const at = order.indexOf(S.focusedId);
+        const stepper = order.length
+          ? `<span class="stepper" role="group" aria-label="Move between proposals">
+      <button class="tool" data-act="prev-proposal" title="${every ? "Previous proposal" : "Previous undecided proposal"} (p)">${Pinrail.icon("chevron-left", { size: 14, label: every ? "Previous proposal" : "Previous undecided proposal" })}</button>
+      <span class="step-count">${at === -1 ? "–" : at + 1} of ${order.length}</span>
+      <button class="tool" data-act="next-proposal" title="${every ? "Next proposal" : "Next undecided proposal"} (n)">${Pinrail.icon("chevron-right", { size: 14, label: every ? "Next proposal" : "Next undecided proposal" })}</button>
+    </span>`
+          : "";
         return `<div class="diff-bar" role="toolbar" aria-label="The diff">
     <div class="seg-group">
       <button class="seg ${S.diffMode === "inline" ? "on" : ""}" data-act="set-inline" title="Inline diff">${Pinrail.icon("rows-3", { size: 14, label: "Inline diff" })}</button>
@@ -2678,6 +2708,7 @@
     </div>
     <button class="tool" data-act="fold-all" title="${allFolded ? "Unfold all" : "Fold all"}">${ico(allFolded ? "unfold-vertical" : "fold-vertical")}<span class="label">${allFolded ? "Unfold all" : "Fold all"}</span></button>
     <button class="tool${S.wrap ? " on" : ""}" data-act="toggle-wrap" aria-pressed="${S.wrap ? "true" : "false"}" ${S.diffMode === "split" ? `disabled title="Side by side always wraps, so the two sides stay level"` : `title="Wrap long lines, or scroll sideways (w)"`}>${ico("wrap-text")}<span class="label">Wrap</span></button>
+    ${stepper}
     <span class="grow"></span>
     ${!RO() && undecided ? `${bulk("accept", "Accept", "list-check")}${bulk("reject", "Reject", "list-x")}` : ""}
   </div>`;
@@ -2715,7 +2746,9 @@
             ? { id: "composer-ta" }
             : focusEl && focusEl.hasAttribute && focusEl.hasAttribute("data-note-ta")
               ? { note: focusEl.getAttribute("data-note-ta") }
-              : null;
+              : focusEl && focusEl.closest && focusEl.closest(".stepper")
+                ? { act: focusEl.getAttribute("data-act") }
+                : null;
 
         const globalUn = D.proposals.filter(unplaceable);
         const order = orderedFiles();
@@ -2825,7 +2858,9 @@
         if (focusDesc)
           toFocus = focusDesc.id
             ? document.getElementById(focusDesc.id)
-            : document.querySelector(`[data-note-ta="${focusDesc.note}"]`);
+            : focusDesc.act
+              ? document.querySelector(`.stepper [data-act="${focusDesc.act}"]`)
+              : document.querySelector(`[data-note-ta="${focusDesc.note}"]`);
         else if (S.composer) toFocus = document.getElementById("composer-ta");
         // a note field takes the cursor when it has just been opened, not on every
         // redraw: one left open further up must not pull the page back to it
@@ -2834,9 +2869,12 @@
         // putting the cursor back where it was never scrolls; a field just opened may
         if (toFocus && toFocus !== document.activeElement) {
           toFocus.focus({ preventScroll: !!focusDesc });
-          const v = toFocus.value;
-          toFocus.value = "";
-          toFocus.value = v;
+          // the cursor goes to the end of a field's text
+          if (toFocus.tagName === "TEXTAREA") {
+            const v = toFocus.value;
+            toFocus.value = "";
+            toFocus.value = v;
+          }
         }
       }
 
@@ -3121,6 +3159,12 @@
             break;
           case "close-tree":
             openDrawer(false);
+            break;
+          case "prev-proposal":
+            moveFocus(-1);
+            break;
+          case "next-proposal":
+            moveFocus(1);
             break;
           case "toggle-findings-only":
             set(() => {

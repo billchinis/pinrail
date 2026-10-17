@@ -203,12 +203,24 @@ test("the diff's bar holds how it reads and the bulk decisions; icons carry name
   // the diff's bar: how it reads, and the decisions on the findings still open below
   expect(
     await bar.locator(".pinrail-icon").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.icon)),
-  ).toEqual(["rows-3", "columns-2", "fold-vertical", "wrap-text", "list-check", "list-x"]);
+  ).toEqual([
+    "rows-3",
+    "columns-2",
+    "fold-vertical",
+    "wrap-text",
+    "chevron-left",
+    "chevron-right",
+    "list-check",
+    "list-x",
+  ]);
 
   // Beside a word, an icon is decoration and the word is the name.
   await expect(bar.getByRole("button", { name: "Accept remaining (3)" })).toBeVisible();
   await expect(bar.getByRole("button", { name: "Fold all" })).toBeVisible();
   await expect(bar.locator('[data-act="bulk-accept"] .pinrail-icon')).toHaveAttribute("aria-hidden", "true");
+
+  // So have the arrows through the proposals.
+  await expect(bar.getByRole("button", { name: "Next undecided proposal" })).toBeVisible();
 
   // The diff toggle has no words, so its two buttons are named.
   await expect(bar.getByRole("button", { name: "Inline diff" })).toBeVisible();
@@ -627,4 +639,31 @@ test("in a narrow frame the title keeps a line, and a card's buttons go under it
   expect(accept.y).toBeGreaterThanOrEqual(name.y + name.height);
   // the toolbar's buttons keep their names
   await expect(f.getByRole("button", { name: "Fold all" })).toBeVisible();
+});
+
+test("the toolbar's arrows go through the undecided proposals, as n and p do, and say where the focus is", async ({
+  page,
+}) => {
+  const plugin = await mountPlugin(page, dir, { review: webhooks() });
+  const f = plugin.frame;
+  const bar = f.locator('[role="toolbar"]');
+  const count = bar.locator(".step-count");
+  // the first proposal has the focus when the review opens
+  await expect(count).toHaveText("1 of 5");
+
+  const next = bar.getByRole("button", { name: "Next undecided proposal" });
+  await next.click();
+  await expect(count).toHaveText("2 of 5");
+  await expect(f.locator(".card.focused")).toBeInViewport();
+  // the button keeps the keyboard's focus, so Enter goes on
+  await expect(next).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(count).toHaveText("3 of 5");
+
+  // a decided proposal is passed over, both ways
+  await f.locator(".card.focused").getByRole("button", { name: "Accept" }).click();
+  await bar.getByRole("button", { name: "Previous undecided proposal" }).click();
+  await expect(count).toHaveText("2 of 5");
+  await bar.getByRole("button", { name: "Next undecided proposal" }).click();
+  await expect(count).toHaveText("4 of 5");
 });
