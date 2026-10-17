@@ -38,9 +38,9 @@ unused-allowed-license = "allow"
 [licenses.private]
 ignore = true
 
-# the systems Pinrail ships for: macOS on Apple silicon and Intel, and Linux
+# the systems Pinrail ships for: macOS and Linux, each on ARM and Intel
 [graph]
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu"]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 
 # A known vulnerability fails, wherever it is, and so does a yanked crate.
 # An unmaintained crate fails only when Pinrail depends on it directly:

@@ -431,7 +431,7 @@ mod tests {
             let mut entry = archive.by_index(i).unwrap();
             let mut bytes = Vec::new();
             entry.read_to_end(&mut bytes).unwrap();
-            files.push((entry.name().to_string(), bytes));
+            files.push((entry.name().unwrap().to_string(), bytes));
         }
         let from_zip = Listing::from_files(
             files.iter().map(|(p, b)| (p.as_str(), b.as_slice())),

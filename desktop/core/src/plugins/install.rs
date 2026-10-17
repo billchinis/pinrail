@@ -409,7 +409,12 @@ fn unzip_within(bytes: &[u8], into: &Path, limits: Unpacking) -> Result<(), Erro
         let mut file = archive
             .by_index(i)
             .map_err(|e| Error::invalid("/source", format!("bad zip entry: {e}")))?;
-        let Some(relative) = file.enclosed_name() else {
+        // an absolute name is refused too, though the zip crate would unpack
+        // it inside the folder
+        let absolute = file
+            .name()
+            .is_ok_and(|name| name.starts_with(['/', '\\']) || name.get(1..2) == Some(":"));
+        let (false, Some(relative)) = (absolute, file.enclosed_name()) else {
             return Err(Error::invalid(
                 "/source",
                 "the archive has an entry that leaves the archive",
