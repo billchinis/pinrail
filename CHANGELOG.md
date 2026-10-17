@@ -46,6 +46,12 @@ The `pinrail` command ships inside the app and carries the app's version.
   and K step through the list from it, while the view has the keyboard
   too. *Settings › General › Opening a review* switches back to opening
   reviews as a page.
+- The official plugins fit a narrow frame, such as the inbox's side
+  panel. Their sidebars, such as the code review's file tree and the
+  Markdown review's outline and comments, open as drawers over the
+  review, and their headers and controls rearrange to leave the content
+  the width. The image review's notes fold away, and the code review has
+  arrows for the next and previous proposal.
 - Only a decision or a discard made in the app is recorded as yours. One
   made with `pinrail decide` or `pinrail discard` is recorded as made by
   the agent the command runs under, if any, and one made through the API
