@@ -1584,6 +1584,15 @@
           flex-basis: 100%;
         }
       }
+      /* the app's microphone beside a note's Save and a comment's Cancel,
+         the size of the buttons around it, where the app can dictate */
+      .dictate-slot {
+        display: contents;
+      }
+      .dictate-slot .pinrail-dictate {
+        width: 26px;
+        height: 26px;
+      }
     </style>
   </head>
   <body>
@@ -2224,8 +2233,9 @@
         return `<div class="note editing ${kind}">
     <span class="note-text">
       <span class="note-label">${label}<span class="note-hint">Enter to save · Esc to cancel</span></span>
-      <textarea class="note-ta" data-note-ta="${p.id}" rows="1" placeholder="${esc(ph)}" aria-label="note for proposal ${p.id}">${esc(st.draft || "")}</textarea>
+      <textarea class="note-ta" id="note-${esc(String(p.id))}" data-note-ta="${p.id}" data-pinrail-dictate rows="1" placeholder="${esc(ph)}" aria-label="note for proposal ${p.id}">${esc(st.draft || "")}</textarea>
     </span>
+    <span class="dictate-slot" data-pinrail-dictate-for="note-${esc(String(p.id))}"></span>
     <button class="icon-btn" data-act="save-note" data-id="${p.id}" title="Save">${Pinrail.icon("check", { size: 15, label: "Save" })}</button>
   </div>`;
       }
@@ -2363,9 +2373,10 @@
         const c = S.composer;
         return `<div class="mine editing">
     <div class="mine-head">${Pinrail.icon("message-square", { size: 13 })}<span class="mine-label">YOUR COMMENT</span><span class="mine-at">${esc(anchorOf(c))}</span><span class="grow"></span><span class="mine-hint">Enter to ${c.editId != null ? "save" : "add"} · Esc to cancel</span>
+      <span class="dictate-slot" data-pinrail-dictate-for="composer-ta"></span>
       <button class="icon-btn" data-act="cancel-composer" title="Cancel">${Pinrail.icon("x", { size: 15, label: "Cancel" })}</button>
       <button class="icon-btn ok" data-act="save-composer" title="${c.editId != null ? "Save" : "Add comment"}">${Pinrail.icon("check", { size: 15, label: c.editId != null ? "Save" : "Add comment" })}</button></div>
-    <textarea class="note-ta" id="composer-ta" rows="1" placeholder="What should the agent look at here? e.g. is this bucket cleanup handled anywhere?" aria-label="your comment">${esc(c.text || "")}</textarea>
+    <textarea class="note-ta" id="composer-ta" data-pinrail-dictate rows="1" placeholder="What should the agent look at here? e.g. is this bucket cleanup handled anywhere?" aria-label="your comment">${esc(c.text || "")}</textarea>
   </div>`;
       }
 

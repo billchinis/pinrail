@@ -667,3 +667,28 @@ test("the toolbar's arrows go through the undecided proposals, as n and p do, an
   await bar.getByRole("button", { name: "Next undecided proposal" }).click();
   await expect(count).toHaveText("4 of 5");
 });
+
+test("a proposal's note and your own comment can be dictated, from a microphone beside their buttons", async ({
+  page,
+}) => {
+  const plugin = await mountPlugin(page, dir, { review: webhooks(), dictation: true });
+  const f = plugin.frame;
+  const card = f.locator(".card").first();
+  await card.getByRole("button", { name: "Add instruction" }).click();
+  const note = card.locator("textarea.note-ta");
+  await expect(note).toBeFocused();
+  await card.locator(".dictate-slot").getByRole("button", { name: "Dictate" }).click();
+  await plugin.say("re-enqueue it");
+  await plugin.say("re-enqueue it with a run at");
+  await expect(note).toHaveValue("re-enqueue it with a run at");
+  await card.getByRole("button", { name: "Stop dictating" }).click();
+  await expect.poll(() => plugin.dictating()).toBe(false);
+});
+
+test("without the app's dictation a note has no microphone", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: webhooks() });
+  const card = plugin.frame.locator(".card").first();
+  await card.getByRole("button", { name: "Add instruction" }).click();
+  await expect(card.locator("textarea.note-ta")).toBeVisible();
+  await expect(plugin.frame.getByRole("button", { name: "Dictate" })).toHaveCount(0);
+});

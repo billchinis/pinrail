@@ -8,6 +8,9 @@ carries it.
 
 ### Added
 
+- A proposal's note and a comment of your own can be dictated in the
+  macOS app, from a microphone beside the note's Save and the comment's
+  Cancel buttons.
 - Arrows in the toolbar move to the previous and next undecided
   proposal, as P and N do, between a count of where the focus is among
   the proposals.
