@@ -2618,12 +2618,10 @@ fn plugins_check_since_a_release_says_what_it_breaks_of_the_one_before() {
             std::fs::copy(list.join(f), to).unwrap();
         }
         let manifest = dir.join("manifest.json");
-        let text = std::fs::read_to_string(&manifest).unwrap();
-        std::fs::write(
-            &manifest,
-            text.replace("\"1.0.0\"", &format!("\"{version}\"")),
-        )
-        .unwrap();
+        let mut fields: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&manifest).unwrap()).unwrap();
+        fields["version"] = version.into();
+        std::fs::write(&manifest, fields.to_string()).unwrap();
         let path = dir.join("schemas/decision.schema.json");
         let mut schema: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
