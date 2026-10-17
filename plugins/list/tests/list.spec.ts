@@ -260,3 +260,24 @@ test("in a wide frame the items sit beside the list, and fold away from the head
   await f.getByRole("button", { name: "Show the items" }).click();
   await expect(rail).toBeVisible();
 });
+
+test("a note can be dictated, with the microphone in its corner, and the note is drafted", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: triage(), dictation: true });
+  const f = plugin.frame;
+  const item = f.locator('.pinrail-item[data-id="102"]');
+  const mic = item.locator(".note-mic").getByRole("button", { name: "Dictate" });
+  await mic.click();
+  await plugin.say("deploys are fine, fix the rollout instead");
+  await expect(f.getByLabel("note for item 102")).toHaveValue("deploys are fine, fix the rollout instead");
+  await expect
+    .poll(async () => (await plugin.lastDraft())?.decisions?.["102"]?.note)
+    .toBe("deploys are fine, fix the rollout instead");
+  await item.getByRole("button", { name: "Stop dictating" }).click();
+  await expect.poll(() => plugin.dictating()).toBe(false);
+});
+
+test("without the app's dictation the notes have no microphone", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: triage() });
+  await expect(plugin.frame.getByLabel("note for item 102")).toBeVisible();
+  await expect(plugin.frame.getByRole("button", { name: "Dictate" })).toHaveCount(0);
+});

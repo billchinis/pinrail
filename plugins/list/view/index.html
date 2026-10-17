@@ -381,10 +381,25 @@
       .pinrail-item-controls {
         width: 100%;
       }
-      textarea.pinrail-note {
+      /* the note, with the app's microphone in its right corner where the
+     app can dictate */
+      .note-field {
         flex: 1 1 260px;
+        position: relative;
+        display: flex;
+      }
+      textarea.pinrail-note {
+        flex: 1;
         min-height: 30px;
         padding: 5px 9px;
+      }
+      .note-field:has(.pinrail-dictate) textarea.pinrail-note {
+        padding-right: 34px;
+      }
+      .note-mic {
+        position: absolute;
+        top: 1px;
+        right: 2px;
       }
       .note-ro {
         flex: 1 1 260px;
@@ -766,7 +781,10 @@
               : "note (optional)";
         return `<div class="pinrail-item ${cls}" data-id="${item.id}">${head}
     <div class="pinrail-item-controls">
-      <textarea class="pinrail-note" rows="1" data-note="${item.id}" placeholder="${placeholder}" aria-label="note for item ${esc(item.id)}">${esc(d.note || "")}</textarea>
+      <span class="note-field">
+        <textarea class="pinrail-note" rows="1" id="note-${item.id}" data-note="${item.id}" data-pinrail-dictate placeholder="${placeholder}" aria-label="note for item ${esc(item.id)}">${esc(d.note || "")}</textarea>
+        <span class="note-mic" data-pinrail-dictate-for="note-${item.id}"></span>
+      </span>
       <span class="choice" role="group" aria-label="decide item ${esc(item.id)}">
         <button type="button" class="pinrail-btn accept ${d.action === "accept" ? "on" : ""}" data-act="accept" data-id="${item.id}" aria-pressed="${d.action === "accept"}">Accept</button>
         <button type="button" class="pinrail-btn reject ${d.action === "reject" ? "on" : ""}" data-act="reject" data-id="${item.id}" aria-pressed="${d.action === "reject"}">Reject</button>
