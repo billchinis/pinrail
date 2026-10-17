@@ -482,3 +482,47 @@ test("n and p move between questions, focus the answer, and leave typing alone",
   await expect(text).toHaveValue("n");
   await expect(q(f, "other_context")).toHaveClass(/is-current/);
 });
+
+test("in the side panel's width the groups are a strip above the questions", async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 800 });
+  const plugin = await mount(page);
+  const f = plugin.frame;
+  const strip = await f.locator(".sidebar").boundingBox();
+  const first = await q(f, "approach").boundingBox();
+  // the strip runs across the frame, and the questions start under it
+  expect(strip!.width).toBeGreaterThan(650);
+  expect(first!.y).toBeGreaterThan(strip!.y + strip!.height);
+  await expect(f.locator(".rail-questions").first()).toBeHidden();
+});
+
+test("in a narrow frame a question's prompt keeps its row, with its comment button under it", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  const plugin = await mount(page);
+  const f = plugin.frame;
+  const prompt = await q(f, "approach").locator(".question-prompt").boundingBox();
+  const meta = await q(f, "approach").locator(".question-meta").boundingBox();
+  expect(meta!.y).toBeGreaterThanOrEqual(prompt!.y + prompt!.height);
+  // the counts sit under the title, beside the toggle
+  const toggle = await f.locator(".rail-toggle").boundingBox();
+  const title = await f.locator(".feedback-header .pinrail-title").boundingBox();
+  const counts = await f.locator(".header-count").boundingBox();
+  expect(Math.abs(toggle!.y + toggle!.height / 2 - (title!.y + title!.height / 2))).toBeLessThan(4);
+  expect(counts!.y).toBeGreaterThanOrEqual(title!.y + title!.height);
+});
+
+test("where the questions are narrow, an answered question's buttons go under its prompt, whatever the frame", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 600, height: 800 });
+  const plugin = await mount(page);
+  const f = plugin.frame;
+  await q(f, "approach").getByRole("button", { name: "Use this answer" }).click();
+  const preserve = q(f, "preserve_logs");
+  await preserve.getByText("Capture logs").click();
+  await expect(preserve.getByRole("button", { name: "Clear answer" })).toBeVisible();
+  const prompt = await preserve.locator(".question-prompt").boundingBox();
+  const meta = await preserve.locator(".question-meta").boundingBox();
+  // the prompt keeps one line, and the buttons sit under it
+  expect(prompt!.height).toBeLessThan(30);
+  expect(meta!.y).toBeGreaterThanOrEqual(prompt!.y + prompt!.height);
+});

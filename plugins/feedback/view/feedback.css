@@ -865,8 +865,8 @@ textarea:disabled {
 }
 
 /* ------------------------------------------------------------ narrow
-   The rail becomes a strip of groups above the questions, and the whole
-   workspace scrolls as one. */
+   In a narrow frame the rail becomes a strip of groups above the
+   questions, and the whole workspace scrolls as one. */
 
 @media (max-width: 860px) {
   .sidebar {
@@ -878,20 +878,9 @@ textarea:disabled {
   }
 }
 
-@media (max-width: 600px) {
-  .feedback-header {
-    padding: 9px 13px;
-    gap: 4px 12px;
-    flex-wrap: wrap;
-  }
-  .feedback-header .pinrail-title {
-    flex-basis: 100%;
-    font-size: 14px;
-  }
-  .header-count {
-    font-size: 11px;
-    gap: 10px;
-  }
+/* below 760 pixels, such as in the inbox's side panel, the rail becomes
+   a strip of groups above the questions */
+@media (max-width: 760px) {
   .workspace {
     display: block;
     overflow-y: auto;
@@ -925,6 +914,9 @@ textarea:disabled {
   .questions-scroll {
     overflow: visible;
   }
+}
+
+@media (max-width: 600px) {
   .questions-content {
     padding: 16px 12px 30px;
   }
@@ -945,6 +937,41 @@ textarea:disabled {
   .agent-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* below 520 pixels the counts go under the title */
+@media (max-width: 520px) {
+  .feedback-header {
+    padding: 9px 13px;
+    gap: 4px 10px;
+    flex-wrap: wrap;
+  }
+  .feedback-header .pinrail-title {
+    font-size: 14px;
+  }
+  .header-count {
+    flex-basis: 100%;
+    font-size: 11px;
+    gap: 10px;
+  }
+}
+
+/* where the questions are narrower than 700 pixels, a question's buttons
+   and its requirement go under its prompt, so the prompt keeps the width
+   of the card */
+@container (max-width: 700px) {
+  .question legend {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .question-prompt {
+    flex: 1 1 0;
+  }
+  .question-meta {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding-left: 34px;
   }
 }
 
