@@ -52,9 +52,25 @@ describe("each release's notes", () => {
         if (!card.image) continue;
         expect(card.alt, card.title).toBeTruthy();
         for (const theme of ["light", "dark"] as const) {
-          expect(pictureOf(r.version, card.image, theme), `${r.version}/${card.image}-${theme}.png`).not.toBeNull();
+          expect(pictureOf(r.version, card.image, theme), `${r.version}/${card.image}-${theme}.webp`).not.toBeNull();
         }
       }
     }
+  });
+});
+
+describe("the pictures the app carries", () => {
+  test("are each one a card shows, in a release that has notes", () => {
+    const named = new Set(
+      RELEASES.flatMap((r) =>
+        r.cards
+          .filter((c) => c.image)
+          .flatMap((c) => ["light", "dark"].map((t) => `../whats-new/${r.version}/${c.image}-${t}.webp`)),
+      ),
+    );
+    expect(FILES.pictures.filter((file) => !named.has(file))).toEqual([]);
+    // and nothing else sits in a release's folder, such as a PNG left behind
+    const folders = import.meta.glob("../whats-new/*/*", { query: "?url", import: "default" });
+    expect(Object.keys(folders).filter((file) => !file.endsWith(".webp"))).toEqual([]);
   });
 });

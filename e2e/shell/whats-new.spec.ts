@@ -32,7 +32,7 @@ test("a new release shows its cards once, one at a time, and a card opens what i
   await expect(dialog).toContainText("New in 0.3.0");
   await expect(card).toHaveText("Reviews open beside the inbox");
   // the picture is the theme's
-  await expect(dialog.locator("img")).toHaveAttribute("src", /inbox-panel-(light|dark)\.png/);
+  await expect(dialog.locator("img")).toHaveAttribute("src", /inbox-panel-(light|dark)\.webp/);
 
   await dialog.getByTestId("whats-new-next").click();
   await expect(card).toHaveText("See where a decision came from");

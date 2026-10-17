@@ -1,7 +1,7 @@
 // What's new: a few cards about a release, shown once when the release
 // first starts. Each release that has notes has a file of its own,
 // whats-new/<version>.json, and its pictures beside it in
-// whats-new/<version>/, as <image>-light.png and <image>-dark.png, which
+// whats-new/<version>/, as <image>-light.webp and <image>-dark.webp, which
 // the screenshot run makes (e2e/screenshots). A release with no file shows
 // nothing.
 
@@ -57,7 +57,7 @@ export function latestNotes(releases: Release[], running: string, preview: boole
 }
 
 const files = import.meta.glob<Release>("../whats-new/*.json", { eager: true, import: "default" });
-const pictures = import.meta.glob<string>("../whats-new/*/*.png", {
+const pictures = import.meta.glob<string>("../whats-new/*/*.webp", {
   eager: true,
   query: "?url",
   import: "default",
@@ -68,7 +68,7 @@ export const RELEASES: Release[] = Object.values(files);
 
 /** The address of a card's picture in a theme, or null when there is none. */
 export function pictureOf(version: string, image: string, theme: "light" | "dark"): string | null {
-  return pictures[`../whats-new/${version}/${image}-${theme}.png`] ?? null;
+  return pictures[`../whats-new/${version}/${image}-${theme}.webp`] ?? null;
 }
 
 /** The file names the notes are kept under, for the check that each is complete. */

@@ -17,8 +17,8 @@ changelog. Each card has:
 | `action` | Optional. A button that opens the change: `{"label": "Open the inbox", "to": "/"}` for a screen, or `{"label": "Open Plugins", "settings": "plugins"}` for a section of Settings. |
 
 The screenshot run makes the pictures: a scene whose name a card gives as
-its `image` is saved here as `<version>/<image>-light.png` and
-`<image>-dark.png`. A scene shows the whole window at 1180 by 576, the
+its `image` is saved here as `<version>/<image>-light.webp` and
+`<image>-dark.webp`. A scene shows the whole window at 1180 by 576, the
 shape of the dialog's picture, with the change on screen; it does not
 crop, so nothing is cut off at the edges:
 
@@ -27,4 +27,4 @@ mise run screenshots -- --only inbox-panel
 ```
 
 `src/lib/whatsNew.test.ts` fails when a card names a picture that is not
-here in both themes.
+here in both themes, and when a file here is not a picture a card shows.

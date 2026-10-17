@@ -14,7 +14,9 @@
 // into website/src/assets/screenshots when the scene marks it `site: true`,
 // for the landing pages, where Astro optimizes it, and into
 // desktop/app/ui/src/whats-new/<version>/ when a release's What's new card
-// names it as its image. A shot used by none of them fails the run. With --out, every shot goes into that folder instead.
+// names it as its image, as WebP, which the app carries at a third of the
+// size. A shot used by none of them fails the run. With --out, every shot
+// goes into that folder instead.
 //
 // made.json records the files a full run made. The next full run that
 // succeeds removes the ones it no longer makes, such as a renamed scene's;
@@ -96,6 +98,27 @@ const made = new Set();
 const app = await startApp({ build: !args.includes("--no-build") });
 // WebGL in software, for the views that draw with it (the model plugin)
 const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+
+/** A PNG as WebP, encoded by the browser itself, in a page of its own. */
+let encoder = null;
+async function webp(png) {
+  encoder ??= await (await browser.newContext()).newPage();
+  const data = await encoder.evaluate(async (base64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${base64}`;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    const blob = await new Promise((done) => canvas.toBlob(done, "image/webp", 0.85));
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let text = "";
+    for (const b of bytes) text += String.fromCharCode(b);
+    return btoa(text);
+  }, png.toString("base64"));
+  return Buffer.from(data, "base64");
+}
 let failed = false;
 try {
   const reviews = await seed(app);
@@ -134,12 +157,16 @@ try {
           [app.data, "~/.local/share/pinrail"],
           [app.code, "~/code"],
         ]);
-        const [file, ...copies] = folders.map((folder) => path.join(folder, `${name}-${theme}.png`));
-        await target.screenshot({ path: file, animations: "disabled", caret: "hide", ...options });
-        for (const copy of copies) fs.copyFileSync(file, copy);
-        for (const each of [file, ...copies]) {
-          made.add(path.relative(root, each));
-          console.log(`screenshots: ${path.relative(root, each)}`);
+        const png = await target.screenshot({ animations: "disabled", caret: "hide", ...options });
+        const whatsNew = new Set(inWhatsNew.get(name) ?? []);
+        let encoded = null;
+        for (const folder of folders) {
+          const asWebp = !elsewhere && whatsNew.has(folder);
+          const file = path.join(folder, `${name}-${theme}.${asWebp ? "webp" : "png"}`);
+          if (asWebp) encoded ??= await webp(png);
+          fs.writeFileSync(file, asWebp ? encoded : png);
+          made.add(path.relative(root, file));
+          console.log(`screenshots: ${path.relative(root, file)}`);
         }
       };
       try {
