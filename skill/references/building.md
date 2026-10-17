@@ -299,7 +299,8 @@ only 400 to 700 pixels wide, and short. Make it work there:
 - Put an item's buttons under its title when they do not fit beside it.
 - Do not give fixed heights to parts above the content. Let the view
   scroll as a whole, and let long notes fold away.
-- Check it at about 390, 600 and 900 pixels. In a test, call
+- Check it at about 390, 600 and 900 pixels. In the dev shell, the size
+  menu sets the frame to the side panel or a device. In a test, call
   `page.setViewportSize` before mounting the view.
 
 ## Settings and keys

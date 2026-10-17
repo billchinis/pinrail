@@ -286,3 +286,33 @@ test("the bar stays on one line at the app's window size, however long the revie
     expect(Math.abs((await middle("#theme")) - (await middle("#name")))).toBeLessThan(2);
   });
 });
+
+test("the frame takes the size chosen, as the app's side panel or a phone shows it, and keeps it", async ({ page }) => {
+  const dir = path.join(scratch("pinrail-dev-"), "triage");
+  plainPlugin("triage", dir);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await withDevShell(dir, async (url) => {
+    await page.goto(url);
+    const frame = page.locator("#frame");
+    await expect(page.frameLocator("#frame").getByRole("button", { name: "Yes" })).toBeVisible();
+    const width = async () => (await frame.evaluate((el) => el.getBoundingClientRect().width)) | 0;
+
+    await page.locator("#width").selectOption("panel");
+    await expect.poll(width).toBe(700);
+    await expect(page.locator("#frame-size")).toContainText("700 ×");
+
+    // a device sets the height too; the composer under the view takes its share
+    await page.locator("#width").selectOption("iphone");
+    await expect.poll(width).toBe(393);
+    const device = (await page.locator("#device").boundingBox())!;
+    expect(Math.round(device.height)).toBe(852 + 2);
+
+    // the choice outlives a reload, and full width takes the stage again
+    await page.reload();
+    await expect(page.locator("#width")).toHaveValue("iphone");
+    await expect.poll(width).toBe(393);
+    await page.locator("#width").selectOption("full");
+    await expect.poll(width).toBeGreaterThan(900);
+    await expect(page.locator("#frame-size")).toBeHidden();
+  });
+});

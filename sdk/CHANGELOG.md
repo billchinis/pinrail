@@ -6,6 +6,13 @@ change to the protocol is a new major and a new path.
 
 ## [Unreleased]
 
+### Added
+
+- The development shell sizes the frame from a menu in its bar: the full
+  stage, the app's side panel at 700 or 420 pixels, or a phone or tablet,
+  such as an iPhone or an iPad. A caption under the frame gives its size,
+  and the shell remembers the choice.
+
 ### Changed
 
 - J and K belong to the app, which moves through the inbox with them

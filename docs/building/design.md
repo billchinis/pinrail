@@ -141,7 +141,7 @@ The inbox opens a review in a panel beside the list, so a view is often only 400
 }
 ```
 
-Check the view at about 390, 600 and 900 pixels wide. In the dev shell, narrow the browser window or use the browser's device toolbar. In a test, `page.setViewportSize({ width: 390, height: 800 })` before mounting the view sets the frame's width.
+Check the view at about 390, 600 and 900 pixels wide. In the dev shell, the size menu in the bar sets the frame to the app's side panel, or to a phone or tablet. In a test, `page.setViewportSize({ width: 390, height: 800 })` before mounting the view sets the frame's width.
 
 ### Pieces
 

@@ -22,7 +22,8 @@
   .bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); flex: none; flex-wrap: wrap; }
   .bar b { font-weight: 600; margin-right: 4px; }
   /* a long review title would push the bar onto two lines; the open menu shows it whole */
-  .bar select { max-width: 18rem; text-overflow: ellipsis; }
+  .bar select { max-width: 13rem; text-overflow: ellipsis; }
+  .bar select#width { width: 8rem; }
   .bar .v { color: var(--faint); font: 11.5px var(--mono); margin-right: 8px; }
   select, button, input[type=text] { font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
   button { cursor: pointer; }
@@ -86,7 +87,15 @@
   /* The app's composer, as the review screen draws it under the view: the
      note to the agent and the hand-over button with the view's label. */
   .stage.fill { display: flex; flex-direction: column; }
+  /* the frame and the composer, as the app's review page holds them; a
+     size from the bar's menu gives them a width, or a device's whole size */
+  .device { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; width: 100%; }
   .stage.fill iframe { flex: 1 1 auto; height: auto; min-height: 0; }
+  .stage.sized { align-items: center; padding: 16px; overflow: auto; background: radial-gradient(var(--line) 1px, transparent 1px) 0 0 / 14px 14px, var(--bg); }
+  .stage.sized .device { flex: 1 1 auto; width: calc(var(--device-width) + 2px); max-width: none; border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden; background: var(--panel); box-shadow: 0 12px 32px -18px rgb(0 0 0 / 0.5); }
+  .stage.sized.device-tall .device { flex: none; height: calc(var(--device-height) + 2px); }
+  .frame-size { display: none; }
+  .stage.sized .frame-size { display: block; flex: none; margin-top: 8px; font: 11.5px var(--mono); color: var(--faint); }
   #composer { flex: none; margin: 8px 12px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); }
   #composer:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
   #composer textarea { display: block; width: 100%; padding: 9px 12px 4px; border: 0; background: none; color: var(--text); font: inherit; resize: none; min-height: 34px; outline: none; }
@@ -123,6 +132,20 @@
   <label class="check"><input type="checkbox" id="readonly"> read-only</label>
   <button id="reinit" title="Send init again, with the last draft">Re-init</button>
   <span class="spacer"></span>
+  <select id="width" title="The size of the frame: as wide as the stage, as the app's side panel, or as a phone or tablet">
+    <option value="full">Full width</option>
+    <optgroup label="App">
+      <option value="panel">Side panel</option>
+      <option value="panel-narrow">Narrow panel</option>
+    </optgroup>
+    <optgroup label="Devices">
+      <option value="iphone-se">iPhone SE</option>
+      <option value="iphone">iPhone 16</option>
+      <option value="iphone-max">iPhone Pro Max</option>
+      <option value="ipad-mini">iPad mini</option>
+      <option value="ipad">iPad Air</option>
+    </optgroup>
+  </select>
   <button id="show-payload" title="Show the payload and the schemas as JSON in place of the view">JSON</button>
   <button id="select" title="Pick a part of the view to comment on">Select<kbd>I</kbd></button>
   <button id="copy" title="Copy every comment as Markdown, to paste to an agent">Copy comments<span class="count" id="comment-count"></span></button>
@@ -130,7 +153,7 @@
   <button id="theme" title="Switch theme">Theme</button>
 </div>
 <div class="main">
-  <div class="stage fill" id="stage"><iframe id="frame" sandbox="allow-scripts" title="plugin"></iframe><div id="json"><div id="json-tabs" role="tablist" aria-label="JSON"><button type="button" role="tab" data-json="payload" aria-selected="true">Payload</button><button type="button" role="tab" data-json="payload-schema" aria-selected="false">Payload schema</button><button type="button" role="tab" data-json="decision-schema" aria-selected="false">Decision schema</button></div><pre id="payload" role="tabpanel" aria-label="JSON"></pre></div>
+  <div class="stage fill" id="stage"><div class="device" id="device"><iframe id="frame" sandbox="allow-scripts" title="plugin"></iframe><div id="json"><div id="json-tabs" role="tablist" aria-label="JSON"><button type="button" role="tab" data-json="payload" aria-selected="true">Payload</button><button type="button" role="tab" data-json="payload-schema" aria-selected="false">Payload schema</button><button type="button" role="tab" data-json="decision-schema" aria-selected="false">Decision schema</button></div><pre id="payload" role="tabpanel" aria-label="JSON"></pre></div>
     <div id="composer">
       <textarea rows="1" aria-label="Note to the agent" placeholder="Add a note for the agent…" data-shell-part="note to the agent"></textarea>
       <div class="bar-row">
@@ -138,7 +161,7 @@
         <button type="button" id="handover" title="Hand over to the agent" data-shell-part="hand-over button"><span id="handover-label">Hand over</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg><span class="keys" aria-hidden="true"><kbd>⌘</kbd><kbd>↵</kbd></span></button>
       </div>
     </div>
-  </div>
+  </div><div class="frame-size" id="frame-size" title="The frame's size, which the view's media queries see"></div></div>
   <aside class="side">
     <h2 class="with">Comments <button class="link" id="clear-comments" title="Delete every comment">Clear</button></h2>
     <div id="comments"><div class="empty">Turn on Select, then click a part of the view to comment on it.</div></div>
@@ -389,6 +412,40 @@ $("theme").addEventListener("click", () => {
   host.appearance(theme);
   drawComments();
 });
+
+// The frame's size: the stage's width, the app's side panel, or a phone or
+// tablet, kept in localStorage like the theme. The bar shows the size the
+// view's media queries see.
+const SIZES = {
+  full: null,
+  panel: { width: 700 },
+  "panel-narrow": { width: 420 },
+  "iphone-se": { width: 375, height: 667 },
+  iphone: { width: 393, height: 852 },
+  "iphone-max": { width: 440, height: 956 },
+  "ipad-mini": { width: 744, height: 1133 },
+  ipad: { width: 820, height: 1180 },
+};
+const SIZE_KEY = "pinrail-shell:size";
+function applySize(name) {
+  const size = SIZES[name] ?? null;
+  stage.classList.toggle("sized", !!size);
+  stage.classList.toggle("device-tall", !!size?.height);
+  stage.style.setProperty("--device-width", size ? `${size.width}px` : "");
+  stage.style.setProperty("--device-height", size?.height ? `${size.height}px` : "");
+  $("width").value = size ? name : "full";
+}
+$("width").addEventListener("change", () => {
+  applySize($("width").value);
+  try { localStorage.setItem(SIZE_KEY, $("width").value); } catch { /* the size lasts until a reload */ }
+});
+applySize((() => { try { return localStorage.getItem(SIZE_KEY); } catch { return null; } })() ?? "full");
+new ResizeObserver(([entry]) => {
+  const { width, height } = entry.contentRect;
+  const size = `${Math.round(width)} × ${Math.round(height)}`;
+  $("frame-size").textContent = size;
+  $("width").title = `The size of the frame, now ${size}: as wide as the stage, as the app's side panel, or as a phone or tablet`;
+}).observe(frame);
 
 // The manifest's shortcuts, pressed while this page rather than the frame
 // has focus, go to the view as the app sends them: a `key` message the SDK

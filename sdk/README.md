@@ -54,6 +54,9 @@ last draft, when a file of the plugin changes.
   round, and switch between read-only and editable and between the themes.
 - Under the view sits the app's composer: the note to the agent, and the
   hand-over button with the label the view gives it.
+- The size menu sets the frame to the whole stage, to the app's side
+  panel at 700 or 420 pixels, or to a phone or tablet. A caption under
+  the frame gives its size.
 - The side panel shows the settings and keys the manifest declares, every
   message the view sends, and what the view handed over, checked against
   the decision schema. It can answer a hand-over with violations.
