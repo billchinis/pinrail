@@ -80,3 +80,28 @@ test("the note box is dictated into from its own microphone, which stops the vie
   await page.getByRole("button", { name: "Stop dictating" }).click();
   await expect.poll(() => listening(page)).toBe(false);
 });
+
+test("Esc stops a dictation, and leaves the panel open", async ({ page }) => {
+  await fakeRecognition(page);
+  await clearInbox(page.request);
+  const review = await createReview(page.request, { title: "Dictation: Esc" });
+  await page.goto(`/#/?open=${review.id}`);
+  const frame = page.frameLocator("#plugin-frame");
+  await expect(frame.getByLabel("note for item 1")).toBeVisible();
+  const panel = page.getByRole("button", { name: "Dictate the note" });
+
+  // the note box
+  await panel.click();
+  await expect.poll(() => listening(page)).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect.poll(() => listening(page)).toBe(false);
+  await expect(page.getByRole("button", { name: "Dictate the note" })).toBeVisible();
+
+  // a field of the view, with Esc pressed in the app rather than the view
+  await frame.getByRole("button", { name: "Dictate" }).click();
+  await expect(page.getByText("Listening for the view")).toBeVisible();
+  await page.getByRole("textbox", { name: "Note to the agent" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("Listening for the view")).toHaveCount(0);
+  await expect(frame.getByLabel("note for item 1")).toBeVisible();
+});

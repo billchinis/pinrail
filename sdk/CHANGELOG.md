@@ -18,9 +18,10 @@ change to the protocol is a new major and a new path.
   `plugin.canDictate` and `plugin.dictating` serve a control of the
   view's own. The text goes in at the cursor, with an `input` event for
   each change. A field the view draws again with the same `id` keeps the
-  dictation. The host takes a `dictation` listener and reports
-  `onDictation`. The test harness mounts a view with `dictation: true`,
-  and speaks into it with `say(text)` and `endDictation(error)`.
+  dictation, and Esc stops it before the view hears the key. The host
+  takes a `dictation` listener and reports `onDictation`. The test
+  harness mounts a view with `dictation: true`, and speaks into it with
+  `say(text)` and `endDictation(error)`.
 
 - The development shell sizes the frame from a menu in its bar: the full
   stage, the app's side panel at 700 or 420 pixels, or a phone or tablet,

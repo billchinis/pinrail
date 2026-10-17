@@ -1012,6 +1012,17 @@
     connected = true;
     const plugin = createPlugin(browserEnv(root), handlers);
     if (root.document && root.MutationObserver) microphones(root, plugin);
+    // Esc stops a dictation before the view hears it: the next Esc is the view's
+    root.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key !== "Escape" || event.isComposing || !plugin.dictating) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        plugin.stopDictating();
+      },
+      true,
+    );
     return plugin;
   }
 

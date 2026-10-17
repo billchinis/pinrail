@@ -629,6 +629,23 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
   // dictation writes into the note as it hears it, and the box grows with it
   const dictation = useDictation(onNote, (message) => toast(message, "danger"));
   const listening = dictation.listening;
+  // Esc stops a dictation, into the note or the view, before anything else
+  // hears it: the panel stays open, and the next Esc is the screen's
+  const viewDictating = bridge.dictating;
+  const stopViewDictation = bridge.stopDictation;
+  const stopNoteDictation = dictation.stop;
+  useEffect(() => {
+    if (!listening && !viewDictating) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.isComposing || modalOpen()) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (listening) stopNoteDictation();
+      if (viewDictating) stopViewDictation();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [listening, viewDictating, stopViewDictation, stopNoteDictation]);
   useEffect(() => {
     const el = noteBox.current;
     if (!el || !dictation.listening) return;

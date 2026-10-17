@@ -153,3 +153,23 @@ test("pressing the microphone leaves the focus in the field, so the view does no
   await expect(note).toBeFocused();
   await expect.poll(() => plugin.dictating()).toBe(true);
 });
+
+test("Esc stops a dictation before the view hears it, and the next Esc is the view's", async ({ page }) => {
+  const plugin = await mountPlugin(page, notePlugin(), { review: reviewFrom({ payload: {} }), dictation: true });
+  const f = plugin.frame;
+  const note = f.getByRole("textbox", { name: "note" });
+  await note.evaluate((el) =>
+    el.addEventListener("keydown", (e) => {
+      if ((e as KeyboardEvent).key === "Escape")
+        (window as any).__viewEscapes = ((window as any).__viewEscapes ?? 0) + 1;
+    }),
+  );
+  const viewEscapes = () => note.evaluate(() => (window as any).__viewEscapes ?? 0);
+  await f.getByRole("button", { name: "Dictate" }).click();
+  await plugin.say("hello");
+  await note.press("Escape");
+  await expect.poll(() => plugin.dictating()).toBe(false);
+  expect(await viewEscapes()).toBe(0);
+  await note.press("Escape");
+  expect(await viewEscapes()).toBe(1);
+});
