@@ -10,6 +10,11 @@ carries it.
 
 - The next and previous undecided proposal are N and P, and every
   proposal is Shift+N and Shift+P. J and K now move through the inbox.
+- The view fits a narrow frame, such as the inbox's side panel. Below
+  860 pixels the file tree opens as a drawer over the diff. Below 640
+  pixels the title keeps a line of its own, the toolbar's buttons show
+  only their icons, and the agent's summary puts its buttons under its
+  text. A card narrower than 480 pixels puts its buttons under its title.
 
 ## [1.1.0] - Pinrail 0.2.0
 

@@ -734,6 +734,15 @@
         min-height: 26px;
         padding: 10px 16px 0;
       }
+      .card-actions {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .card-actions:empty {
+        display: none;
+      }
       .card.folded .card-head {
         padding-bottom: 10px;
       }
@@ -1457,6 +1466,105 @@
         color: var(--pinrail-danger);
         white-space: pre-wrap;
       }
+      /* the tree, the diff and, in a narrow frame, the scrim under the drawer */
+      .work {
+        position: relative;
+        display: flex;
+        flex: 1;
+        min-height: 0;
+      }
+      .scrim {
+        display: none;
+      }
+      @media (max-width: 860px) {
+        .rail {
+          position: absolute;
+          z-index: 8;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          width: min(300px, 85%);
+          box-shadow: 0 8px 28px rgb(0 0 0 / 0.28);
+        }
+        .rail + .scrim {
+          display: block;
+          position: absolute;
+          inset: 0;
+          z-index: 7;
+          background: rgb(0 0 0 / 0.25);
+        }
+      }
+      /* Below 640 pixels the head wraps, with the title on a line of its own,
+     the toolbar's buttons keep only their icons, and the agent's summary puts
+     its buttons under its text. */
+      @media (max-width: 640px) {
+        .head {
+          flex-wrap: wrap;
+          row-gap: 4px;
+          padding: 9px 14px;
+        }
+        .head-title {
+          flex: 1 1 calc(100% - 40px);
+          flex-wrap: wrap;
+          row-gap: 2px;
+        }
+        .head-title h1 {
+          flex-basis: 100%;
+          font-size: 14px;
+        }
+        .tally {
+          flex-basis: 100%;
+          font-size: 11.5px;
+          gap: 12px;
+        }
+        .diff-bar {
+          padding: 0 10px;
+        }
+        .diff-bar .tool .label {
+          display: none;
+        }
+        #main > div {
+          padding: 12px 10px 420px !important;
+        }
+        .brief-line {
+          flex-wrap: wrap;
+        }
+        .brief-pills {
+          flex-basis: 100%;
+          padding-left: 24px;
+        }
+        .brief-concerns,
+        .brief-details {
+          padding-left: 14px;
+        }
+      }
+      /* below 520 pixels the branches leave the head, and the line numbers
+     narrow */
+      @media (max-width: 520px) {
+        .head-branch .pinrail-chip,
+        .head-branch .arrow {
+          display: none;
+        }
+        .diff-row.inline {
+          grid-template-columns: 34px 34px 14px 1fr;
+        }
+      }
+      /* a card narrower than 480 pixels puts its buttons under its title */
+      .card {
+        container: card / inline-size;
+      }
+      @container card (max-width: 480px) {
+        .card-head {
+          flex-wrap: wrap;
+          row-gap: 8px;
+        }
+        .card-head .grow {
+          display: none;
+        }
+        .card-actions {
+          flex-basis: 100%;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1536,6 +1644,8 @@
         wrap: true,
         folded: {},
         treeOpen: true,
+        // in a narrow frame the tree opens as a drawer over the diff
+        drawer: false,
         findingsOnly: false,
         briefOpen: false,
         concernsOpen: false,
@@ -1842,6 +1952,41 @@
           S.noteOpen[el.getAttribute("data-note-ta")] = { open: true, draft: el.value };
         });
       }
+      /* Below 860 pixels, such as in the inbox's side panel, the file tree is a
+   drawer over the diff: closed until the head's button opens it, and closed
+   again by a choice in it, Esc, or a click beside it. */
+      const narrow = window.matchMedia("(max-width: 860px)");
+      const treeShown = () => (narrow.matches ? S.drawer : S.treeOpen);
+      function openDrawer(open) {
+        if (S.drawer === open) return;
+        set(() => {
+          S.drawer = open;
+        });
+        if (open) document.querySelector(".rail-body button")?.focus();
+        else document.querySelector(".head-tree")?.focus();
+      }
+      function closeDrawer() {
+        if (!S.drawer) return;
+        S.drawer = false;
+        render();
+      }
+      narrow.addEventListener("change", () => {
+        if (!D) return;
+        S.drawer = false;
+        render();
+      });
+      // the drawer's Esc, before the view's own
+      document.addEventListener(
+        "keydown",
+        (e) => {
+          if (e.key !== "Escape" || !S.drawer || !narrow.matches) return;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          openDrawer(false);
+        },
+        true,
+      );
+
       function set(mut) {
         captureDrafts();
         mut();
@@ -2172,7 +2317,7 @@
             : "",
           foldable ? iconBtn("undo", p.id, "undo-2", "Undo") : "",
         ].join("");
-        const head = `<div class="card-head">${lead}<span class="grow"></span>${tail}</div>`;
+        const head = `<div class="card-head">${lead}<span class="grow"></span><span class="card-actions">${tail}</span></div>`;
         if (collapsed) {
           return `<div id="card-${p.id}" data-card="${p.id}" class="card ${flush ? "flush" : "boxed"} ${state}${focused ? " focused" : ""} folded">${head}</div>`;
         }
@@ -2498,7 +2643,7 @@
         const status = REVIEW.status;
         const roLabel = status === "decided" ? "READ-ONLY · DECIDED" : `READ-ONLY · ${String(status).toUpperCase()}`;
         return `<header class="head">
-    <button class="bare head-tree" data-act="toggle-tree">${Pinrail.icon(S.treeOpen ? "panel-left-close" : "panel-left-open", { size: 15, label: S.treeOpen ? "Collapse the file tree" : "Show the file tree" })}</button>
+    <button class="bare head-tree" data-act="toggle-tree" aria-expanded="${treeShown()}">${Pinrail.icon(treeShown() ? "panel-left-close" : "panel-left-open", { size: 15, label: treeShown() ? "Collapse the file tree" : "Show the file tree" })}</button>
     <div class="head-title">
       <h1>${esc(c.title)}</h1>
       <span class="head-ref">${esc(c.ref)}</span>
@@ -2523,15 +2668,16 @@
         // decisions on every finding still open below
         const bulk = (kind, verb, icon) => {
           const armed = S.confirmBulk === kind;
-          return `<button class="tool${armed ? ` armed ${kind}` : ""}" data-act="bulk-${kind}">${ico(icon)}${armed ? `Really ${verb.toLowerCase()} ${undecided}?` : `${verb} remaining (${undecided})`}</button>`;
+          const label = `${verb} remaining (${undecided})`;
+          return `<button class="tool${armed ? ` armed ${kind}` : ""}" data-act="bulk-${kind}" title="${label}">${ico(icon)}${armed ? `Really ${verb.toLowerCase()} ${undecided}?` : `<span class="label">${label}</span>`}</button>`;
         };
         return `<div class="diff-bar" role="toolbar" aria-label="The diff">
     <div class="seg-group">
       <button class="seg ${S.diffMode === "inline" ? "on" : ""}" data-act="set-inline" title="Inline diff">${Pinrail.icon("rows-3", { size: 14, label: "Inline diff" })}</button>
       <button class="seg ${S.diffMode === "split" ? "on" : ""}" data-act="set-split" title="Split diff">${Pinrail.icon("columns-2", { size: 14, label: "Split diff" })}</button>
     </div>
-    <button class="tool" data-act="fold-all">${ico(allFolded ? "unfold-vertical" : "fold-vertical")}${allFolded ? "Unfold all" : "Fold all"}</button>
-    <button class="tool${S.wrap ? " on" : ""}" data-act="toggle-wrap" aria-pressed="${S.wrap ? "true" : "false"}" ${S.diffMode === "split" ? `disabled title="Side by side always wraps, so the two sides stay level"` : `title="Wrap long lines, or scroll sideways (w)"`}>${ico("wrap-text")}Wrap</button>
+    <button class="tool" data-act="fold-all" title="${allFolded ? "Unfold all" : "Fold all"}">${ico(allFolded ? "unfold-vertical" : "fold-vertical")}<span class="label">${allFolded ? "Unfold all" : "Fold all"}</span></button>
+    <button class="tool${S.wrap ? " on" : ""}" data-act="toggle-wrap" aria-pressed="${S.wrap ? "true" : "false"}" ${S.diffMode === "split" ? `disabled title="Side by side always wraps, so the two sides stay level"` : `title="Wrap long lines, or scroll sideways (w)"`}>${ico("wrap-text")}<span class="label">Wrap</span></button>
     <span class="grow"></span>
     ${!RO() && undecided ? `${bulk("accept", "Accept", "list-check")}${bulk("reject", "Reject", "list-x")}` : ""}
   </div>`;
@@ -2576,7 +2722,7 @@
         const regions = new Map();
         HUNKS = new Map();
         regions.set("header", region("header", headerHtml()));
-        regions.set("tree", region("tree", S.treeOpen ? treeHtml() : ""));
+        regions.set("tree", region("tree", treeShown() ? treeHtml() : ""));
         regions.set("toolbar", region("toolbar", toolbarHtml()));
         regions.set("brief", region("brief", briefHtml()));
         for (const i of order)
@@ -2597,7 +2743,8 @@
           ),
         );
         const shape = JSON.stringify([
-          S.treeOpen,
+          treeShown(),
+          narrow.matches,
           S.done,
           order.map((i) => D.files[i].path),
           globalUn.map((p) => p.id),
@@ -2640,8 +2787,9 @@
           ? `<div id="done-banner" style="flex:none;padding:7px 16px;background:color-mix(in oklab, var(--pinrail-success) 12%, var(--pinrail-bg-panel));border-bottom:1px solid color-mix(in oklab, var(--pinrail-success) 35%, var(--pinrail-border));font-size:12.5px;color:var(--pinrail-success);font-weight:500">✓ Decisions submitted. The workflow receives exactly what you approved.</div>`
           : "";
         app.innerHTML = `${regions.get("header")}${banner}
-  <div style="display:flex;flex:1;min-height:0">
+  <div class="work">
     ${regions.get("tree")}
+    <div class="scrim" data-act="close-tree"></div>
     <div class="pane">
     ${regions.get("toolbar")}
     <div id="main" style="flex:1;overflow-y:auto;min-width:0;min-height:0">
@@ -2933,14 +3081,17 @@
             break;
           }
           case "jump-file":
+            closeDrawer();
             jumpToFile(t.getAttribute("data-file"));
             break;
           case "jump-comment": {
+            closeDrawer();
             const el = document.querySelector(`[data-comment="${CSS.escape(t.getAttribute("data-mid"))}"]`);
             if (el) scrollTo(el, (cr) => cr.height / 3.2);
             break;
           }
           case "jump-card": {
+            closeDrawer();
             const p = D.proposals.find((x) => String(x.id) === t.getAttribute("data-id"));
             if (p) {
               set(() => {
@@ -2959,10 +3110,17 @@
             break;
           }
           case "toggle-tree":
+            if (narrow.matches) {
+              openDrawer(!S.drawer);
+              break;
+            }
             set(() => {
               S.treeOpen = !S.treeOpen;
             });
             keep("tree_open", S.treeOpen);
+            break;
+          case "close-tree":
+            openDrawer(false);
             break;
           case "toggle-findings-only":
             set(() => {

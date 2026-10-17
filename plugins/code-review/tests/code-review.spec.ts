@@ -586,3 +586,45 @@ test("in an app that serves no highlighter, the code stays plain and the view wo
   await expect(tickets.locator("[class^='hljs-']")).toHaveCount(0);
   await expect(f.locator("#card-18")).toContainText("|> Enum.uniq_by(& &1.id)");
 });
+
+const webhooks = () => fixture(path.join(dir, "fixtures", "webhooks.json"));
+
+test("in a narrow frame the file tree opens as a drawer over the diff, and a finding in it goes there", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 420, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: webhooks() });
+  const f = plugin.frame;
+  await expect(f.locator(".card").first()).toBeVisible();
+  const rail = f.locator("aside.rail");
+  await expect(rail).toHaveCount(0);
+  // the diff takes the frame
+  expect((await f.locator("#main").boundingBox())!.width).toBeGreaterThan(400);
+
+  await f.getByRole("button", { name: "Show the file tree" }).click();
+  await expect(rail).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(rail).toHaveCount(0);
+  await expect(f.getByRole("button", { name: "Show the file tree" })).toBeFocused();
+
+  await f.getByRole("button", { name: "Show the file tree" }).click();
+  await rail.locator(".tree-finding", { hasText: "Add jitter" }).click();
+  await expect(rail).toHaveCount(0);
+  await expect(f.locator(".card", { hasText: "Add jitter" })).toBeInViewport();
+  // the drawer is the narrow frame's own: the tree's setting is untouched
+  expect(await plugin.lastSettingsSet()).toBeNull();
+});
+
+test("in a narrow frame the title keeps a line, and a card's buttons go under its title", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: webhooks() });
+  const f = plugin.frame;
+  const title = (await f.locator(".head-title h1").boundingBox())!;
+  expect(title.width).toBeGreaterThan(300);
+  const card = f.locator(".card").first();
+  const name = (await card.locator(".card-title").boundingBox())!;
+  const accept = (await card.getByRole("button", { name: "Accept" }).boundingBox())!;
+  expect(accept.y).toBeGreaterThanOrEqual(name.y + name.height);
+  // the toolbar's buttons keep their names
+  await expect(f.getByRole("button", { name: "Fold all" })).toBeVisible();
+});
