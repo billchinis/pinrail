@@ -287,6 +287,21 @@ draws neither. Keep the view dense and quiet, with one accent colour and
 lines rather than boxes. A decided review shows what was there and what
 was decided, without controls.
 
+The inbox shows a review in a panel beside the list, so the view is often
+only 400 to 700 pixels wide, and short. Make it work there:
+
+- Use media queries on the frame's width, and container queries for parts
+  whose width depends on what is beside them.
+- Below about 760 pixels, open a sidebar as a drawer over the content from
+  a header button. A choice in it, Esc or a click beside it closes it.
+- Below about 520 pixels, show header buttons as icons, with the label as
+  `title` and `aria-label`.
+- Put an item's buttons under its title when they do not fit beside it.
+- Do not give fixed heights to parts above the content. Let the view
+  scroll as a whole, and let long notes fold away.
+- Check it at about 390, 600 and 900 pixels. In a test, call
+  `page.setViewportSize` before mounting the view.
+
 ## Settings and keys
 
 A plugin's settings are a JSON Schema in the manifest's `settings_schema`,

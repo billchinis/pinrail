@@ -117,6 +117,32 @@ bar.confirmation({ text: "2 left undecided. Hand over again to confirm." });
 | `.pinrail-subhead` | A heading in the body that stays while its section is on screen. |
 | `.pinrail-spacer` | Pushes what follows it to the end of a row. |
 
+### Narrow frames
+
+The inbox opens a review in a panel beside the list, so a view is often only 400 to 700 pixels wide, and a short window makes it short as well. A view that works at that size works at any size. The official plugins follow these conventions:
+
+- **Respond to the frame's width.** The frame is the view's viewport, so a media query such as `@media (max-width: 760px)` responds to the frame. Use a container query for a part whose width depends on what is beside it, such as a card in a list.
+- **Turn a sidebar into a drawer.** Below about 760 pixels, a sidebar, such as a list of items or files, opens over the content from a button in the header. Choosing an entry in it closes it and goes to that place, and so do Esc and a click beside it. Move the focus into the drawer when it opens, and back to its button when it closes.
+- **Keep the header to two rows.** Below about 520 pixels, the header's buttons show only their icons. Keep each label as the button's `title` and `aria-label`.
+- **Let rows wrap.** When an item's buttons do not fit beside its title, put them on a row of their own under it, so that the title keeps the full width.
+- **Let a short frame scroll as a whole.** Do not give fixed heights to parts above the content, such as notes or a strip of thumbnails. Let the whole view scroll instead, and let long notes fold away.
+
+```css
+/* the sidebar becomes a drawer over the content */
+@media (max-width: 760px) {
+  .sidebar { display: none; position: absolute; inset: 0 auto 0 0; z-index: 6; width: min(300px, 85%); }
+  .sidebar.open { display: block; }
+}
+/* a card puts its buttons under its title when it is narrow */
+.card { container: card / inline-size; }
+@container card (max-width: 480px) {
+  .card-head { flex-wrap: wrap; }
+  .card-actions { flex-basis: 100%; }
+}
+```
+
+Check the view at about 390, 600 and 900 pixels wide. In the dev shell, narrow the browser window or use the browser's device toolbar. In a test, `page.setViewportSize({ width: 390, height: 800 })` before mounting the view sets the frame's width.
+
 ### Pieces
 
 | Class | What it is |
