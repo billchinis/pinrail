@@ -92,6 +92,14 @@ const AGENTS: &[Agent] = &[
         reads: &["claude", "cursor"],
         also_reads: None,
     },
+    Agent {
+        id: "pi",
+        name: "Pi",
+        config: ".pi/agent",
+        skills: ".pi/agent/skills",
+        reads: &[],
+        also_reads: None,
+    },
 ];
 
 /// One agent, as Settings shows it.
@@ -565,5 +573,15 @@ mod tests {
         disconnect(home.path(), "cursor").unwrap();
         connect(home.path(), "grok").unwrap();
         assert_eq!(state(home.path(), "grok").state, State::Connected);
+    }
+
+    #[test]
+    fn pi_keeps_its_skills_in_its_agent_folder() {
+        let home = home_with(&[".pi/agent"]);
+        assert!(state(home.path(), "pi").found);
+        connect(home.path(), "pi").unwrap();
+        let path = home.path().join(".pi/agent/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "pi").state, State::Connected);
     }
 }
