@@ -224,17 +224,6 @@ export function AgentsSection({ open }: { open: boolean }) {
       <div className="settings-group">
         <div className="settings-group-head">
           <h3>Connect your agents</h3>
-          {/* one agent to update has its own button */}
-          {outdated.length > 1 || updating ? (
-            <button
-              type="button"
-              className="chrome-button button-primary"
-              onClick={updateAll}
-              disabled={updating || busy !== null}
-            >
-              {updating ? "Updating…" : `Update all ${outdated.length}`}
-            </button>
-          ) : null}
         </div>
         <p className="settings-intro">
           Connecting an agent adds a global skill named pinrail. It tells the agent how to submit a review and read your
@@ -256,7 +245,20 @@ export function AgentsSection({ open }: { open: boolean }) {
             ].map(({ title, list }) =>
               list.length ? (
                 <div key={title} className="agent-group" data-testid={`agent-group-${title}`}>
-                  <h4 className="agent-group-title">{title}</h4>
+                  <div className="agent-group-head">
+                    <h4 className="agent-group-title">{title}</h4>
+                    {/* one agent to update has its own button */}
+                    {title === "Connected" && (outdated.length > 1 || updating) ? (
+                      <button
+                        type="button"
+                        className="chrome-button settings-caption-action"
+                        onClick={updateAll}
+                        disabled={updating || busy !== null}
+                      >
+                        {updating ? "Updating…" : `Update all ${outdated.length}`}
+                      </button>
+                    ) : null}
+                  </div>
                   <div className="agent-list">
                     {byName(list).map((agent) => (
                       <AgentCard

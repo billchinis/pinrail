@@ -2748,11 +2748,21 @@ body.is-resizing iframe {
 .agent-group {
   margin-bottom: 14px;
 }
+.agent-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 6px;
+}
 .agent-group-title {
   margin: 0 0 6px;
   font-size: 11.5px;
   font-weight: 500;
   color: var(--faint);
+}
+.agent-group-head .agent-group-title {
+  margin: 0;
 }
 .agent-group-toggle {
   display: inline-flex;
