@@ -130,6 +130,14 @@ const AGENTS: &[Agent] = &[
         reads: &[],
         also_reads: None,
     },
+    Agent {
+        id: "kiro",
+        name: "Kiro CLI",
+        config: ".kiro",
+        skills: ".kiro/skills",
+        reads: &[],
+        also_reads: None,
+    },
 ];
 
 /// One agent, as Settings shows it.
@@ -641,6 +649,16 @@ mod tests {
         let path = home.path().join(".copilot/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
         assert_eq!(state(home.path(), "copilot").state, State::Connected);
+    }
+
+    #[test]
+    fn kiro_cli_keeps_its_skills_in_its_folder() {
+        let home = home_with(&[".kiro"]);
+        assert!(state(home.path(), "kiro").found);
+        connect(home.path(), "kiro").unwrap();
+        let path = home.path().join(".kiro/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "kiro").state, State::Connected);
     }
 
     #[test]
