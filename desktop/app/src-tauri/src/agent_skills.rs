@@ -32,11 +32,8 @@ struct Agent {
     config: &'static str,
     skills: &'static str,
     /// other agents whose skill folders this one also reads; the skill is
-    /// not installed for it while one of them has it
-    reads: &'static [&'static str],
-    /// another agent whose skill folder this one also reads; the skill is
     /// still installed in this agent's own folder
-    also_reads: Option<&'static str>,
+    also_reads: &'static [&'static str],
 }
 
 const AGENTS: &[Agent] = &[
@@ -45,60 +42,53 @@ const AGENTS: &[Agent] = &[
         name: "Claude Code",
         config: ".claude",
         skills: ".claude/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
     Agent {
         id: "codex",
         name: "Codex",
         config: ".codex",
         skills: ".codex/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
     Agent {
         id: "cursor",
         name: "Cursor",
         config: ".cursor",
         skills: ".cursor/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
     Agent {
         id: "antigravity",
         name: "Antigravity CLI",
         config: ".gemini",
         skills: ".gemini/config/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
     Agent {
         id: "opencode",
         name: "OpenCode",
         config: ".config/opencode",
         skills: ".config/opencode/skills",
-        reads: &[],
         // OpenCode also reads ~/.claude/skills. It loads one skill per
         // name, so installing in both folders does not duplicate it.
-        also_reads: Some("claude"),
+        also_reads: &["claude"],
     },
     Agent {
         id: "grok",
         name: "Grok CLI",
         config: ".grok",
         skills: ".grok/skills",
-        // Grok reads ~/.claude/skills and ~/.cursor/skills too, unless the
-        // person turns that off
-        reads: &["claude", "cursor"],
-        also_reads: None,
+        // Grok also reads ~/.claude/skills and ~/.cursor/skills, unless the
+        // person turns that off, and loads one skill per name
+        also_reads: &["claude", "cursor"],
     },
     Agent {
         id: "pi",
         name: "Pi",
         config: ".pi/agent",
         skills: ".pi/agent/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
     Agent {
         id: "goose",
@@ -106,10 +96,9 @@ const AGENTS: &[Agent] = &[
         config: ".config/goose",
         // not ~/.agents/skills, which other agents read too
         skills: ".config/goose/skills",
-        reads: &[],
         // Goose also reads ~/.claude/skills and loads the first skill of a
         // name it finds, so installing in both folders does not duplicate it
-        also_reads: Some("claude"),
+        also_reads: &["claude"],
     },
     Agent {
         id: "amp",
@@ -117,44 +106,39 @@ const AGENTS: &[Agent] = &[
         config: ".config/amp",
         // not ~/.config/agents/skills, which other agents read too
         skills: ".config/amp/skills",
-        reads: &[],
         // Amp also reads ~/.claude/skills and loads the first skill of a
         // name it finds, so installing in both folders does not duplicate it
-        also_reads: Some("claude"),
+        also_reads: &["claude"],
     },
     Agent {
         id: "copilot",
         name: "Copilot CLI",
         config: ".copilot",
         skills: ".copilot/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
     Agent {
         id: "kiro",
         name: "Kiro CLI",
         config: ".kiro",
         skills: ".kiro/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
     Agent {
         id: "augment",
         name: "Augment CLI",
         config: ".augment",
         skills: ".augment/skills",
-        reads: &[],
         // Augment also reads ~/.claude/skills and loads the first skill of
         // a name it finds, so installing in both folders does not duplicate it
-        also_reads: Some("claude"),
+        also_reads: &["claude"],
     },
     Agent {
         id: "cline",
         name: "Cline",
         config: ".cline",
         skills: ".cline/skills",
-        reads: &[],
-        also_reads: None,
+        also_reads: &[],
     },
 ];
 
@@ -168,10 +152,8 @@ pub struct AgentStatus {
     /// where the skill goes
     pub skill: String,
     pub state: State,
-    /// for `covered`: the agent whose skill this one reads
-    pub covered_by: Option<&'static str>,
-    /// another agent whose skill folder this one also reads
-    pub also_reads: Option<&'static str>,
+    /// the other agents whose skill folders this one also reads
+    pub also_reads: Vec<&'static str>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -185,8 +167,6 @@ pub enum State {
     Outdated,
     /// a `pinrail` skill that is not the app's
     Theirs,
-    /// none of its own, but it reads another agent's
-    Covered,
 }
 
 /// The skill's SKILL.md as this version of the app writes it.
@@ -258,35 +238,20 @@ fn sha(text: &str) -> Option<&str> {
 
 /// Every agent the app knows, found or not.
 pub fn status(home: &Path) -> Vec<AgentStatus> {
-    let own: Vec<State> = AGENTS
-        .iter()
-        .map(|a| state_of(&skill_path(home, a)))
-        .collect();
     AGENTS
         .iter()
-        .zip(&own)
-        .map(|(agent, &state)| {
-            let reader = agent
-                .reads
+        .map(|agent| AgentStatus {
+            id: agent.id,
+            name: agent.name,
+            found: home.join(agent.config).is_dir(),
+            skill: skill_path(home, agent).display().to_string(),
+            state: state_of(&skill_path(home, agent)),
+            also_reads: agent
+                .also_reads
                 .iter()
-                .filter_map(|id| AGENTS.iter().position(|a| a.id == *id))
-                .find(|&i| own[i] != State::Absent);
-            let (state, covered_by) = match reader {
-                Some(i) if state == State::Absent => (State::Covered, Some(AGENTS[i].name)),
-                _ => (state, None),
-            };
-            AgentStatus {
-                id: agent.id,
-                name: agent.name,
-                found: home.join(agent.config).is_dir(),
-                skill: skill_path(home, agent).display().to_string(),
-                state,
-                covered_by,
-                also_reads: agent
-                    .also_reads
-                    .and_then(|id| AGENTS.iter().find(|a| a.id == id))
-                    .map(|a| a.name),
-            }
+                .filter_map(|id| AGENTS.iter().find(|a| a.id == *id))
+                .map(|a| a.name)
+                .collect(),
         })
         .collect()
 }
@@ -313,16 +278,6 @@ pub fn connect(home: &Path, id: &str) -> Result<(), String> {
         return Err(format!(
             "{} is a skill of yours, not Pinrail's; it is left alone",
             path.display()
-        ));
-    }
-    if let Some(covered) = status(home)
-        .into_iter()
-        .find(|a| a.id == id && a.state == State::Covered)
-    {
-        return Err(format!(
-            "{} already reads {}'s skill; a second copy would be a second skill of the same name",
-            agent.name,
-            covered.covered_by.unwrap_or("another agent")
         ));
     }
     let dir = path.parent().expect("the skill's path has a folder");
@@ -595,7 +550,7 @@ mod tests {
         connect(home.path(), "claude").unwrap();
         let opencode = state(home.path(), "opencode");
         assert_eq!(opencode.state, State::Absent);
-        assert_eq!(opencode.also_reads, Some("Claude Code"));
+        assert_eq!(opencode.also_reads, ["Claude Code"]);
         connect(home.path(), "opencode").unwrap();
         let path = home.path().join(".config/opencode/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
@@ -613,21 +568,17 @@ mod tests {
     }
 
     #[test]
-    fn grok_is_found_by_its_folder_and_covered_by_claude_code_or_cursor() {
-        let home = home_with(&[".grok", ".cursor"]);
+    fn grok_gets_its_own_skill_beside_claude_codes_and_cursors() {
+        let home = home_with(&[".grok", ".claude", ".cursor"]);
+        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "cursor").unwrap();
         let grok = state(home.path(), "grok");
         assert!(grok.found);
         assert_eq!(grok.state, State::Absent);
-        assert!(grok.skill.ends_with(".grok/skills/pinrail/SKILL.md"));
-
-        connect(home.path(), "cursor").unwrap();
-        let grok = state(home.path(), "grok");
-        assert_eq!(grok.state, State::Covered);
-        assert_eq!(grok.covered_by, Some("Cursor"));
-        assert!(connect(home.path(), "grok").is_err());
-
-        disconnect(home.path(), "cursor").unwrap();
+        assert_eq!(grok.also_reads, ["Claude Code", "Cursor"]);
         connect(home.path(), "grok").unwrap();
+        let path = home.path().join(".grok/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
         assert_eq!(state(home.path(), "grok").state, State::Connected);
     }
 
@@ -638,7 +589,7 @@ mod tests {
         let goose = state(home.path(), "goose");
         assert!(goose.found);
         assert_eq!(goose.state, State::Absent);
-        assert_eq!(goose.also_reads, Some("Claude Code"));
+        assert_eq!(goose.also_reads, ["Claude Code"]);
         connect(home.path(), "goose").unwrap();
         let path = home.path().join(".config/goose/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
@@ -652,7 +603,7 @@ mod tests {
         let amp = state(home.path(), "amp");
         assert!(amp.found);
         assert_eq!(amp.state, State::Absent);
-        assert_eq!(amp.also_reads, Some("Claude Code"));
+        assert_eq!(amp.also_reads, ["Claude Code"]);
         connect(home.path(), "amp").unwrap();
         let path = home.path().join(".config/amp/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
@@ -686,7 +637,7 @@ mod tests {
         let augment = state(home.path(), "augment");
         assert!(augment.found);
         assert_eq!(augment.state, State::Absent);
-        assert_eq!(augment.also_reads, Some("Claude Code"));
+        assert_eq!(augment.also_reads, ["Claude Code"]);
         connect(home.path(), "augment").unwrap();
         let path = home.path().join(".augment/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());

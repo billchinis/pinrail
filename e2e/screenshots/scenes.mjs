@@ -37,19 +37,18 @@ const freePort = () =>
 
 /** The agents Settings › Agents lists, as the desktop app reports them. */
 const AGENTS = [
-  ["claude", "Claude Code", true, ".claude/skills", "connected", null],
-  ["codex", "Codex", true, ".codex/skills", "absent", null],
-  ["cursor", "Cursor", true, ".cursor/skills", "connected", null],
-  ["antigravity", "Antigravity CLI", false, ".gemini/config/skills", "absent", null],
-  ["opencode", "OpenCode", true, ".config/opencode/skills", "connected", null, "Claude Code"],
-  ["grok", "Grok CLI", false, ".grok/skills", "absent", null],
-].map(([id, name, found, skills, state, covered_by, also_reads = null]) => ({
+  ["claude", "Claude Code", true, ".claude/skills", "connected"],
+  ["codex", "Codex", true, ".codex/skills", "absent"],
+  ["cursor", "Cursor", true, ".cursor/skills", "connected"],
+  ["antigravity", "Antigravity CLI", false, ".gemini/config/skills", "absent"],
+  ["opencode", "OpenCode", true, ".config/opencode/skills", "connected", ["Claude Code"]],
+  ["grok", "Grok CLI", false, ".grok/skills", "absent", ["Claude Code", "Cursor"]],
+].map(([id, name, found, skills, state, also_reads = []]) => ({
   id,
   name,
   found,
   skill: `/Users/you/${skills}/pinrail/SKILL.md`,
   state,
-  covered_by,
   also_reads,
 }));
 

@@ -2791,8 +2791,7 @@ body.is-resizing iframe {
   border-radius: 10px;
   background: var(--bg-raised);
 }
-.agent-card.is-connected,
-.agent-card.is-covered {
+.agent-card.is-connected {
   border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
   background: color-mix(in srgb, var(--ok) 5%, var(--bg-raised));
 }

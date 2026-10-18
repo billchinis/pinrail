@@ -61,8 +61,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 - Settings › Agents groups the agents into connected, not connected and
   not found, and sorts each group by name. The agents not found are
   folded away. The setup wizard also lists the agents it found by name.
-- Pinrail installs its skill to OpenCode's skill folder,
-  `~/.config/opencode/skills`, even when Claude Code already has it.
+- Pinrail installs its skill to OpenCode's and Grok CLI's skill folders,
+  `~/.config/opencode/skills` and `~/.grok/skills`, even when Claude Code
+  or Cursor already has it.
 - An app update now updates the installed official plugins to the
   versions it carries, when Pinrail starts. Until now, Settings › Plugins
   offered each update and waited for you to apply it. Reviews keep the

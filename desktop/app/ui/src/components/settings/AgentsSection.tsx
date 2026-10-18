@@ -16,11 +16,9 @@ export type AgentStatus = {
   found: boolean;
   /** where the skill goes */
   skill: string;
-  state: "absent" | "connected" | "outdated" | "theirs" | "covered";
-  /** for `covered`: the agent whose skill this one reads */
-  covered_by: string | null;
-  /** another agent whose skill folder this one also reads */
-  also_reads?: string | null;
+  state: "absent" | "connected" | "outdated" | "theirs";
+  /** the other agents whose skill folders this one also reads */
+  also_reads?: string[];
 };
 
 const invoke = <T,>(command: string, args?: Record<string, unknown>) =>
@@ -29,8 +27,11 @@ const invoke = <T,>(command: string, args?: Record<string, unknown>) =>
 /** The agents in alphabetical order of their names. */
 export const byName = (agents: AgentStatus[]) => [...agents].sort((a, b) => a.name.localeCompare(b.name));
 
-/** Whether an agent has Pinrail's skill, its own or another agent's it reads. */
-const connected = (a: AgentStatus) => a.state === "connected" || a.state === "outdated" || a.state === "covered";
+/** Whether an agent has Pinrail's skill, current or not. */
+const connected = (a: AgentStatus) => a.state === "connected" || a.state === "outdated";
+
+/** "Claude Code's", or "Claude Code's and Cursor's". */
+const possessives = (names: string[]) => names.map((n) => `${n}'s`).join(" and ");
 
 /** The skill's folder, with ~ for the home folder. */
 export const where = (skill: string) => skill.replace(/^\/(?:Users|home)\/[^/]+/, "~").replace(/\/SKILL\.md$/, "");
@@ -145,13 +146,6 @@ function AgentCard({
       </>
     );
     note ??= "Pinrail leaves it alone. Remove or rename it to let Pinrail add its skill.";
-  } else if (agent.state === "covered") {
-    where_ = <>Reads {agent.covered_by}'s skills too</>;
-    side = (
-      <span className="agent-ok">
-        <Check size={14} strokeWidth={2.5} /> Uses {agent.covered_by}'s skill
-      </span>
-    );
   } else if (agent.found) {
     where_ = (
       <>
@@ -163,7 +157,8 @@ function AgentCard({
     where_ = "Not found";
     state = "missing";
   }
-  if (agent.found && agent.also_reads && agent.state !== "theirs") note ??= `Reads ${agent.also_reads}'s skills too`;
+  if (agent.found && agent.also_reads?.length && agent.state !== "theirs")
+    note ??= `Reads ${possessives(agent.also_reads)} skills too`;
 
   return (
     <div className={`agent-card is-${state}`} data-testid={`agent-${agent.id}`}>

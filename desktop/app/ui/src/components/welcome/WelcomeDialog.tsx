@@ -308,12 +308,10 @@ function AgentsSection() {
     >
       <div className="welcome-agents">
         {shown.map((a) => {
-          const done = a.state === "connected" || a.state === "covered";
+          const done = a.state === "connected";
           const pill =
             a.state === "connected" ? (
               <span className="welcome-pill is-ok">Connected</span>
-            ) : a.state === "covered" ? (
-              <span className="welcome-pill is-ok">Uses {a.covered_by}'s skill</span>
             ) : a.state === "outdated" ? (
               <span className="welcome-pill">Needs an update</span>
             ) : a.state === "theirs" ? (
@@ -336,9 +334,7 @@ function AgentsSection() {
               <Tile id={a.id} />
               <span className="welcome-agent-text">
                 <b>{a.name}</b>
-                <span className="mono">
-                  {a.state === "covered" ? `Reads ${a.covered_by}'s skills` : where(a.skill)}
-                </span>
+                <span className="mono">{where(a.skill)}</span>
               </span>
               {pill}
             </label>

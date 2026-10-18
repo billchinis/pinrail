@@ -32,7 +32,6 @@ test("Agents fits its width, whatever an agent's message says", async ({ page })
       found: true,
       skill: `/Users/someone-with-a-long-name/${skills}/pinrail/SKILL.md`,
       state: "outdated",
-      covered_by: null,
     });
     const agents = [
       agent("claude", "Claude Code", ".claude/skills"),
@@ -63,7 +62,6 @@ test("Update all updates every agent whose skill is outdated", async ({ page }) 
       found: true,
       skill: `/Users/you/.${id}/skills/pinrail/SKILL.md`,
       state,
-      covered_by: null,
     });
     const agents = [
       agent("claude", "Claude Code", "outdated"),
@@ -111,8 +109,7 @@ test("OpenCode can be connected beside Claude Code, and says it reads Claude Cod
         found: true,
         skill: "/Users/you/.claude/skills/pinrail/SKILL.md",
         state: "connected",
-        covered_by: null,
-        also_reads: null,
+        also_reads: [],
       },
       {
         id: "opencode",
@@ -120,8 +117,7 @@ test("OpenCode can be connected beside Claude Code, and says it reads Claude Cod
         found: true,
         skill: "/Users/you/.config/opencode/skills/pinrail/SKILL.md",
         state: "absent",
-        covered_by: null,
-        also_reads: "Claude Code",
+        also_reads: ["Claude Code"],
       },
     ];
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
@@ -155,10 +151,9 @@ test("Agents groups the agents into connected, not connected and not found, each
       found,
       skill: `/Users/you/.${id}/skills/pinrail/SKILL.md`,
       state,
-      covered_by: state === "covered" ? "Claude Code" : null,
     });
     const agents = [
-      agent("grok", "Grok CLI", true, "covered"),
+      agent("grok", "Grok CLI", true, "connected"),
       agent("claude", "Claude Code", true, "connected"),
       agent("pi", "Pi", true, "absent"),
       agent("codex", "Codex", true, "absent"),
