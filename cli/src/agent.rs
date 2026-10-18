@@ -5,7 +5,7 @@
 //! agent's own markers. An agent none of these name asks as `pinrail-cli`.
 
 /// The name a review gives each agent Pinrail knows, as the app shows it.
-const KNOWN: [(&str, &str); 7] = [
+const KNOWN: [(&str, &str); 8] = [
     ("claude-code", "claude"),
     ("codex", "codex"),
     ("cursor", "cursor"),
@@ -13,10 +13,11 @@ const KNOWN: [(&str, &str); 7] = [
     ("opencode", "opencode"),
     ("kimi", "kimi"),
     ("grok", "grok"),
+    ("pi", "pi"),
 ];
 
 /// Each agent's own markers, in the order they are checked.
-const MARKERS: [(&str, &[&str]); 6] = [
+const MARKERS: [(&str, &[&str]); 7] = [
     ("claude-code", &["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]),
     ("codex", &["CODEX_THREAD_ID", "CODEX_SANDBOX", "CODEX_CI"]),
     // not CURSOR_TRACE_ID: the editor sets it in a person's terminals too
@@ -27,15 +28,17 @@ const MARKERS: [(&str, &[&str]); 6] = [
     ),
     ("opencode", &["OPENCODE", "OPENCODE_PID", "OPENCODE_CLIENT"]),
     ("grok", &["GROK_AGENT", "GROK_SESSION_ID"]),
+    ("pi", &["PI_CODING_AGENT"]),
 ];
 
 /// The variable each agent keeps its session's id in.
-const SESSIONS: [(&str, &str); 5] = [
+const SESSIONS: [(&str, &str); 6] = [
     ("claude-code", "CLAUDE_CODE_SESSION_ID"),
     ("codex", "CODEX_SESSION_ID"),
     ("opencode", "OPENCODE_SESSION_ID"),
     ("grok", "GROK_SESSION_ID"),
     ("antigravity", "ANTIGRAVITY_CONVERSATION_ID"),
+    ("pi", "PI_SESSION_ID"),
 ];
 
 pub fn detect() -> Option<String> {
@@ -142,6 +145,12 @@ mod tests {
             detect(&[("GROK_SESSION_ID", "abc")]).as_deref(),
             Some("grok")
         );
+        assert_eq!(
+            detect(&[("PI_CODING_AGENT", "true")]).as_deref(),
+            Some("pi")
+        );
+        assert_eq!(detect(&[("AGENT", "pi")]).as_deref(), Some("pi"));
+        assert_eq!(detect(&[("AI_AGENT", "pi")]).as_deref(), Some("pi"));
         // a person's own terminal in Cursor, and blank values, name nobody
         assert_eq!(
             detect(&[("CURSOR_TRACE_ID", "abc"), ("ANTIGRAVITY_AGENT", " ")]),

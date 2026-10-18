@@ -11,6 +11,7 @@ import cursor from "../assets/agents/cursor.svg?raw";
 import grok from "../assets/agents/grok.svg?raw";
 import kimi from "../assets/agents/kimi.svg?raw";
 import opencode from "../assets/agents/opencode.svg?raw";
+import pi from "../assets/agents/pi.svg?raw";
 
 const AGENTS: Record<string, { label: string; svg: string }> = {
   "claude-code": { label: "Claude Code", svg: claude },
@@ -22,6 +23,7 @@ const AGENTS: Record<string, { label: string; svg: string }> = {
   opencode: { label: "OpenCode", svg: opencode },
   kimi: { label: "Kimi", svg: kimi },
   grok: { label: "Grok CLI", svg: grok },
+  pi: { label: "Pi", svg: pi },
 };
 
 /** The agent a requester names, when the app knows it. */
