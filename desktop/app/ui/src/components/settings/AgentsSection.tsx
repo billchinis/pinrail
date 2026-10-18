@@ -2,7 +2,7 @@
 // computer. The skill says how to submit through
 // Pinrail; the prompt or skill that sends an agent to it says when.
 
-import { Check, Copy, Plug } from "lucide-react";
+import { Check, ChevronRight, Copy, Plug } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { inTauri } from "../../api/client";
 import { AgentIcon } from "../AgentIcon";
@@ -25,6 +25,12 @@ export type AgentStatus = {
 
 const invoke = <T,>(command: string, args?: Record<string, unknown>) =>
   import("@tauri-apps/api/core").then(({ invoke }) => invoke<T>(command, args));
+
+/** The agents in alphabetical order of their names. */
+export const byName = (agents: AgentStatus[]) => [...agents].sort((a, b) => a.name.localeCompare(b.name));
+
+/** Whether an agent has Pinrail's skill, its own or another agent's it reads. */
+const connected = (a: AgentStatus) => a.state === "connected" || a.state === "outdated" || a.state === "covered";
 
 /** The skill's folder, with ~ for the home folder. */
 export const where = (skill: string) => skill.replace(/^\/(?:Users|home)\/[^/]+/, "~").replace(/\/SKILL\.md$/, "");
@@ -206,6 +212,7 @@ function AnotherAgent() {
 export function AgentsSection({ open }: { open: boolean }) {
   const { agents, busy, error, act } = useAgents(open);
   const [updating, setUpdating] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
   const outdated = (agents ?? []).filter((a) => a.found && a.state === "outdated");
   const updateAll = async () => {
     setUpdating(true);
@@ -242,18 +249,58 @@ export function AgentsSection({ open }: { open: boolean }) {
             <SettingsRow label="Agents" description={error?.message ?? "Looking for agents…"} />
           </div>
         ) : (
-          <div className="agent-list">
-            {agents.map((agent) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                busy={busy === agent.id}
-                error={error && error.id === agent.id ? error.message : null}
-                act={act}
-              />
-            ))}
-            <AnotherAgent />
-          </div>
+          <>
+            {[
+              { title: "Connected", list: agents.filter((a) => a.found && connected(a)) },
+              { title: "Not connected", list: agents.filter((a) => a.found && !connected(a)) },
+            ].map(({ title, list }) =>
+              list.length ? (
+                <div key={title} className="agent-group" data-testid={`agent-group-${title}`}>
+                  <h4 className="agent-group-title">{title}</h4>
+                  <div className="agent-list">
+                    {byName(list).map((agent) => (
+                      <AgentCard
+                        key={agent.id}
+                        agent={agent}
+                        busy={busy === agent.id}
+                        error={error && error.id === agent.id ? error.message : null}
+                        act={act}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null,
+            )}
+            {agents.some((a) => !a.found) ? (
+              <div className="agent-group" data-testid="agent-group-Not found">
+                <button
+                  type="button"
+                  className="agent-group-title agent-group-toggle"
+                  aria-expanded={showMissing}
+                  onClick={() => setShowMissing((v) => !v)}
+                >
+                  <ChevronRight size={13} className={showMissing ? "is-open" : ""} />
+                  Not found on this computer ({agents.filter((a) => !a.found).length})
+                </button>
+                {showMissing ? (
+                  <div className="agent-list">
+                    {byName(agents.filter((a) => !a.found)).map((agent) => (
+                      <AgentCard
+                        key={agent.id}
+                        agent={agent}
+                        busy={busy === agent.id}
+                        error={error && error.id === agent.id ? error.message : null}
+                        act={act}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="agent-list">
+              <AnotherAgent />
+            </div>
+          </>
         )}
       </div>
     </>

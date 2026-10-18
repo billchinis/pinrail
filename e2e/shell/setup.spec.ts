@@ -129,6 +129,16 @@ test("Connect lists only the agents found, and connects the ones chosen", async 
   const agents = setup.getByRole("region", { name: "Your agents" });
   await expect(agents.getByTestId(/^welcome-agent-/)).toHaveCount(5);
   await expect(agents.getByTestId("welcome-agent-antigravity")).toHaveCount(0);
+  // in alphabetical order of their names
+  expect(
+    await agents.getByTestId(/^welcome-agent-/).evaluateAll((rows) => rows.map((r) => r.getAttribute("data-testid"))),
+  ).toEqual([
+    "welcome-agent-claude",
+    "welcome-agent-codex",
+    "welcome-agent-cursor",
+    "welcome-agent-grok",
+    "welcome-agent-opencode",
+  ]);
 
   // connected ones stay ticked; the others found are chosen to begin with
   await expect(agents.getByTestId("welcome-agent-claude").getByRole("checkbox")).toBeChecked();

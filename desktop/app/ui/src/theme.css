@@ -2745,6 +2745,33 @@ body.is-resizing iframe {
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
+.agent-group {
+  margin-bottom: 14px;
+}
+.agent-group-title {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--faint);
+}
+.agent-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.agent-group-toggle:hover {
+  color: var(--dim);
+}
+.agent-group-toggle svg {
+  transition: transform 0.15s;
+}
+.agent-group-toggle svg.is-open {
+  transform: rotate(90deg);
+}
 .agent-card {
   display: flex;
   align-items: center;

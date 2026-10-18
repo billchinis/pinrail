@@ -144,3 +144,48 @@ test("OpenCode can be connected beside Claude Code, and says it reads Claude Cod
   await expect(opencode).toContainText("~/.config/opencode/skills/pinrail");
   await expect(opencode).toContainText("Reads Claude Code's skills too");
 });
+
+test("Agents groups the agents into connected, not connected and not found, each by name", async ({ page }) => {
+  await page.goto("/#/");
+  await page.getByRole("main").waitFor();
+  await page.evaluate(() => {
+    const agent = (id: string, name: string, found: boolean, state: string) => ({
+      id,
+      name,
+      found,
+      skill: `/Users/you/.${id}/skills/pinrail/SKILL.md`,
+      state,
+      covered_by: state === "covered" ? "Claude Code" : null,
+    });
+    const agents = [
+      agent("grok", "Grok CLI", true, "covered"),
+      agent("claude", "Claude Code", true, "connected"),
+      agent("pi", "Pi", true, "absent"),
+      agent("codex", "Codex", true, "absent"),
+      agent("kiro", "Kiro CLI", false, "absent"),
+      agent("amp", "Amp", false, "absent"),
+    ];
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+      invoke: async (command: string) => {
+        if (command === "agents_status") return agents;
+        throw new Error(`${command} is not answered here`);
+      },
+    };
+  });
+  await page.keyboard.press("ControlOrMeta+,");
+  await settingsSection(page, "Agents").click();
+  const ids = (group: string) =>
+    page
+      .getByTestId(`agent-group-${group}`)
+      .locator("[data-testid^=agent-]:not([data-testid^=agent-group])")
+      .evaluateAll((cards) => cards.map((c) => c.getAttribute("data-testid")));
+  await expect.poll(() => ids("Connected")).toEqual(["agent-claude", "agent-grok"]);
+  expect(await ids("Not connected")).toEqual(["agent-codex", "agent-pi"]);
+
+  // the agents not found stay folded away until asked for
+  const missing = page.getByTestId("agent-group-Not found");
+  await expect(missing.getByRole("button")).toHaveText("Not found on this computer (2)");
+  expect(await ids("Not found")).toEqual([]);
+  await missing.getByRole("button").click();
+  await expect.poll(() => ids("Not found")).toEqual(["agent-amp", "agent-kiro"]);
+});

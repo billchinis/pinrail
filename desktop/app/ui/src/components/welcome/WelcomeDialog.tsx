@@ -15,7 +15,7 @@ import { describeSystem, useNotificationStatus } from "../../state/notifications
 import { useSettings } from "../../state/settings";
 import { PluginIcon } from "../PluginIcon";
 import { Toggle } from "../settings/controls";
-import { Tile, useAgents, where, type AgentStatus } from "../settings/AgentsSection";
+import { byName, Tile, useAgents, where, type AgentStatus } from "../settings/AgentsSection";
 import { useCli, type CliStatus } from "../settings/CliRow";
 import { WaitMark } from "../WaitMark";
 
@@ -264,7 +264,7 @@ function AgentsSection() {
     return <Section icon={icon} title="Your agents" detail={error?.message ?? "Looking for agents…"} />;
   }
 
-  const shown = agents.filter((a) => a.found);
+  const shown = byName(agents.filter((a) => a.found));
   const toConnect = shown.filter((a) => connectable(a) && chosen?.has(a.id));
   const connect = async () => {
     setConnecting(true);
