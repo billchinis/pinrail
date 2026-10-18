@@ -15,7 +15,7 @@ import { describeSystem, useNotificationStatus } from "../../state/notifications
 import { useSettings } from "../../state/settings";
 import { PluginIcon } from "../PluginIcon";
 import { Toggle } from "../settings/controls";
-import { byName, Tile, useAgents, where, type AgentStatus } from "../settings/AgentsSection";
+import { byName, readsSkillOf, Tile, useAgents, where, type AgentStatus } from "../settings/AgentsSection";
 import { useCli, type CliStatus } from "../settings/CliRow";
 import { WaitMark } from "../WaitMark";
 
@@ -318,6 +318,8 @@ function AgentsSection() {
               <span className="welcome-pill">Has a skill of your own</span>
             ) : busy === a.id ? (
               <span className="welcome-pill">Connecting…</span>
+            ) : readsSkillOf(a, agents).length ? (
+              <span className="welcome-pill is-ok">Already uses {readsSkillOf(a, agents)[0]}'s skill</span>
             ) : null;
           return (
             <label

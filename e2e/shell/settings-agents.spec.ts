@@ -98,7 +98,7 @@ test("Update all updates every agent whose skill is outdated", async ({ page }) 
   await expect(updateAll).toHaveCount(0);
 });
 
-test("OpenCode can be connected beside Claude Code, and says it reads Claude Code's skills too", async ({ page }) => {
+test("OpenCode can be connected beside Claude Code, whose skill it already uses", async ({ page }) => {
   await page.goto("/#/");
   await page.getByRole("main").waitFor();
   await page.evaluate(() => {
@@ -134,7 +134,7 @@ test("OpenCode can be connected beside Claude Code, and says it reads Claude Cod
   await page.keyboard.press("ControlOrMeta+,");
   await settingsSection(page, "Agents").click();
   const opencode = page.getByTestId("agent-opencode");
-  await expect(opencode).toContainText("Reads Claude Code's skills too");
+  await expect(opencode).toContainText("Already uses Claude Code's skill");
   await opencode.getByRole("button", { name: "Connect" }).click();
   await expect(opencode).toHaveClass(/\bis-connected\b/);
   await expect(opencode).toContainText("~/.config/opencode/skills/pinrail");
@@ -183,4 +183,41 @@ test("Agents groups the agents into connected, not connected and not found, each
   expect(await ids("Not found")).toEqual([]);
   await missing.getByRole("button").click();
   await expect.poll(() => ids("Not found")).toEqual(["agent-amp", "agent-kiro"]);
+});
+
+test("an agent that reads a connected agent's skill says it already uses it", async ({ page }) => {
+  await page.goto("/#/");
+  await page.getByRole("main").waitFor();
+  await page.evaluate(() => {
+    const agent = (id: string, name: string, state: string, also_reads: string[] = []) => ({
+      id,
+      name,
+      found: true,
+      skill: `/Users/you/.${id}/skills/pinrail/SKILL.md`,
+      state,
+      also_reads,
+    });
+    const agents = [
+      agent("claude", "Claude Code", "connected"),
+      agent("cursor", "Cursor", "absent"),
+      agent("grok", "Grok CLI", "absent", ["Claude Code", "Cursor"]),
+      agent("opencode", "OpenCode", "absent", ["Claude Code"]),
+      agent("amp", "Amp", "absent", ["Cursor"]),
+    ];
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+      invoke: async (command: string) => {
+        if (command === "agents_status") return agents;
+        throw new Error(`${command} is not answered here`);
+      },
+    };
+  });
+  await page.keyboard.press("ControlOrMeta+,");
+  await settingsSection(page, "Agents").click();
+  const notConnected = page.getByTestId("agent-group-Not connected");
+  // only the connected agent counts; it stays under Not connected, with Connect
+  await expect(notConnected.getByTestId("agent-grok")).toContainText("Already uses Claude Code's skill");
+  await expect(notConnected.getByTestId("agent-opencode")).toContainText("Already uses Claude Code's skill");
+  await expect(notConnected.getByTestId("agent-opencode").getByRole("button", { name: "Connect" })).toBeVisible();
+  // Cursor is not connected, so Amp only reads its skills
+  await expect(notConnected.getByTestId("agent-amp")).toContainText("Reads Cursor's skills too");
 });

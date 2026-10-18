@@ -30,6 +30,10 @@ export const byName = (agents: AgentStatus[]) => [...agents].sort((a, b) => a.na
 /** Whether an agent has Pinrail's skill, current or not. */
 const connected = (a: AgentStatus) => a.state === "connected" || a.state === "outdated";
 
+/** The connected agents among those whose skill folders an agent also reads. */
+export const readsSkillOf = (agent: AgentStatus, agents: AgentStatus[]) =>
+  (agent.also_reads ?? []).filter((name) => agents.some((a) => a.name === name && connected(a)));
+
 /** "Claude Code's", or "Claude Code's and Cursor's". */
 const possessives = (names: string[]) => names.map((n) => `${n}'s`).join(" and ");
 
@@ -82,11 +86,14 @@ export function Tile({ id }: { id: string }) {
 
 function AgentCard({
   agent,
+  usesSkillOf,
   busy,
   error,
   act,
 }: {
   agent: AgentStatus;
+  /** the connected agents whose skill this one reads */
+  usesSkillOf: string[];
   busy: boolean;
   error: string | null;
   act: (command: "connect_agent" | "disconnect_agent", id: string) => void;
@@ -157,7 +164,13 @@ function AgentCard({
     where_ = "Not found";
     state = "missing";
   }
-  if (agent.found && agent.also_reads?.length && agent.state !== "theirs")
+  if (agent.found && agent.state === "absent" && usesSkillOf.length)
+    note ??= (
+      <span className="agent-note-ok">
+        <Check size={12} strokeWidth={2.5} /> Already uses {usesSkillOf[0]}'s skill
+      </span>
+    );
+  else if (agent.found && agent.also_reads?.length && agent.state !== "theirs")
     note ??= `Reads ${possessives(agent.also_reads)} skills too`;
 
   return (
@@ -259,6 +272,7 @@ export function AgentsSection({ open }: { open: boolean }) {
                       <AgentCard
                         key={agent.id}
                         agent={agent}
+                        usesSkillOf={readsSkillOf(agent, agents)}
                         busy={busy === agent.id}
                         error={error && error.id === agent.id ? error.message : null}
                         act={act}
@@ -285,6 +299,7 @@ export function AgentsSection({ open }: { open: boolean }) {
                       <AgentCard
                         key={agent.id}
                         agent={agent}
+                        usesSkillOf={readsSkillOf(agent, agents)}
                         busy={busy === agent.id}
                         error={error && error.id === agent.id ? error.message : null}
                         act={act}
