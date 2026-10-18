@@ -31,8 +31,12 @@ struct Agent {
     name: &'static str,
     config: &'static str,
     skills: &'static str,
-    /// other agents whose skills this one reads as well
+    /// other agents whose skill folders this one also reads; the skill is
+    /// not installed for it while one of them has it
     reads: &'static [&'static str],
+    /// another agent whose skill folder this one also reads; the skill is
+    /// still installed in this agent's own folder
+    also_reads: Option<&'static str>,
 }
 
 const AGENTS: &[Agent] = &[
@@ -42,6 +46,7 @@ const AGENTS: &[Agent] = &[
         config: ".claude",
         skills: ".claude/skills",
         reads: &[],
+        also_reads: None,
     },
     Agent {
         id: "codex",
@@ -49,6 +54,7 @@ const AGENTS: &[Agent] = &[
         config: ".codex",
         skills: ".codex/skills",
         reads: &[],
+        also_reads: None,
     },
     Agent {
         id: "cursor",
@@ -56,6 +62,7 @@ const AGENTS: &[Agent] = &[
         config: ".cursor",
         skills: ".cursor/skills",
         reads: &[],
+        also_reads: None,
     },
     Agent {
         id: "antigravity",
@@ -63,15 +70,17 @@ const AGENTS: &[Agent] = &[
         config: ".gemini",
         skills: ".gemini/config/skills",
         reads: &[],
+        also_reads: None,
     },
     Agent {
         id: "opencode",
         name: "OpenCode",
         config: ".config/opencode",
         skills: ".config/opencode/skills",
-        // OpenCode reads ~/.claude/skills too: a second copy would be a
-        // second skill of the same name
-        reads: &["claude"],
+        reads: &[],
+        // OpenCode also reads ~/.claude/skills. It loads one skill per
+        // name, so installing in both folders does not duplicate it.
+        also_reads: Some("claude"),
     },
     Agent {
         id: "grok",
@@ -81,6 +90,7 @@ const AGENTS: &[Agent] = &[
         // Grok reads ~/.claude/skills and ~/.cursor/skills too, unless the
         // person turns that off
         reads: &["claude", "cursor"],
+        also_reads: None,
     },
 ];
 
@@ -96,6 +106,8 @@ pub struct AgentStatus {
     pub state: State,
     /// for `covered`: the agent whose skill this one reads
     pub covered_by: Option<&'static str>,
+    /// another agent whose skill folder this one also reads
+    pub also_reads: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -206,6 +218,10 @@ pub fn status(home: &Path) -> Vec<AgentStatus> {
                 skill: skill_path(home, agent).display().to_string(),
                 state,
                 covered_by,
+                also_reads: agent
+                    .also_reads
+                    .and_then(|id| AGENTS.iter().find(|a| a.id == id))
+                    .map(|a| a.name),
             }
         })
         .collect()
@@ -510,19 +526,17 @@ mod tests {
     }
 
     #[test]
-    fn opencode_is_covered_by_claude_codes_skill_and_needs_none_of_its_own() {
+    fn opencode_gets_its_own_skill_beside_claude_codes() {
         let home = home_with(&[".claude", ".config/opencode"]);
-        assert_eq!(state(home.path(), "opencode").state, State::Absent);
         connect(home.path(), "claude").unwrap();
         let opencode = state(home.path(), "opencode");
-        assert_eq!(opencode.state, State::Covered);
-        assert_eq!(opencode.covered_by, Some("Claude Code"));
-        let refused = connect(home.path(), "opencode").unwrap_err();
-        assert!(
-            refused.contains("already reads Claude Code's skill"),
-            "{refused}"
-        );
-        assert!(!home.path().join(".config/opencode/skills/pinrail").exists());
+        assert_eq!(opencode.state, State::Absent);
+        assert_eq!(opencode.also_reads, Some("Claude Code"));
+        connect(home.path(), "opencode").unwrap();
+        let path = home.path().join(".config/opencode/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "opencode").state, State::Connected);
+        assert_eq!(state(home.path(), "claude").state, State::Connected);
     }
 
     #[test]
@@ -551,12 +565,5 @@ mod tests {
         disconnect(home.path(), "cursor").unwrap();
         connect(home.path(), "grok").unwrap();
         assert_eq!(state(home.path(), "grok").state, State::Connected);
-    }
-
-    #[test]
-    fn opencode_gets_its_own_skill_when_claude_code_has_none() {
-        let home = home_with(&[".config/opencode"]);
-        connect(home.path(), "opencode").unwrap();
-        assert_eq!(state(home.path(), "opencode").state, State::Connected);
     }
 }

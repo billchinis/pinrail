@@ -19,6 +19,8 @@ export type AgentStatus = {
   state: "absent" | "connected" | "outdated" | "theirs" | "covered";
   /** for `covered`: the agent whose skill this one reads */
   covered_by: string | null;
+  /** another agent whose skill folder this one also reads */
+  also_reads?: string | null;
 };
 
 const invoke = <T,>(command: string, args?: Record<string, unknown>) =>
@@ -155,6 +157,7 @@ function AgentCard({
     where_ = "Not found";
     state = "missing";
   }
+  if (agent.found && agent.also_reads && agent.state !== "theirs") note ??= `Reads ${agent.also_reads}'s skills too`;
 
   return (
     <div className={`agent-card is-${state}`} data-testid={`agent-${agent.id}`}>

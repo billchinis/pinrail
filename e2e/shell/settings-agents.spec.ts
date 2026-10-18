@@ -99,3 +99,48 @@ test("Update all updates every agent whose skill is outdated", async ({ page }) 
   ]);
   await expect(updateAll).toHaveCount(0);
 });
+
+test("OpenCode can be connected beside Claude Code, and says it reads Claude Code's skills too", async ({ page }) => {
+  await page.goto("/#/");
+  await page.getByRole("main").waitFor();
+  await page.evaluate(() => {
+    const agents = [
+      {
+        id: "claude",
+        name: "Claude Code",
+        found: true,
+        skill: "/Users/you/.claude/skills/pinrail/SKILL.md",
+        state: "connected",
+        covered_by: null,
+        also_reads: null,
+      },
+      {
+        id: "opencode",
+        name: "OpenCode",
+        found: true,
+        skill: "/Users/you/.config/opencode/skills/pinrail/SKILL.md",
+        state: "absent",
+        covered_by: null,
+        also_reads: "Claude Code",
+      },
+    ];
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+      invoke: async (command: string, args: { id?: string }) => {
+        if (command === "agents_status") return agents;
+        if (command === "connect_agent") {
+          agents.find((a) => a.id === args.id)!.state = "connected";
+          return agents;
+        }
+        throw new Error(`${command} is not answered here`);
+      },
+    };
+  });
+  await page.keyboard.press("ControlOrMeta+,");
+  await settingsSection(page, "Agents").click();
+  const opencode = page.getByTestId("agent-opencode");
+  await expect(opencode).toContainText("Reads Claude Code's skills too");
+  await opencode.getByRole("button", { name: "Connect" }).click();
+  await expect(opencode).toHaveClass(/\bis-connected\b/);
+  await expect(opencode).toContainText("~/.config/opencode/skills/pinrail");
+  await expect(opencode).toContainText("Reads Claude Code's skills too");
+});

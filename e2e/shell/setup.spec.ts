@@ -77,13 +77,21 @@ test("Try it opens once a plugin is installed, and lists a prompt and a sample f
 
 /** The agents as the desktop app reports them: the browser build has no
  *  native side, so the test answers its calls. */
-const agent = (id: string, name: string, found: boolean, state: string, covered_by: string | null = null) => ({
+const agent = (
+  id: string,
+  name: string,
+  found: boolean,
+  state: string,
+  covered_by: string | null = null,
+  also_reads: string | null = null,
+) => ({
   id,
   name,
   found,
   skill: `/Users/you/.${id}/skills/pinrail/SKILL.md`,
   state,
   covered_by,
+  also_reads,
 });
 
 test("Connect lists only the agents found, and connects the ones chosen", async ({ page }) => {
@@ -111,26 +119,32 @@ test("Connect lists only the agents found, and connects the ones chosen", async 
       agent("claude", "Claude Code", true, "connected"),
       agent("codex", "Codex", true, "absent"),
       agent("cursor", "Cursor", true, "absent"),
-      agent("opencode", "OpenCode", true, "covered", "Claude Code"),
-      agent("grok", "Grok CLI", false, "absent"),
+      agent("antigravity", "Antigravity CLI", false, "absent"),
+      // OpenCode also reads Claude Code's skills, but the skill is still installed for it
+      agent("opencode", "OpenCode", true, "absent", null, "Claude Code"),
+      agent("grok", "Grok CLI", true, "covered", "Claude Code"),
     ],
   );
   const setup = await openSetup(page);
   const agents = setup.getByRole("region", { name: "Your agents" });
-  await expect(agents.getByTestId(/^welcome-agent-/)).toHaveCount(4);
-  await expect(agents.getByTestId("welcome-agent-grok")).toHaveCount(0);
+  await expect(agents.getByTestId(/^welcome-agent-/)).toHaveCount(5);
+  await expect(agents.getByTestId("welcome-agent-antigravity")).toHaveCount(0);
 
   // connected ones stay ticked; the others found are chosen to begin with
   await expect(agents.getByTestId("welcome-agent-claude").getByRole("checkbox")).toBeChecked();
   await expect(agents.getByTestId("welcome-agent-claude").getByRole("checkbox")).toBeDisabled();
-  await expect(agents.getByTestId("welcome-agent-opencode")).toContainText("Uses Claude Code's skill");
-  await expect(agents.getByRole("button", { name: /^Connect \d+ agents?$/ })).toHaveText("Connect 2 agents");
+  await expect(agents.getByTestId("welcome-agent-grok")).toContainText("Uses Claude Code's skill");
+  await expect(agents.getByRole("button", { name: /^Connect \d+ agents?$/ })).toHaveText("Connect 3 agents");
 
   await agents.getByTestId("welcome-agent-cursor").getByRole("checkbox").uncheck();
   await agents.getByRole("button", { name: /^Connect \d+ agents?$/ }).click();
   await expect(agents.getByTestId("welcome-agent-codex")).toContainText("Connected");
+  await expect(agents.getByTestId("welcome-agent-opencode")).toContainText("Connected");
   await expect(agents.getByTestId("welcome-agent-cursor")).not.toContainText("Connected");
-  expect(await page.evaluate(() => (window as unknown as { __connected: string[] }).__connected)).toEqual(["codex"]);
+  expect(await page.evaluate(() => (window as unknown as { __connected: string[] }).__connected)).toEqual([
+    "codex",
+    "opencode",
+  ]);
   await expect(agents.getByRole("button", { name: /^Connect \d+ agents?$/ })).toHaveCount(0);
   await page.keyboard.press("Escape");
 });

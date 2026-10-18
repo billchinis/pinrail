@@ -41,15 +41,16 @@ const AGENTS = [
   ["codex", "Codex", true, ".codex/skills", "absent", null],
   ["cursor", "Cursor", true, ".cursor/skills", "connected", null],
   ["antigravity", "Antigravity CLI", false, ".gemini/config/skills", "absent", null],
-  ["opencode", "OpenCode", true, ".config/opencode/skills", "covered", "Claude Code"],
+  ["opencode", "OpenCode", true, ".config/opencode/skills", "connected", null, "Claude Code"],
   ["grok", "Grok CLI", false, ".grok/skills", "absent", null],
-].map(([id, name, found, skills, state, covered_by]) => ({
+].map(([id, name, found, skills, state, covered_by, also_reads = null]) => ({
   id,
   name,
   found,
   skill: `/Users/you/${skills}/pinrail/SKILL.md`,
   state,
   covered_by,
+  also_reads,
 }));
 
 /** Writes a note on a code review proposal, opening the field when a verdict did not. */

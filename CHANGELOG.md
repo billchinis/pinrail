@@ -36,6 +36,8 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Changed
 
+- Pinrail installs its skill to OpenCode's skill folder,
+  `~/.config/opencode/skills`, even when Claude Code already has it.
 - An app update now updates the installed official plugins to the
   versions it carries, when Pinrail starts. Until now, Settings › Plugins
   offered each update and waited for you to apply it. Reviews keep the
