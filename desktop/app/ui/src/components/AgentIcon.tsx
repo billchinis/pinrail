@@ -13,6 +13,7 @@ import cursor from "../assets/agents/cursor.svg?raw";
 import goose from "../assets/agents/goose.svg?raw";
 import grok from "../assets/agents/grok.svg?raw";
 import kimi from "../assets/agents/kimi.svg?raw";
+import kiro from "../assets/agents/kiro.svg?raw";
 import opencode from "../assets/agents/opencode.svg?raw";
 import pi from "../assets/agents/pi.svg?raw";
 
@@ -30,6 +31,7 @@ const AGENTS: Record<string, { label: string; svg: string }> = {
   goose: { label: "Goose", svg: goose },
   amp: { label: "Amp", svg: amp },
   copilot: { label: "Copilot CLI", svg: copilot },
+  kiro: { label: "Kiro CLI", svg: kiro },
 };
 
 /** The agent a requester names, when the app knows it. */

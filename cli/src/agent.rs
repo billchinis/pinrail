@@ -5,7 +5,7 @@
 //! agent's own markers. An agent none of these name asks as `pinrail-cli`.
 
 /// The name a review gives each agent Pinrail knows, as the app shows it.
-const KNOWN: [(&str, &str); 11] = [
+const KNOWN: [(&str, &str); 12] = [
     ("claude-code", "claude"),
     ("codex", "codex"),
     ("cursor", "cursor"),
@@ -17,10 +17,11 @@ const KNOWN: [(&str, &str); 11] = [
     ("goose", "goose"),
     ("amp", "amp"),
     ("copilot", "copilot"),
+    ("kiro", "kiro"),
 ];
 
 /// Each agent's own markers, in the order they are checked.
-const MARKERS: [(&str, &[&str]); 10] = [
+const MARKERS: [(&str, &[&str]); 11] = [
     // before Claude Code: older versions of Amp also set CLAUDECODE
     ("amp", &["AMP_CURRENT_THREAD_ID"]),
     ("claude-code", &["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]),
@@ -35,6 +36,7 @@ const MARKERS: [(&str, &[&str]); 10] = [
     ("grok", &["GROK_AGENT", "GROK_SESSION_ID"]),
     ("pi", &["PI_CODING_AGENT"]),
     ("copilot", &["COPILOT_CLI"]),
+    ("kiro", &["KIRO_SESSION_ID"]),
     // Goose's shell tool sets only AGENT_SESSION_ID; GOOSE_TERMINAL and
     // AGENT=goose are set for its other commands. Checked last, since the
     // name is generic.
@@ -42,7 +44,7 @@ const MARKERS: [(&str, &[&str]); 10] = [
 ];
 
 /// The variable each agent keeps its session's id in.
-const SESSIONS: [(&str, &str); 9] = [
+const SESSIONS: [(&str, &str); 10] = [
     ("claude-code", "CLAUDE_CODE_SESSION_ID"),
     ("codex", "CODEX_SESSION_ID"),
     ("opencode", "OPENCODE_SESSION_ID"),
@@ -53,6 +55,7 @@ const SESSIONS: [(&str, &str); 9] = [
     ("goose", "AGENT_SESSION_ID"),
     ("amp", "AMP_CURRENT_THREAD_ID"),
     ("copilot", "COPILOT_AGENT_SESSION_ID"),
+    ("kiro", "KIRO_SESSION_ID"),
 ];
 
 pub fn detect() -> Option<String> {
@@ -177,6 +180,10 @@ mod tests {
             Some("amp")
         );
         assert_eq!(detect(&[("COPILOT_CLI", "1")]).as_deref(), Some("copilot"));
+        assert_eq!(
+            detect(&[("KIRO_SESSION_ID", "k-1")]).as_deref(),
+            Some("kiro")
+        );
         // the only variable Goose's shell tool sets
         assert_eq!(
             detect(&[("AGENT_SESSION_ID", "20260217_5")]).as_deref(),
