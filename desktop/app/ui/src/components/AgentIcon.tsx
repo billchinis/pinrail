@@ -8,6 +8,7 @@ import amp from "../assets/agents/amp.svg?raw";
 import antigravity from "../assets/agents/antigravity.svg?raw";
 import claude from "../assets/agents/claude.svg?raw";
 import codex from "../assets/agents/codex.svg?raw";
+import copilot from "../assets/agents/copilot.svg?raw";
 import cursor from "../assets/agents/cursor.svg?raw";
 import goose from "../assets/agents/goose.svg?raw";
 import grok from "../assets/agents/grok.svg?raw";
@@ -28,6 +29,7 @@ const AGENTS: Record<string, { label: string; svg: string }> = {
   pi: { label: "Pi", svg: pi },
   goose: { label: "Goose", svg: goose },
   amp: { label: "Amp", svg: amp },
+  copilot: { label: "Copilot CLI", svg: copilot },
 };
 
 /** The agent a requester names, when the app knows it. */
