@@ -126,6 +126,8 @@ fn pinrail() -> Command {
         .env_remove("GROK_SESSION_ID")
         .env_remove("PI_CODING_AGENT")
         .env_remove("PI_SESSION_ID")
+        .env_remove("GOOSE_TERMINAL")
+        .env_remove("AGENT_SESSION_ID")
         .env_remove("CLAUDE_CODE_SESSION_ID")
         .env_remove("CODEX_SESSION_ID")
         .env_remove("OPENCODE_SESSION_ID")
@@ -384,6 +386,7 @@ fn a_review_carries_the_session_of_the_agent_the_cli_runs_under() {
         ("ANTIGRAVITY_CONVERSATION_ID", "a-5"),
     ]);
     submit(&[("PI_CODING_AGENT", "true"), ("PI_SESSION_ID", "p-7")]);
+    submit(&[("AGENT_SESSION_ID", "20260217_5")]);
     // another agent's session is not this review's
     submit(&[("CLAUDECODE", "1"), ("CODEX_SESSION_ID", "x-6")]);
     submit(&[]);
@@ -396,6 +399,7 @@ fn a_review_carries_the_session_of_the_agent_the_cli_runs_under() {
             serde_json::json!("g-4"),
             serde_json::json!("a-5"),
             serde_json::json!("p-7"),
+            serde_json::json!("20260217_5"),
             serde_json::Value::Null,
             serde_json::Value::Null,
         ]

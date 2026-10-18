@@ -5,7 +5,7 @@
 //! agent's own markers. An agent none of these name asks as `pinrail-cli`.
 
 /// The name a review gives each agent Pinrail knows, as the app shows it.
-const KNOWN: [(&str, &str); 8] = [
+const KNOWN: [(&str, &str); 9] = [
     ("claude-code", "claude"),
     ("codex", "codex"),
     ("cursor", "cursor"),
@@ -14,10 +14,11 @@ const KNOWN: [(&str, &str); 8] = [
     ("kimi", "kimi"),
     ("grok", "grok"),
     ("pi", "pi"),
+    ("goose", "goose"),
 ];
 
 /// Each agent's own markers, in the order they are checked.
-const MARKERS: [(&str, &[&str]); 7] = [
+const MARKERS: [(&str, &[&str]); 8] = [
     ("claude-code", &["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]),
     ("codex", &["CODEX_THREAD_ID", "CODEX_SANDBOX", "CODEX_CI"]),
     // not CURSOR_TRACE_ID: the editor sets it in a person's terminals too
@@ -29,16 +30,22 @@ const MARKERS: [(&str, &[&str]); 7] = [
     ("opencode", &["OPENCODE", "OPENCODE_PID", "OPENCODE_CLIENT"]),
     ("grok", &["GROK_AGENT", "GROK_SESSION_ID"]),
     ("pi", &["PI_CODING_AGENT"]),
+    // Goose's shell tool sets only AGENT_SESSION_ID; GOOSE_TERMINAL and
+    // AGENT=goose are set for its other commands. Checked last, since the
+    // name is generic.
+    ("goose", &["GOOSE_TERMINAL", "AGENT_SESSION_ID"]),
 ];
 
 /// The variable each agent keeps its session's id in.
-const SESSIONS: [(&str, &str); 6] = [
+const SESSIONS: [(&str, &str); 7] = [
     ("claude-code", "CLAUDE_CODE_SESSION_ID"),
     ("codex", "CODEX_SESSION_ID"),
     ("opencode", "OPENCODE_SESSION_ID"),
     ("grok", "GROK_SESSION_ID"),
     ("antigravity", "ANTIGRAVITY_CONVERSATION_ID"),
     ("pi", "PI_SESSION_ID"),
+    // a generic name, read only when Goose is the detected agent
+    ("goose", "AGENT_SESSION_ID"),
 ];
 
 pub fn detect() -> Option<String> {
@@ -151,6 +158,13 @@ mod tests {
         );
         assert_eq!(detect(&[("AGENT", "pi")]).as_deref(), Some("pi"));
         assert_eq!(detect(&[("AI_AGENT", "pi")]).as_deref(), Some("pi"));
+        assert_eq!(detect(&[("GOOSE_TERMINAL", "1")]).as_deref(), Some("goose"));
+        assert_eq!(detect(&[("AGENT", "goose")]).as_deref(), Some("goose"));
+        // the only variable Goose's shell tool sets
+        assert_eq!(
+            detect(&[("AGENT_SESSION_ID", "20260217_5")]).as_deref(),
+            Some("goose")
+        );
         // a person's own terminal in Cursor, and blank values, name nobody
         assert_eq!(
             detect(&[("CURSOR_TRACE_ID", "abc"), ("ANTIGRAVITY_AGENT", " ")]),
