@@ -4,6 +4,7 @@
 // The marks are inline so the ones drawn in currentColor follow the theme.
 
 import { Bot } from "lucide-react";
+import amp from "../assets/agents/amp.svg?raw";
 import antigravity from "../assets/agents/antigravity.svg?raw";
 import claude from "../assets/agents/claude.svg?raw";
 import codex from "../assets/agents/codex.svg?raw";
@@ -26,6 +27,7 @@ const AGENTS: Record<string, { label: string; svg: string }> = {
   grok: { label: "Grok CLI", svg: grok },
   pi: { label: "Pi", svg: pi },
   goose: { label: "Goose", svg: goose },
+  amp: { label: "Amp", svg: amp },
 };
 
 /** The agent a requester names, when the app knows it. */
