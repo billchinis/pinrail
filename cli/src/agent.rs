@@ -5,7 +5,7 @@
 //! agent's own markers. An agent none of these name asks as `pinrail-cli`.
 
 /// The name a review gives each agent Pinrail knows, as the app shows it.
-const KNOWN: [(&str, &str); 12] = [
+const KNOWN: [(&str, &str); 13] = [
     ("claude-code", "claude"),
     ("codex", "codex"),
     ("cursor", "cursor"),
@@ -18,10 +18,11 @@ const KNOWN: [(&str, &str); 12] = [
     ("amp", "amp"),
     ("copilot", "copilot"),
     ("kiro", "kiro"),
+    ("augment", "auggie"),
 ];
 
 /// Each agent's own markers, in the order they are checked.
-const MARKERS: [(&str, &[&str]); 11] = [
+const MARKERS: [(&str, &[&str]); 12] = [
     // before Claude Code: older versions of Amp also set CLAUDECODE
     ("amp", &["AMP_CURRENT_THREAD_ID"]),
     ("claude-code", &["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]),
@@ -37,6 +38,7 @@ const MARKERS: [(&str, &[&str]); 11] = [
     ("pi", &["PI_CODING_AGENT"]),
     ("copilot", &["COPILOT_CLI"]),
     ("kiro", &["KIRO_SESSION_ID"]),
+    ("augment", &["AUGMENT_AGENT"]),
     // Goose's shell tool sets only AGENT_SESSION_ID; GOOSE_TERMINAL and
     // AGENT=goose are set for its other commands. Checked last, since the
     // name is generic.
@@ -184,6 +186,11 @@ mod tests {
             detect(&[("KIRO_SESSION_ID", "k-1")]).as_deref(),
             Some("kiro")
         );
+        assert_eq!(
+            detect(&[("AUGMENT_AGENT", "1")]).as_deref(),
+            Some("augment")
+        );
+        assert_eq!(detect(&[("AGENT", "auggie")]).as_deref(), Some("augment"));
         // the only variable Goose's shell tool sets
         assert_eq!(
             detect(&[("AGENT_SESSION_ID", "20260217_5")]).as_deref(),
