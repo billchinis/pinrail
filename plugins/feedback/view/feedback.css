@@ -597,8 +597,8 @@ input:disabled {
   line-height: 1.65;
   resize: none;
 }
-/* a field that can be dictated, with the app's microphone in its corner
-   where the app can dictate */
+/* a field that supports dictation, with the app's microphone in its
+   corner when the app provides dictation */
 .dictate-field {
   position: relative;
   display: block;
@@ -892,8 +892,8 @@ textarea:disabled {
   }
 }
 
-/* below 760 pixels, such as in the inbox's side panel, the rail becomes
-   a strip of groups above the questions */
+/* below 760 pixels, such as in the inbox's side panel, the rail is shown
+   as a strip of groups above the questions */
 @media (max-width: 760px) {
   .workspace {
     display: block;
@@ -954,7 +954,7 @@ textarea:disabled {
   }
 }
 
-/* below 520 pixels the counts go under the title */
+/* below 520 pixels the counts move below the title */
 @media (max-width: 520px) {
   .feedback-header {
     padding: 9px 13px;
@@ -972,8 +972,8 @@ textarea:disabled {
 }
 
 /* where the questions are narrower than 700 pixels, a question's buttons
-   and its requirement go under its prompt, so the prompt keeps the width
-   of the card */
+   and its requirement move below its prompt, so the prompt keeps the full
+   width of the card */
 @container (max-width: 700px) {
   .question legend {
     flex-wrap: wrap;

@@ -135,9 +135,9 @@
           background: rgb(0 0 0 / 0.25);
         }
       }
-      /* In a narrow frame the header's buttons keep their icons and lose their
-     labels, which stay as their tooltips, and the counts take a row of their
-     own below. */
+      /* In a narrow frame the header's buttons hide their labels, which
+     remain as tooltips, and show only their icons. The counts move to a row
+     of their own below. */
       @media (max-width: 520px) {
         .pinrail-header .pinrail-meta {
           order: 1;
@@ -381,8 +381,8 @@
       .pinrail-item-controls {
         width: 100%;
       }
-      /* the note, with the app's microphone in its right corner where the
-     app can dictate */
+      /* the note, with the app's microphone in its right corner when the
+     app provides dictation */
       .note-field {
         flex: 1 1 260px;
         position: relative;
@@ -473,7 +473,7 @@
       const rail = document.createElement("nav");
       rail.className = "rail";
       rail.setAttribute("aria-label", "items");
-      // in a narrow frame, a click beside the open drawer closes it
+      // in a narrow frame, a click outside the open drawer closes it
       const scrim = document.createElement("div");
       scrim.className = "scrim";
       scrim.onclick = () => openDrawer(false);

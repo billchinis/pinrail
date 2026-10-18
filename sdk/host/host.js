@@ -13,10 +13,10 @@
 
 export const PROTOCOL = 1;
 
-/** What every host can do for a view beyond protocol 1: nothing yet. A
- *  later addition is named in `init.capabilities`, so a view can tell
- *  whether the app it runs in has it. A host that can turn speech into text
- *  adds "dictation". */
+/** The capabilities every host offers a view beyond protocol 1, currently
+ *  none. Each later addition is listed in `init.capabilities`, so a view can
+ *  check whether the app it runs in supports it. A host with speech
+ *  recognition adds "dictation". */
 export const CAPABILITIES = [];
 
 /** How long a view has to answer a request for its decision. */
@@ -110,8 +110,8 @@ export function createHost(options) {
   let wasReadonly = readonly();
   // the latest search of the find bar: only its answers count
   let finding = 0;
-  // the one dictation that is on: the view's request number, how to stop
-  // it, and how to end it
+  // the active dictation, with the view's request number and the functions
+  // that stop and end it
   let dictating = null;
 
   const send = (msg, transfer = []) => {
@@ -175,9 +175,10 @@ export function createHost(options) {
     return dictation && canDictate() && !base.includes("dictation") ? [...base, "dictation"] : base;
   }
 
-  /* Dictation: the view asks, the host listens through `dictation`, and the
-     view hears the text so far as it grows, then that it is done. One at a
-     time: a new request ends the one before. */
+  /* The view requests a dictation, the host runs speech recognition through
+     `dictation`, and the view receives the recognised text as it grows, then
+     a final message. Only one dictation runs at a time, so a new request
+     ends the previous one. */
   function startDictation(msg) {
     const { req } = msg;
     if (typeof req !== "number") return;
@@ -207,14 +208,14 @@ export function createHost(options) {
     }
   }
 
-  /** Asks the dictation that is on to stop; its last words and its end
-   *  still come, from the host's listener. */
+  /** Asks the active dictation to stop. The final text and the end message
+   *  still arrive through the host's listener. */
   function stopDictation() {
     if (dictating && typeof dictating.stop === "function") dictating.stop();
   }
 
-  /** Ends the dictation that is on at once: telling the view, or quietly
-   *  when the view's page is gone. */
+  /** Ends the active dictation immediately and tells the view, or ends it
+   *  silently when the view's page has unloaded. */
   function endDictation(quietly = false) {
     const session = dictating;
     if (!session) return;
@@ -416,7 +417,7 @@ export function createHost(options) {
     },
     /** Stops the view's dictation, as the app's own stop button does. */
     stopDictation,
-    /** a dictation the view asked for is on */
+    /** whether a dictation the view requested is active */
     get dictating() {
       return dictating !== null;
     },

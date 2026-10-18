@@ -18,7 +18,7 @@ let lastDraft = null;
 let lastStatus = null;
 let lastOpen = null;
 let lastSettingsSet = null;
-// what the view's dictation is told, while one is on
+// the listener of the active dictation, or null
 let speaker = null;
 // the test waiting on handOver(): resolved with what became of the request
 let waiting = null;
@@ -86,13 +86,14 @@ const host = connectFrame(frame, {
   },
   // the app opens it; here it is only recorded
   open: (url) => (lastOpen = url),
-  // the app listens when a test mounts the view with `dictation: true`; the
-  // test speaks with say() and ends it with endDictation()
+  // the view is offered dictation when a test mounts it with
+  // `dictation: true`; the test sends text with say() and ends it with
+  // endDictation()
   canDictate: () => !!(pending && pending.dictation),
   dictation: (listener) => {
     speaker = listener;
     return () => {
-      // the recogniser stops, and says it is done
+      // stop the recogniser and report that it ended
       if (speaker === listener) {
         speaker = null;
         listener({ done: true });

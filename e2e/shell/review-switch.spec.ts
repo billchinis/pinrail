@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 import { clearInbox, core, createReview, decide, linkPlugin, onReviewPages } from "./helpers";
 
-// a review opened from the inbox or the sidebar is followed on its own page
+// these tests open a review from the inbox or the sidebar on a page of its own
 onReviewPages();
 
 const hello = path.resolve(__dirname, "..", "..", "plugins", "hello");

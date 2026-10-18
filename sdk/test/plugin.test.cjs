@@ -838,7 +838,7 @@ test("a view with a layout of its own places the same confirmation bar where it 
   assert.equal(bar.hidden, true);
 });
 
-/** A text field as the client sees one: its text, its selection, its input events. */
+/** A text field as the client sees it, with its value, selection and input events. */
 function field(value = "", start = value.length, end = start) {
   return {
     value,
@@ -876,13 +876,13 @@ test("dictation writes what the app hears at the cursor, with input events, and 
   assert.equal(note.selectionStart, "Keep the staging bucket".length);
   assert.equal(note.inputs, 2);
 
-  // dictating into the same field again stops it; the end still comes from the app
+  // dictating into the same field again stops it; the end message still comes from the app
   plugin.dictate(note);
   assert.equal(env.last("dictation_stop").msg.req, req);
   env.deliver(shell({ type: "dictation", req, done: true }));
   assert.deepEqual(await done, {});
   assert.equal(plugin.dictating, null);
-  // a message for a dictation that is over changes nothing
+  // a message for a dictation that has ended changes nothing
   env.deliver(shell({ type: "dictation", req, text: "late" }));
   assert.equal(note.value, "Keep the staging bucket for now");
 });
@@ -922,7 +922,7 @@ test("dictating into another field ends the one before, and a field drawn again 
   env.deliver(shell({ type: "dictation", req: second, text: "lost" }));
   env.deliver(shell({ type: "dictation", req: second, text: "lost again" }));
   assert.equal(two.value, "");
-  // asked to stop once, not for every word
+  // the stop request is sent once, not for every word
   assert.equal(env.posted.filter((p) => p.msg.type === "dictation_stop" && p.msg.req === second).length, 1);
 });
 

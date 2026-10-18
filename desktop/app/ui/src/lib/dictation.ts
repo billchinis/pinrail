@@ -1,6 +1,6 @@
-// Dictating a note: the web view's speech recognition, which in the macOS
-// app is Apple's. Where the web view has none, such as on Linux, the note
-// box shows no button for it.
+// Dictation uses the web view's speech recognition, which is Apple's in the
+// macOS app. Where the web view has none, such as on Linux, the note field
+// shows no dictation button.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -24,10 +24,10 @@ const Recognizer: RecognitionClass | undefined =
     : ((window as unknown as Record<string, RecognitionClass | undefined>).SpeechRecognition ??
       (window as unknown as Record<string, RecognitionClass | undefined>).webkitSpeechRecognition);
 
-/** Whether this window can turn speech into text. */
+/** Whether this window supports speech recognition. */
 export const canDictate = !!Recognizer;
 
-/** What to tell the person when recognition stops with an error, or null when there is nothing to say. */
+/** The message to show when recognition stops with an error, or null when there is none. */
 export function dictationError(error: string): string | null {
   switch (error) {
     case "aborted":
@@ -45,13 +45,13 @@ export function dictationError(error: string): string | null {
   }
 }
 
-/** What a dictation tells its listener: the text heard so far, then that it is over. */
+/** The events a dictation sends its listener: the text recognized so far, then the end. */
 export type Heard = { text: string } | { done: true; error?: string };
 
 /**
- * Listens, and tells `listener` the text heard so far as it grows, then
- * that it is over, with a message when it failed. Returns how to stop; the
- * last words and the end still come after it.
+ * Starts speech recognition and sends `listener` the text recognized so
+ * far as it grows, then an end event, with a message if it failed. Returns
+ * a stop function; the final text and the end event still follow it.
  */
 export function listen(listener: (heard: Heard) => void): () => void {
   if (!Recognizer) {
@@ -77,9 +77,9 @@ export function listen(listener: (heard: Heard) => void): () => void {
 }
 
 /**
- * Turns speech into text after what the field holds. While it listens,
- * `onText` receives the field's text with what has been said so far, and
- * `onError` a message when recognition fails.
+ * Appends recognized speech to a field's text. While recognition runs,
+ * `onText` receives the field's text followed by the text recognized so
+ * far, and `onError` receives a message when recognition fails.
  */
 export function useDictation(onText: (text: string) => void, onError: (message: string) => void) {
   const [listening, setListening] = useState(false);
@@ -101,7 +101,7 @@ export function useDictation(onText: (text: string) => void, onError: (message: 
     });
     setListening(true);
   }, []);
-  // leaving the review stops listening
+  // leaving the review stops the dictation
   useEffect(() => () => stopping.current?.(), []);
   return { listening, start, stop };
 }

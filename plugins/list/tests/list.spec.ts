@@ -232,7 +232,7 @@ test("in a narrow frame the items open as a drawer over the list, and a click on
   await expect(f.locator(".pinrail-item").first()).toBeVisible();
   await expect(rail).toBeHidden();
 
-  // the header's buttons keep only their icons, and their names
+  // the header's buttons show only their icons and keep their accessible names
   await expect(f.getByRole("button", { name: "Accept all undecided" })).toBeVisible();
   await expect(f.locator(".pinrail-header .label").first()).toBeHidden();
 

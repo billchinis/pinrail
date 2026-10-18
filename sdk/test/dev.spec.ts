@@ -301,13 +301,13 @@ test("the frame takes the size chosen, as the app's side panel or a phone shows 
     await expect.poll(width).toBe(700);
     await expect(page.locator("#frame-size")).toContainText("700 ×");
 
-    // a device sets the height too; the composer under the view takes its share
+    // a device sets the height too, which the frame shares with the composer below it
     await page.locator("#width").selectOption("iphone");
     await expect.poll(width).toBe(393);
     const device = (await page.locator("#device").boundingBox())!;
     expect(Math.round(device.height)).toBe(852 + 2);
 
-    // the choice outlives a reload, and full width takes the stage again
+    // the choice survives a reload, and full width fills the stage again
     await page.reload();
     await expect(page.locator("#width")).toHaveValue("iphone");
     await expect.poll(width).toBe(393);

@@ -29,10 +29,10 @@ function savedLayout(): Layout {
   }
 }
 
-/** The panel's width, remembered on this machine. */
+/** The side panel's width, stored on this machine. */
 const PANEL_WIDTH = "pinrail.inbox.panel";
 const PANEL_MIN = 420;
-// the list keeps at least this much beside the panel
+// the minimum width of the list beside the side panel
 const LIST_MIN = 320;
 function savedWidth(): number | null {
   try {
@@ -64,7 +64,7 @@ export function Inbox() {
   const navigate = useNavigate();
   const [params, updateParams] = useUrlParams();
   const { settings: prefs } = useSettings();
-  // with the panel, a review opens beside the list, named by ?open=
+  // with the side panel, ?open= names the review shown beside the list
   const panelMode = prefs.inbox.open_in === "panel";
   const openId = panelMode ? params.get("open") : null;
   // The search box keeps its own text: a router navigation per keystroke is
@@ -181,9 +181,9 @@ export function Inbox() {
     setFocused((f) => Math.min(f, Math.max(0, shown.length - 1)));
   }, [shown.length]);
 
-  // The highlight follows the review the panel opens, by a click, a key or
-  // after a decision; a pointer resting on another row takes it back only
-  // once it moves.
+  // The highlight follows the review open in the side panel, whether opened
+  // by a click, a shortcut or after a decision. A pointer over another row
+  // moves the highlight only once it moves.
   const shownRef = useRef(shown);
   shownRef.current = shown;
   useEffect(() => {
@@ -194,7 +194,7 @@ export function Inbox() {
     setFocused(at);
   }, [openId]);
 
-  /** Where a review's row leads: the panel, keeping the filters, or its page. */
+  /** The link of a review's row: the side panel, keeping the filters, or its page. */
   const hrefFor = useCallback(
     (id: string): To => {
       if (!panelMode) return `/reviews/${id}`;
@@ -204,7 +204,7 @@ export function Inbox() {
     },
     [panelMode, params],
   );
-  /** Opens a review in the panel, or closes it with null. */
+  /** Opens a review in the side panel, or closes the panel with null. */
   const openInPanel = useCallback(
     (id: string | null, options?: { replace?: boolean }) =>
       updateParams((next) => {
@@ -213,7 +213,7 @@ export function Inbox() {
       }, options),
     [updateParams],
   );
-  // the order the rows are drawn in, as the panel walks it
+  // the rows in display order, which the side panel follows
   const orderedRef = useRef(ordered);
   orderedRef.current = ordered;
   /** The review after the one that just ended, or before it at the end of the list. */
@@ -225,7 +225,7 @@ export function Inbox() {
   }, [openId, openInPanel]);
   const closePanel = useCallback(() => openInPanel(null), [openInPanel]);
 
-  // the panel's width, dragged at its edge, within what the window allows
+  // the side panel's width, resized by dragging its edge, within the window's limits
   const split = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(savedWidth);
   const clampWidth = (w: number) => {
@@ -237,13 +237,13 @@ export function Inbox() {
     try {
       localStorage.setItem(PANEL_WIDTH, String(w));
     } catch {
-      // no storage: the width lasts until the app restarts
+      // without storage, the width is kept until the app restarts
     }
   };
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
     const right = split.current?.getBoundingClientRect().right ?? window.innerWidth;
-    // the view's frame would take the pointer while it passes over it
+    // stop the view's frame from capturing pointer events during the drag
     document.body.classList.add("is-resizing");
     const onMove = (e: PointerEvent) => setWidth(clampWidth(right - e.clientX));
     const onUp = (e: PointerEvent) => {
@@ -265,10 +265,10 @@ export function Inbox() {
   };
 
   // With a review open beside the list, J and K move to the next and
-  // previous review, from the list or from the view, which passes them up;
-  // ⌥↓ and ⌥↑ do too. All of them go round at the ends. The listener captures, so
-  // it runs before the layout's walk of the waiting reviews, which then
-  // leaves the key alone.
+  // previous review, from the list or from the view, which forwards them;
+  // ⌥↓ and ⌥↑ do too. All of them wrap around at the ends. The listener uses
+  // the capture phase, so it runs before the layout's handler for waiting
+  // reviews, which then ignores the key.
   useEffect(() => {
     const onWalk = (event: KeyboardEvent) => {
       if (!openId || modalOpen() || hasMod(event)) return;
@@ -293,8 +293,8 @@ export function Inbox() {
     const onKey = (event: KeyboardEvent) => {
       // the inbox's keys are not for a dialog in front of it
       if (modalOpen()) return;
-      // the open review has the rest of the keys: the panel discards it, and
-      // Enter may be its view's
+      // the open review handles the other keys: the panel handles discard,
+      // and the view may use Enter
       if (openId) {
         if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
           const el = event.target as HTMLElement | null;
@@ -324,7 +324,7 @@ export function Inbox() {
       }
       if (discarding) return;
       if (event.key === "j" || event.key === "k") keyboard.current = true;
-      // round at the ends, from the last row to the first and back
+      // wrap around at the ends, from the last row to the first and back
       if (shown.length && event.key === "j") setFocused((f) => (f + 1) % shown.length);
       if (shown.length && event.key === "k") setFocused((f) => (f - 1 + shown.length) % shown.length);
       if (event.key === "Enter" && shown[focused]) navigate(hrefFor(shown[focused].id));

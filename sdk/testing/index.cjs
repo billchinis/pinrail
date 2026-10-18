@@ -271,8 +271,8 @@ async function mountPlugin(page, pluginDir, opts) {
     // violations of one the schema refuses, or the view's "not yet"
     handOver: () => page.evaluate(() => window.__shell.handOver()),
     setFrameHeight: (px) => page.evaluate((h) => window.__shell.setFrameHeight(h), px),
-    // dictation, as the app's recogniser: what it has heard so far, and its end
-    // a click that starts it reaches the app a moment later: wait for it
+    // dictation, in place of the app's recogniser: the text so far, and the end
+    // a click that starts dictation reaches the app shortly after, so wait for it
     say: async (text) => {
       try {
         await page.waitForFunction(() => window.__shell.dictating(), null, { timeout: 2000 });

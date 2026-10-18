@@ -20,7 +20,7 @@ export type Settings = {
   menu_bar_icon: boolean;
   notifications: { enabled: boolean; paused_until: string | null; sound: boolean; muted_plugins: string[] };
   shortcut: { global: string; global_opens: "oldest" | "inbox" };
-  /** where the inbox opens a review: beside the list, or as a page */
+  /** where the inbox opens a review: in the side panel, or on its own page */
   inbox: { open_in: "panel" | "page" };
   /** each plugin's own settings, only the values someone changed */
   plugins: Record<string, Record<string, unknown>>;
@@ -34,7 +34,7 @@ export type Settings = {
   updates: { check: boolean };
   /** the welcome screen was closed; until then the app opens on it */
   welcome: { seen: boolean };
-  /** the release whose notes were last shown, or null before any */
+  /** the release whose notes were last shown, or null if none has been */
   whats_new: { seen: string | null };
   /** launch at login; null when the app cannot say (a browser) */
   autostart: boolean | null;

@@ -396,7 +396,7 @@ test("in a narrow frame the stage's bars do not overlap, and the verdicts keep o
     .locator(".image-head .choice")
     .evaluateAll((buttons) => buttons.map((b) => Math.round(b.getBoundingClientRect().top)));
   expect(new Set(tops).size).toBe(1);
-  // the key a button takes is still named, in its tooltip
+  // the tooltip still shows the button's shortcut
   await expect(f.locator('.choice[data-action="keep"]')).toHaveAttribute("title", "Keep (s)");
 });
 
@@ -410,7 +410,7 @@ test("the round's notes fold away to a line, and the view keeps the choice", asy
   await expect(notes.locator(".notes-body")).toBeHidden();
   await expect(notes.locator(".notes-peek")).toContainText("Round 1 of the empty inbox");
   await expect.poll(() => plugin.lastSettingsSet()).toEqual({ notes_open: false });
-  // a redraw keeps them folded, and so does the setting the next time
+  // a redraw keeps the notes folded, and a later setting still applies
   await f.locator('.choice[data-action="keep"]').click();
   await expect(notes.locator(".notes-body")).toBeHidden();
   await plugin.settings({ notes_open: true });
@@ -432,7 +432,7 @@ test("in a short, narrow frame the view scrolls as one, down to the image", asyn
   expect((await stage.boundingBox())!.height).toBeGreaterThanOrEqual(280);
   await stage.scrollIntoViewIfNeeded();
   await expect(f.locator(".stage .art")).toBeInViewport();
-  // a verdict redraws the view without losing the place
+  // a verdict redraws the view and keeps the scroll position
   const before = await f.locator("#app").evaluate((el) => el.scrollTop);
   expect(before).toBeGreaterThan(0);
   await f.locator('.choice[data-action="keep"]').click();
@@ -476,6 +476,6 @@ test("in a narrow but short frame the stage still takes the full width", async (
   const f = plugin.frame;
   const stage = (await f.locator(".stage").boundingBox())!;
   const sheet = (await f.locator(".sheet-inner").boundingBox())!;
-  // the stage spans the sheet's content, its padding aside
+  // the stage spans the sheet's content area, apart from its padding
   expect(stage.width).toBeGreaterThan(sheet.width - 80);
 });

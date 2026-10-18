@@ -13,9 +13,9 @@
 // a docs page shows it as screenshot:<name>, and, in the light theme only,
 // into website/src/assets/screenshots when the scene marks it `site: true`,
 // for the landing pages, where Astro optimizes it, and into
-// desktop/app/ui/src/whats-new/<version>/ when a release's What's new card
-// names it as its image, as WebP, which the app carries at a third of the
-// size. A shot used by none of them fails the run. With --out, every shot
+// desktop/app/ui/src/whats-new/<version>/ as WebP, about a third of the
+// size of the PNG, when a release's What's new card uses it as its image.
+// A shot that none of them uses fails the run. With --out, every shot
 // goes into that folder instead.
 //
 // made.json records the files a full run made. The next full run that
@@ -75,7 +75,7 @@ function docsShots(dir = path.join(root, "docs")) {
 }
 const inDocs = docsShots();
 
-/** The pictures What's new shows, each into the folder of every release whose card names it. */
+/** Maps each image that What's new shows to the folder of every release whose card uses it. */
 function whatsNewShots(dir = path.join(root, "desktop", "app", "ui", "src", "whats-new")) {
   const where = new Map();
   for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
@@ -99,7 +99,7 @@ const app = await startApp({ build: !args.includes("--no-build") });
 // WebGL in software, for the views that draw with it (the model plugin)
 const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 
-/** A PNG as WebP, encoded by the browser itself, in a page of its own. */
+/** Converts a PNG to WebP, encoded by the browser in a separate page. */
 let encoder = null;
 async function webp(png) {
   encoder ??= await (await browser.newContext()).newPage();

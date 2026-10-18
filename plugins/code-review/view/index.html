@@ -1358,7 +1358,7 @@
         background: var(--pinrail-bg-hover);
         color: var(--pinrail-text);
       }
-      /* the arrows through the proposals, and where the focus is among them */
+      /* the buttons that move between proposals, and the focused one's position */
       .stepper {
         display: inline-flex;
         align-items: center;
@@ -1512,9 +1512,9 @@
           background: rgb(0 0 0 / 0.25);
         }
       }
-      /* Below 640 pixels the head wraps, with the title on a line of its own,
-     the toolbar's buttons keep only their icons, and the agent's summary puts
-     its buttons under its text. */
+      /* Below 640 pixels the head wraps and puts the title on a line of its
+     own, the toolbar's buttons show only their icons, and the agent's summary
+     places its buttons under its text. */
       @media (max-width: 640px) {
         .head {
           flex-wrap: wrap;
@@ -1556,8 +1556,8 @@
           padding-left: 14px;
         }
       }
-      /* below 520 pixels the branches leave the head, and the line numbers
-     narrow */
+      /* below 520 pixels the head hides the branches, and the line-number
+     column narrows */
       @media (max-width: 520px) {
         .head-branch .pinrail-chip,
         .head-branch .arrow {
@@ -1583,8 +1583,8 @@
           flex-basis: 100%;
         }
       }
-      /* the app's microphone beside a note's Save and a comment's Cancel,
-         the size of the buttons around it, where the app can dictate */
+      /* the app's microphone, sized like the buttons beside it, next to a
+         note's Save and a comment's Cancel where the app supports dictation */
       .dictate-slot {
         display: contents;
       }
@@ -1984,8 +1984,8 @@
         });
       }
       /* Below 860 pixels, such as in the inbox's side panel, the file tree is a
-   drawer over the diff: closed until the head's button opens it, and closed
-   again by a choice in it, Esc, or a click beside it. */
+   drawer over the diff. It stays closed until the head's button opens it,
+   and closes on a choice in it, on Esc, or on a click outside it. */
       const narrow = window.matchMedia("(max-width: 860px)");
       const treeShown = () => (narrow.matches ? S.drawer : S.treeOpen);
       function openDrawer(open) {
@@ -2006,7 +2006,7 @@
         S.drawer = false;
         render();
       });
-      // the drawer's Esc, before the view's own
+      // the drawer handles Esc before the view does
       document.addEventListener(
         "keydown",
         (e) => {
@@ -2094,9 +2094,9 @@
         });
         scrollToCard(next);
       }
-      /* n and p go to the next and previous undecided proposal, round and
-   round; shift+n and shift+p, and n and p once nothing is left undecided
-   or the review is read-only, go through all of them. */
+      /* n and p move to the next and previous undecided proposal and wrap
+   around. Shift+n and shift+p move through all proposals, as n and p do
+   once none is undecided or the review is read-only. */
       function moveFocus(dir, all = false) {
         const order = orderedIds();
         const undecided = RO() ? [] : order.filter((id) => !decided(id));
@@ -2704,7 +2704,7 @@
           const label = `${verb} remaining (${undecided})`;
           return `<button class="tool${armed ? ` armed ${kind}` : ""}" data-act="bulk-${kind}" title="${label}">${ico(icon)}${armed ? `Really ${verb.toLowerCase()} ${undecided}?` : `<span class="label">${label}</span>`}</button>`;
         };
-        // the arrows do what n and p do: the undecided proposals, then all of them
+        // the arrows move like n and p, through the undecided proposals, then all
         const order = orderedIds();
         const every = RO() || !undecided;
         const at = order.indexOf(S.focusedId);
@@ -2883,7 +2883,7 @@
         // putting the cursor back where it was never scrolls; a field just opened may
         if (toFocus && toFocus !== document.activeElement) {
           toFocus.focus({ preventScroll: !!focusDesc });
-          // the cursor goes to the end of a field's text
+          // move the cursor to the end of a field's text
           if (toFocus.tagName === "TEXTAREA") {
             const v = toFocus.value;
             toFocus.value = "";
@@ -3234,11 +3234,11 @@
         const typing =
           tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target && e.target.isContentEditable);
         if (e.key === "Escape") {
-          // Ours only when there is something to cancel: a field being typed
-          // in, a comment, or a confirmation. Otherwise it goes up to the
-          // app, which closes the inbox's panel with it.
+          // Handle Escape only when there is something to cancel: a field
+          // being typed in, a comment, or a confirmation. Otherwise the app
+          // receives it and closes the inbox's side panel.
           if (!typing && !S.composer && !S.confirmBulk && !S.confirmSubmitArm) return;
-          // the field it was typed in lets go of focus before it goes
+          // blur the focused field before it is removed
           e.preventDefault();
           if (typing && e.target.blur) e.target.blur();
           if (typing && e.target.hasAttribute && e.target.hasAttribute("data-note-ta")) {

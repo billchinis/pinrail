@@ -409,8 +409,8 @@ fn unzip_within(bytes: &[u8], into: &Path, limits: Unpacking) -> Result<(), Erro
         let mut file = archive
             .by_index(i)
             .map_err(|e| Error::invalid("/source", format!("bad zip entry: {e}")))?;
-        // an absolute name is refused too, though the zip crate would unpack
-        // it inside the folder
+        // an absolute path is also rejected, even though the zip crate would
+        // extract it inside the folder
         let absolute = file
             .name()
             .is_ok_and(|name| name.starts_with(['/', '\\']) || name.get(1..2) == Some(":"));

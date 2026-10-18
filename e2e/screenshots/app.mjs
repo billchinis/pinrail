@@ -55,8 +55,8 @@ export async function startApp({ build = true } = {}) {
   fs.rmSync(data, { recursive: true, force: true });
   fs.mkdirSync(data, { recursive: true });
 
-  // a returning person's data: the setup and What's new already seen, so
-  // neither dialog covers the screens
+  // the settings of a returning user, with the setup and What's new marked
+  // as seen, so that neither dialog covers the screens
   fs.writeFileSync(
     path.join(data, "settings.json"),
     JSON.stringify({ welcome: { seen: true }, whats_new: { seen: "999.0.0" } }),
@@ -104,9 +104,9 @@ export async function startApp({ build = true } = {}) {
   });
   await waitFor(ui, "the shell");
 
-  // `client` is how the request says it was sent: from the shell's origin by
-  // default, so what the seed decides reads as decided in the app; "cli" as
-  // the pinrail command sends it; "api" as any other program does
+  // `client` sets the client the request identifies as. The default, "app",
+  // sends the shell's origin, so the seed's decisions are recorded as made in
+  // the app. "cli" sends the pinrail command's header, and "api" sends neither
   const api = async (method, route, body, client = "app") => {
     const sent = { app: { origin: ui }, cli: { "x-pinrail-client": "cli" }, api: {} }[client];
     const res = await fetch(`${core}${route}`, {
@@ -163,8 +163,8 @@ const iso = (ms) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, ".000Z");
  * milliseconds before NOW (outcome only when it ended). Every row takes the
  * pinned time; events keep their order, spaced a second apart from the
  * review's creation; installed plugins are dated an hour before the oldest
- * review; whoever decided, discarded or withdrew in the app is PERSON. Returns the old id → new
- * id map.
+ * review; decisions, discards and withdrawals made in the app are
+ * attributed to PERSON. Returns the map of old ids to new ids.
  */
 function pinDatabase(file, plan) {
   const db = new DatabaseSync(file);
@@ -207,8 +207,8 @@ function pinDatabase(file, plan) {
       name,
     );
   }
-  // what was done in the app was done by the fixtures' person, not by
-  // whoever runs this; what an agent or a program did keeps its name
+  // attribute actions taken in the app to the fixtures' user rather than to
+  // the user running the script. Actions by agents and programs keep their names
   db.prepare("UPDATE outcomes SET by = ? WHERE via = 'app'").run(PERSON);
   db.prepare("UPDATE events SET actor = ? WHERE actor = ?").run(PERSON, os.userInfo().username);
   db.prepare("UPDATE events SET at = ? WHERE review_id IS NULL").run(iso(NOW - oldest - 3_600_000));

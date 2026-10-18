@@ -72,7 +72,7 @@ test("keyboard: a / x / j decide and move; with nothing undecided, a hand-over g
   await page.keyboard.press("x");
   await f.getByLabel("note for proposal 19").fill("no");
   await page.keyboard.press("Enter");
-  // saving the reason stays on #19; n moves on
+  // saving the reason keeps the focus on #19, and n moves to the next one
   await expect(f.locator("#card-19")).toHaveClass(/\bfocused\b/);
   await page.keyboard.press("n");
   await page.keyboard.press("a");
@@ -108,7 +108,7 @@ test("n and p go to the undecided proposals; shift+n and shift+p go through all"
   await page.keyboard.press("Shift+N");
   await focused(20);
 
-  // with nothing undecided, n goes through all
+  // with no undecided proposals left, n moves through all of them
   await f.locator("#card-18 button", { hasText: "Accept" }).click();
   await f.locator("#card-20 button", { hasText: "Accept" }).click();
   await f.locator("body").click({ position: { x: 5, y: 5 } });
@@ -219,7 +219,7 @@ test("the diff's bar holds how it reads and the bulk decisions; icons carry name
   await expect(bar.getByRole("button", { name: "Fold all" })).toBeVisible();
   await expect(bar.locator('[data-act="bulk-accept"] .pinrail-icon')).toHaveAttribute("aria-hidden", "true");
 
-  // So have the arrows through the proposals.
+  // The arrow buttons for moving between proposals have names too.
   await expect(bar.getByRole("button", { name: "Next undecided proposal" })).toBeVisible();
 
   // The diff toggle has no words, so its two buttons are named.
@@ -610,7 +610,7 @@ test("in a narrow frame the file tree opens as a drawer over the diff, and a fin
   await expect(f.locator(".card").first()).toBeVisible();
   const rail = f.locator("aside.rail");
   await expect(rail).toHaveCount(0);
-  // the diff takes the frame
+  // the diff fills the width of the frame
   expect((await f.locator("#main").boundingBox())!.width).toBeGreaterThan(400);
 
   await f.getByRole("button", { name: "Show the file tree" }).click();
@@ -623,7 +623,7 @@ test("in a narrow frame the file tree opens as a drawer over the diff, and a fin
   await rail.locator(".tree-finding", { hasText: "Add jitter" }).click();
   await expect(rail).toHaveCount(0);
   await expect(f.locator(".card", { hasText: "Add jitter" })).toBeInViewport();
-  // the drawer is the narrow frame's own: the tree's setting is untouched
+  // the drawer belongs to the narrow layout and leaves the tree setting unchanged
   expect(await plugin.lastSettingsSet()).toBeNull();
 });
 
@@ -637,7 +637,7 @@ test("in a narrow frame the title keeps a line, and a card's buttons go under it
   const name = (await card.locator(".card-title").boundingBox())!;
   const accept = (await card.getByRole("button", { name: "Accept" }).boundingBox())!;
   expect(accept.y).toBeGreaterThanOrEqual(name.y + name.height);
-  // the toolbar's buttons keep their names
+  // the toolbar's buttons keep their accessible names
   await expect(f.getByRole("button", { name: "Fold all" })).toBeVisible();
 });
 
@@ -655,12 +655,12 @@ test("the toolbar's arrows go through the undecided proposals, as n and p do, an
   await next.click();
   await expect(count).toHaveText("2 of 5");
   await expect(f.locator(".card.focused")).toBeInViewport();
-  // the button keeps the keyboard's focus, so Enter goes on
+  // the button keeps the focus, so Enter moves to the next proposal
   await expect(next).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(count).toHaveText("3 of 5");
 
-  // a decided proposal is passed over, both ways
+  // a decided proposal is skipped in both directions
   await f.locator(".card.focused").getByRole("button", { name: "Accept" }).click();
   await bar.getByRole("button", { name: "Previous undecided proposal" }).click();
   await expect(count).toHaveText("2 of 5");

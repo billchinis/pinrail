@@ -1,12 +1,12 @@
-// What's new carries the notes of the last few releases only. Each release
-// that has notes has whats-new/<version>.json and a folder of pictures
-// beside it; set-version.mjs calls `prune` when a release is made, and the
-// release commit removes the oldest.
+// The app ships What's new notes for the last few releases only. Each
+// release that has notes has whats-new/<version>.json and a folder of
+// pictures next to it. set-version.mjs calls `prune` when a release is
+// made, and the release commit removes the oldest.
 
 import fs from "node:fs";
 import path from "node:path";
 
-/** How many releases' notes the app carries. */
+/** The number of releases whose notes the app ships. */
 export const KEEP = 3;
 
 const compare = (a, b) => {

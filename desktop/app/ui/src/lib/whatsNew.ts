@@ -1,20 +1,20 @@
-// What's new: a few cards about a release, shown once when the release
-// first starts. Each release that has notes has a file of its own,
-// whats-new/<version>.json, and its pictures beside it in
-// whats-new/<version>/, as <image>-light.webp and <image>-dark.webp, which
-// the screenshot run makes (e2e/screenshots). A release with no file shows
-// nothing. The app carries the notes of the last few releases only:
+// What's new shows a few cards about a release, once, when the release
+// first starts. Each release that has notes has its own file,
+// whats-new/<version>.json, and its pictures in whats-new/<version>/ as
+// <image>-light.webp and <image>-dark.webp, which the screenshot run
+// generates (e2e/screenshots). A release with no file shows nothing. The
+// app ships the notes of the last few releases only, and
 // scripts/set-version.mjs removes older ones when a release is made.
 
-/** What a card's button opens: a screen of the app, or a section of Settings. */
+/** The target of a card's button: a screen of the app, or a section of Settings. */
 export type CardAction = { label: string; to?: string; settings?: string };
 
 export type Card = {
   title: string;
   text: string;
-  /** the picture's name, without the theme and the extension */
+  /** the picture's name, without the theme suffix and the extension */
   image?: string;
-  /** what the picture shows, for a screen reader */
+  /** alternative text for screen readers */
   alt?: string;
   action?: CardAction;
 };
@@ -33,9 +33,9 @@ export function compareVersions(a: string, b: string): number {
 }
 
 /**
- * The releases to show, newest first. A fresh install shows none. Before
- * any release was shown, only the running one's notes are; after, every
- * release newer than the one shown, up to the running one.
+ * The releases to show, newest first. A fresh install shows none. If no
+ * release has been shown yet, only the running release is shown; otherwise
+ * every release newer than the last one shown, up to the running one.
  */
 export function releasesToShow(releases: Release[], running: string, seen: string | null, fresh: boolean): Release[] {
   if (fresh) return [];
@@ -46,9 +46,9 @@ export function releasesToShow(releases: Release[], running: string, seen: strin
 }
 
 /**
- * The notes What's new opens when asked for: the newest release's, up to
- * the running one. A development build previews the newest notes of all,
- * so they can be checked before their release.
+ * The notes What's new shows when opened on request: those of the newest
+ * release up to the running one. A development build shows the newest
+ * notes of all, so they can be checked before the release.
  */
 export function latestNotes(releases: Release[], running: string, preview: boolean): Release[] {
   return releases
@@ -72,5 +72,5 @@ export function pictureOf(version: string, image: string, theme: "light" | "dark
   return pictures[`../whats-new/${version}/${image}-${theme}.webp`] ?? null;
 }
 
-/** The file names the notes are kept under, for the check that each is complete. */
+/** The file names of the notes, for the test that checks each is complete. */
 export const FILES = { notes: Object.keys(files), pictures: Object.keys(pictures) };

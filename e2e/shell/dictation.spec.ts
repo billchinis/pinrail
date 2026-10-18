@@ -1,11 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { clearInbox, createReview } from "./helpers";
 
-// Dictation, with the browser's speech recognition replaced by one the test
-// speaks into: the note box's microphone, and a view's field, where the app
-// listens for the view and says so in the composer.
+// Dictation, with the browser's speech recognition replaced by a fake that
+// the test controls. It covers the note box's microphone and a field of a
+// plugin view, for which the app runs dictation and shows it in the composer.
 
-/** Replaces speech recognition with a fake; `window.__speak(text)` and `window.__silence()` drive it. */
+/** Replaces speech recognition with a fake, driven by `window.__speak(text)` and `window.__silence()`. */
 async function fakeRecognition(page: Page) {
   await page.addInitScript(() => {
     const w = window as any;
@@ -51,7 +51,7 @@ test("a field of the view is dictated into, and the composer says the app is lis
   await expect.poll(() => listening(page)).toBe(true);
   const status = page.getByRole("status").filter({ hasText: "Listening for the view" });
   await expect(status).toBeVisible();
-  // the note box's own microphone is not the one listening
+  // the note box's own microphone stays inactive
   await expect(page.getByRole("button", { name: "Dictate the note" })).toHaveAttribute("aria-pressed", "false");
 
   await speak(page, "fix the typo in the moduledoc");
@@ -97,7 +97,7 @@ test("Esc stops a dictation, and leaves the panel open", async ({ page }) => {
   await expect.poll(() => listening(page)).toBe(false);
   await expect(page.getByRole("button", { name: "Dictate the note" })).toBeVisible();
 
-  // a field of the view, with Esc pressed in the app rather than the view
+  // a field of the plugin view, with Esc pressed in the app rather than in the frame
   await frame.getByRole("button", { name: "Dictate" }).click();
   await expect(page.getByText("Listening for the view")).toBeVisible();
   await page.getByRole("textbox", { name: "Note to the agent" }).focus();

@@ -35,7 +35,7 @@ test("the app's keys go up from a view, unless typed in a field or kept by the v
   await page.keyboard.press("?");
   await page.keyboard.press("[");
   await page.keyboard.press("]"); // the view keeps this one
-  await page.keyboard.press("j"); // the inbox's next and previous
+  await page.keyboard.press("j"); // next and previous in the inbox
   await page.keyboard.press("k");
   await page.keyboard.press("n"); // not the app's
   await expect.poll(keys).toEqual(["?", "[", "j", "k"]);
@@ -67,7 +67,7 @@ test("⌘D or Ctrl+D goes up from anywhere in a view, a text field too", async (
 
 test("Esc goes up from a view that leaves it alone, so the app can close its panel", async ({ page }) => {
   const dir = view();
-  // this view closes a dialog of its own with Esc while one is open
+  // this view closes its own dialog with Esc while the dialog is open
   const file = path.join(dir, "view", "index.html");
   fs.writeFileSync(
     file,
@@ -88,11 +88,11 @@ test("Esc goes up from a view that leaves it alone, so the app can close its pan
   await page.keyboard.press("Escape"); // closes the view's dialog
   await page.waitForTimeout(100);
   expect(await escapes()).toBe(0);
-  await page.keyboard.press("Escape"); // nothing left to close: the app's
+  await page.keyboard.press("Escape"); // no dialog to close, so it goes to the app
   await expect.poll(escapes).toBe(1);
 
   await f.locator("#field").click();
-  await page.keyboard.press("Escape"); // in a field, the field's
+  await page.keyboard.press("Escape"); // in a field, it stays with the field
   await page.waitForTimeout(100);
   expect(await escapes()).toBe(1);
 });

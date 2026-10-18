@@ -463,8 +463,8 @@
     background: var(--pinrail-accent-bg);
   }
 
-  /* the microphone the SDK puts after a field marked data-pinrail-dictate,
-     red while it listens */
+  /* the microphone button the SDK adds after a field marked
+     data-pinrail-dictate, red while a dictation is active */
   .pinrail-dictate {
     flex: none;
     display: inline-grid;

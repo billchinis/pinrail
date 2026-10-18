@@ -43,11 +43,11 @@ export function clearAll(next: URLSearchParams) {
   for (const key of [...next.keys()]) next.delete(key);
 }
 
-/** Where opening a review leads: the inbox's panel, or the review's own page. */
+/** The route that opens a review: the inbox's side panel, or the review's own page. */
 export const reviewPath = (id: string, openIn: "panel" | "page") =>
   openIn === "panel" ? `/?open=${encodeURIComponent(id)}` : `/reviews/${id}`;
 
-/** The review a location shows: on its page, or in the inbox's panel. */
+/** The review a location shows, on its own page or in the inbox's side panel. */
 export function reviewShown(pathname: string, search: string): string | null {
   const page = pathname.match(/^\/reviews\/([^/]+)/)?.[1];
   if (page) return decodeURIComponent(page);

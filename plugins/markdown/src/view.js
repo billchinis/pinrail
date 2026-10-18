@@ -237,7 +237,7 @@ function renderOutline() {
   toggle.setAttribute("aria-expanded", String(open));
   const shown = headings.length > 0 && outlineOpen;
   $("work").classList.toggle("no-outline", !shown);
-  // a narrow frame shows the outline as a drawer, whatever the wide one does
+  // in a narrow frame the outline is a drawer, whatever the wide layout's setting
   $("outline").hidden = narrowOutline.matches ? !headings.length : !shown;
   $("outline").classList.toggle("drawer", drawer === "outline");
   if (!headings.length) return;
@@ -486,7 +486,7 @@ function openDialog(anchor) {
       )
       .join("") +
     `</div>` +
-    // the comment can be dictated, from a microphone in the field's corner
+    // the comment supports dictation, with a microphone in the field's corner
     `<span class="dictate-field"><textarea id="compose-body" data-pinrail-dictate placeholder="${PLACEHOLDERS[kind]}" aria-label="Comment">${edited ? esc(edited.body) : ""}</textarea>` +
     `<span class="dictate-mic" data-pinrail-dictate-for="compose-body"></span></span>` +
     `<div class="foot"><span class="hint"><kbd>Enter</kbd> to ${edited ? "save" : "add"}, <kbd>Esc</kbd> to cancel</span>` +
@@ -684,7 +684,7 @@ function renderVerdict(readonly, decided) {
 
 $("list").addEventListener("click", (event) => {
   const t = event.target;
-  // the drawer gives the document back to what the comment is about
+  // close the drawer so that the document shows what the comment refers to
   if (drawer && (t.dataset.edit || (t.closest("[data-comment]") && !t.closest("button")))) openDrawer(null);
   if (t.dataset.edit) return editComment(Number(t.dataset.edit));
   if (t.dataset.delete) {

@@ -51,19 +51,19 @@ export function ReviewScreen() {
 
 type ReviewViewProps = {
   id: string;
-  /** in the inbox's panel, beside the list, rather than a page of its own */
+  /** shown in the inbox's side panel, beside the list, rather than on its own page */
   inPanel?: boolean;
-  /** where a link to another round of the review goes */
+  /** the link target for another round of the review */
   linkTo?: (id: string) => To;
-  /** the review ended here, decided or discarded; the page goes back to the inbox */
+  /** called when the review is decided or discarded here; the page returns to the inbox */
   onEnded?: () => void;
-  /** closes the panel */
+  /** closes the side panel */
   onClose?: () => void;
 };
 
 const pageOf = (id: string): To => `/reviews/${id}`;
 
-/** A review: its strip, its view, and the note that goes with a decision. */
+/** A review: its strip, its plugin view, and the note sent with a decision. */
 export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onClose }: ReviewViewProps) {
   const live = useLive();
   const { settings: prefs, update: updatePrefs } = useSettings();
@@ -391,8 +391,8 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
         setMaximized(false);
         return;
       }
-      // the panel closes on Escape; a view that uses the key keeps it, and
-      // passes up only an Escape it left alone
+      // Escape closes the side panel. A view that handles the key keeps it,
+      // and forwards only an Escape it did not handle
       if (event.key === "Escape" && onClose && !finding && !modalOpen()) {
         const target = event.target as HTMLElement | null;
         if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")) {
@@ -435,8 +435,8 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
       const combo = comboFromEvent(event);
       if (combo && !isShadowed(combo) && plugin?.shortcuts?.some((s) => s.keys === combo)) {
         event.preventDefault();
-        // the view gets the keyboard with its key: a field the key opens,
-        // such as a code review's note on c, then takes typing at once
+        // focus the frame before forwarding the shortcut, so a field the
+        // shortcut opens, such as a code review's note on c, accepts typing at once
         frame.current?.focus();
         frame.current?.contentWindow?.postMessage(
           {
@@ -513,7 +513,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
       ) : null,
     [review?.title, review?.origin.ref, originUrl, back.to, back.label, location.state], // eslint-disable-line react-hooks/exhaustive-deps -- the fields the crumb shows, not the whole review
   );
-  // a page opened from the inbox can go back to its panel
+  // a page opened from the inbox can return to its side panel
   const showInPanel = !inPanel && !fromHistory && prefs.inbox.open_in === "panel" && pending;
   const actions = useMemo(
     () =>
@@ -609,7 +609,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
         : undefined,
     [plugin],
   );
-  // in the panel the inbox keeps the bar, with its own title
+  // in the side panel, the inbox shows its own bar and title
   const topbar = useMemo(
     () => (review && !inPanel ? { crumb, plugin: forPlugin } : null),
     [review, crumb, forPlugin, inPanel],
@@ -624,11 +624,11 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
       // ignore
     }
   };
-  // dictation writes into the note as it hears it, and the box grows with it
+  // dictation writes recognized text into the note, and the field grows with it
   const dictation = useDictation(onNote, (message) => toast(message, "danger"));
   const listening = dictation.listening;
-  // Esc stops a dictation, into the note or the view, before anything else
-  // hears it: the panel stays open, and the next Esc is the screen's
+  // Esc stops the active dictation, in the note or the view, before other
+  // handlers see it. The panel stays open, and the next Esc goes to the screen
   const viewDictating = bridge.dictating;
   const stopViewDictation = bridge.stopDictation;
   const stopNoteDictation = dictation.stop;
@@ -968,7 +968,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
           />
           <div className="composer-bar">
             {bridge.dictating ? (
-              // the view cannot listen itself: the app does, and says so
+              // the app runs speech recognition for the view and shows that it is listening
               <span className="composer-hint composer-listening" role="status">
                 <span className="listening-dot" aria-hidden="true" />
                 Listening for the view
@@ -994,7 +994,7 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
                   onClick={() => {
                     if (dictation.listening) dictation.stop();
                     else {
-                      // one dictation at a time: the view's stops first
+                      // only one dictation runs at a time, so stop the view's first
                       if (bridge.dictating) bridge.stopDictation();
                       dictation.start(note);
                     }

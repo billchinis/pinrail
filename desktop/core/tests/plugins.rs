@@ -258,7 +258,7 @@ async fn linking_and_removal_record_and_announce_changes() {
     ));
 }
 
-/// The version of `list` the app carries.
+/// The version of `list` the app bundles.
 fn carried_list() -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/list/manifest.json");
     let manifest: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();

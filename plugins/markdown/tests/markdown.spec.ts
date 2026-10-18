@@ -371,7 +371,7 @@ test("in a narrow frame the document takes the width, and the outline and the co
   const article = await f.locator("#rendered").boundingBox();
   expect(article!.width).toBeGreaterThan(400);
 
-  // a comment, written in the document; the header's count opens the list
+  // add a comment in the document, then open the list with the header's count
   await select(plugin, ".rendered li");
   await f.locator("#pick").click();
   await f.locator("#compose-body").fill("Slow, or failing?");
@@ -384,12 +384,12 @@ test("in a narrow frame the document takes the width, and the outline and the co
   await expect(side).toBeHidden();
   await expect(toggle).toBeFocused();
 
-  // a click on a comment closes the drawer and goes to what it is about
+  // a click on a comment closes the drawer and scrolls to the text it refers to
   await toggle.click();
   await side.locator(".card .body").click();
   await expect(side).toBeHidden();
 
-  // the outline opens over the document, and a heading in it goes there
+  // the outline opens over the document, and a click on a heading scrolls to it
   await f.getByRole("button", { name: "Show the outline" }).click();
   await expect(outline).toBeVisible();
   await outline.getByText("Open questions").click();
@@ -423,7 +423,7 @@ test("a comment can be dictated, from a microphone in the field's corner", async
   await expect(f.locator("#compose-body")).toHaveValue("slow or failing, which one");
   await dialog.getByRole("button", { name: "Stop dictating" }).click();
   await expect.poll(() => plugin.dictating()).toBe(false);
-  // the dialog stays open, and the comment is added as typed
+  // the dialog stays open, and Save adds the comment with the field's text
   await f.locator("#compose-save").click();
   await expect(f.locator(".card .body")).toHaveText("slow or failing, which one");
 });

@@ -39,7 +39,7 @@ test("a code review closes with Escape when it has nothing of its own to cancel"
   await page.locator("body").press("Escape");
   await expect(panel(page)).toHaveCount(0);
 
-  // inside the view: the first Escape closes its open note, the next the panel
+  // in the frame, the first Escape closes the open note and the second the panel
   await row(page, "Panel: Escape in a code review").click();
   await frame.locator(".card").first().getByRole("button", { name: "Add instruction" }).click();
   await expect(frame.locator("textarea.note-ta")).toBeFocused();
@@ -62,7 +62,7 @@ test("a view's key pressed in the app gives the view the keyboard, so c in a cod
   await row(page, "Panel: c to comment").click();
   const frame = page.frameLocator("#plugin-frame");
   await expect(frame.locator(".card").first()).toBeVisible();
-  // the app has the keyboard, as after a click in the list
+  // the app has the focus, as after a click in the list
   await page.locator("body").press("c");
   await expect(frame.locator("textarea.note-ta")).toBeVisible();
   await page.keyboard.type("shorter, please");
@@ -78,7 +78,7 @@ test("a review opens beside the inbox, and closes with its button or Escape", as
   await expect(page).toHaveURL(new RegExp(`#/\\?open=${review.id}$`));
   await expect(panel(page).getByTestId("review-title")).toHaveText("Panel: open and close");
   await expect(page.frameLocator("#plugin-frame").locator("body")).toContainText("One proposal.");
-  // the list stays, with the open review's row marked
+  // the list stays visible, with the open review's row marked
   await expect(row(page, "Panel: open and close")).toHaveAttribute("aria-current", "true");
 
   await panel(page).getByRole("button", { name: "Close the panel" }).click();
@@ -141,13 +141,13 @@ test("J and K move to the next and previous review, from the list and from the v
   await expect(title).toHaveText("Panel keys: newest");
   await page.locator("body").press("j");
   await expect(title).toHaveText("Panel keys: oldest");
-  // at the end of the list it goes round to the first, and back
+  // at the end of the list, j wraps around to the first review, and k back
   await page.locator("body").press("j");
   await expect(title).toHaveText("Panel keys: newest");
   await page.locator("body").press("k");
   await expect(title).toHaveText("Panel keys: oldest");
 
-  // with the view in focus, the view passes them up
+  // with the frame in focus, the view forwards the keys to the app
   await expect(frame.locator("body")).toContainText("One proposal.");
   await frame.locator("body").click();
   await page.keyboard.press("k");
@@ -166,7 +166,7 @@ test("the panel is one step back however many reviews it went through", async ({
   await expect(panel(page).getByTestId("review-title")).toHaveText("Panel back: middle");
   await page.locator("body").press("Alt+ArrowDown");
   await expect(panel(page).getByTestId("review-title")).toHaveText("Panel back: oldest");
-  // Back, as ⌘[ or the web view's ⌘← does it
+  // go back with ⌘[, which does the same as the web view's ⌘←
   await page.locator("body").press("ControlOrMeta+BracketLeft");
   await expect(page).toHaveURL(/#\/$/);
   await expect(panel(page)).toHaveCount(0);
@@ -178,7 +178,7 @@ test("walking from the panel moves the highlight off the row under the pointer",
   await createReview(page.request, { title: "Panel highlight: newest" });
 
   await page.goto("/#/");
-  // the pointer stays on the row it clicked
+  // the clicked row is highlighted, and the pointer stays over it
   await row(page, "Panel highlight: newest").click();
   await expect(row(page, "Panel highlight: newest")).toHaveClass(/is-focused/);
   await page.locator("body").press("Alt+ArrowDown");

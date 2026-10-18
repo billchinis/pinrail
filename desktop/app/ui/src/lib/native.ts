@@ -88,7 +88,7 @@ export function useNativeRoutes() {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
-  // a review's route opens where the inbox opens reviews
+  // open a review's route in the place set for the inbox
   const { settings } = useSettings();
   const openInRef = useRef(settings.inbox.open_in);
   openInRef.current = settings.inbox.open_in;

@@ -1,4 +1,4 @@
-// Pruning What's new to the last few releases, on a scratch folder.
+// Tests pruning What's new to the last few releases, in a temporary folder.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";

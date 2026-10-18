@@ -466,7 +466,7 @@ test("n and p move between questions, focus the answer, and leave typing alone",
   await expect(q(f, "approach")).toHaveClass(/is-current/);
   await expect(q(f, "approach").getByRole("radio").first()).toBeFocused();
 
-  // from a focused radio, n goes on: letters do not answer a radio
+  // with a radio button focused, n moves on, as letters do not select a radio
   await f.locator("body").press("n");
   await expect(q(f, "notify")).toHaveClass(/is-current/);
   await expect(q(f, "approach")).not.toHaveClass(/is-current/);
@@ -474,7 +474,7 @@ test("n and p move between questions, focus the answer, and leave typing alone",
   await f.locator("body").press("p");
   await expect(q(f, "approach")).toHaveClass(/is-current/);
 
-  // typing an n into a text answer types it
+  // an n typed in a text answer is entered as text
   const text = q(f, "other_context").getByRole("textbox");
   await text.click();
   await expect(q(f, "other_context")).toHaveClass(/is-current/);
@@ -489,7 +489,7 @@ test("in the side panel's width the groups are a strip above the questions", asy
   const f = plugin.frame;
   const strip = await f.locator(".sidebar").boundingBox();
   const first = await q(f, "approach").boundingBox();
-  // the strip runs across the frame, and the questions start under it
+  // the strip spans the frame, and the questions start below it
   expect(strip!.width).toBeGreaterThan(650);
   expect(first!.y).toBeGreaterThan(strip!.y + strip!.height);
   await expect(f.locator(".rail-questions").first()).toBeHidden();
@@ -502,7 +502,7 @@ test("in a narrow frame a question's prompt keeps its row, with its comment butt
   const prompt = await q(f, "approach").locator(".question-prompt").boundingBox();
   const meta = await q(f, "approach").locator(".question-meta").boundingBox();
   expect(meta!.y).toBeGreaterThanOrEqual(prompt!.y + prompt!.height);
-  // the counts sit under the title, beside the toggle
+  // the toggle is level with the title, and the counts are below the title
   const toggle = await f.locator(".rail-toggle").boundingBox();
   const title = await f.locator(".feedback-header .pinrail-title").boundingBox();
   const counts = await f.locator(".header-count").boundingBox();
@@ -522,7 +522,7 @@ test("where the questions are narrow, an answered question's buttons go under it
   await expect(preserve.getByRole("button", { name: "Clear answer" })).toBeVisible();
   const prompt = await preserve.locator(".question-prompt").boundingBox();
   const meta = await preserve.locator(".question-meta").boundingBox();
-  // the prompt keeps one line, and the buttons sit under it
+  // the prompt stays on one line, and the buttons are below it
   expect(prompt!.height).toBeLessThan(30);
   expect(meta!.y).toBeGreaterThanOrEqual(prompt!.y + prompt!.height);
 });
@@ -534,7 +534,7 @@ test("a free-text answer and a comment can be dictated, from a microphone in the
   const id = (await answer.getAttribute("data-answer"))!;
   const question = q(f, id);
   await question.locator(".dictate-mic").getByRole("button", { name: "Dictate" }).click();
-  // the view keeps its field while the words come in
+  // the field receives the dictated words as they arrive
   await plugin.say("practical and specific");
   await plugin.say("practical and specific, for small teams");
   await expect(answer).toHaveValue("practical and specific, for small teams");
@@ -542,7 +542,7 @@ test("a free-text answer and a comment can be dictated, from a microphone in the
   await question.getByRole("button", { name: "Stop dictating" }).click();
   await expect.poll(() => plugin.dictating()).toBe(false);
 
-  // a comment, once opened
+  // a comment field, once opened
   const first = f.locator("[data-question]").first();
   await first.getByRole("button", { name: /Add a comment/ }).click();
   await first.locator(".dictate-mic").getByRole("button", { name: "Dictate" }).click();

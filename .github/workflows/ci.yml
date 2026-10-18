@@ -270,7 +270,7 @@ jobs:
         run: |
           node --test scripts/plugin-versions.test.mjs
           node scripts/plugin-versions.mjs
-      # a release removes the What's new notes the app no longer carries
+      # check that a release removes What's new notes the app no longer ships
       - name: What's new pruning
         run: node --test scripts/whats-new.test.mjs
       - name: Plugin tests

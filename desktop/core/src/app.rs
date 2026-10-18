@@ -173,7 +173,7 @@ impl Pinrail {
 }
 
 /// Updates each official plugin to the newest version the app's catalogs
-/// offer, so a new Pinrail brings its plugins' new versions with it. Each
+/// offer, so a new Pinrail release also updates its plugins. Each
 /// review keeps the version it was submitted to. A plugin installed from a
 /// folder, a zip or a link is left alone, and an update that fails leaves
 /// the version installed before.
@@ -252,7 +252,7 @@ mod tests {
     use crate::plugins::carried;
     use serde_json::json;
 
-    /// The version of `list` the app carries.
+    /// The version of `list` the app bundles.
     fn carried_list() -> String {
         let (_, files) = carried()
             .into_iter()
@@ -281,7 +281,7 @@ mod tests {
                     .into_iter()
                     .map(|(path, bytes)| match path.as_str() {
                         "manifest.json" => {
-                            // the same bytes at the carried version, so the bundle is the same
+                            // the same bytes with the bundled version, so the bundle is identical
                             let text = String::from_utf8(bytes).unwrap();
                             let bumped = text.replace(
                                 &format!("\"{}\"", carried_list()),
@@ -378,10 +378,10 @@ mod tests {
         }
     }
 
-    /// The next app carries list 2.0.0, and installs it when it opens: new
-    /// reviews use it, and each review keeps the release it was submitted
-    /// to. An older app opening the data again offers nothing and changes
-    /// nothing.
+    /// The next app bundles list 2.0.0 and installs it at startup. New
+    /// reviews use it, and each review keeps the version it was submitted
+    /// to. An older app that opens the same data installs nothing and
+    /// changes nothing.
     #[test]
     fn a_newer_release_in_the_next_app_is_installed_when_it_opens() {
         let dir = tempfile::tempdir().unwrap();

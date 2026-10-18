@@ -69,13 +69,13 @@ describe("the pictures the app carries", () => {
       ),
     );
     expect(FILES.pictures.filter((file) => !named.has(file))).toEqual([]);
-    // and nothing else sits in a release's folder, such as a PNG left behind
+    // and a release's folder contains no other files, such as a leftover PNG
     const folders = import.meta.glob("../whats-new/*/*", { query: "?url", import: "default" });
     expect(Object.keys(folders).filter((file) => !file.endsWith(".webp"))).toEqual([]);
   });
 
   test("are those of the last few releases only", () => {
-    // three releases, and the notes of the next one while they are written;
+    // three releases, plus the notes of the next one while they are drafted.
     // scripts/set-version.mjs removes the oldest when a release is made
     expect(RELEASES.length).toBeLessThanOrEqual(4);
   });

@@ -1,7 +1,8 @@
-// What's new: the cards of one or more releases, one at a time, newest
-// release first. Each card has a picture in the current theme, a title, a
-// sentence or two, and may open what it is about. ← and → step through the
-// cards; Esc or the close button ends it, as Done does on the last card.
+// The What's new dialog shows the cards of one or more releases one at a
+// time, newest release first. Each card has a picture in the current theme,
+// a title, a short description, and an optional button that opens the
+// feature. ← and → move between cards. Esc, the close button, or Done on
+// the last card closes the dialog.
 
 import { Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +16,7 @@ export function WhatsNewDialog({
   onClose,
 }: {
   releases: Release[];
-  /** opens what a card's button names, after the dialog has closed */
+  /** runs a card's button action after the dialog has closed */
   onAction: (action: CardAction) => void;
   onClose: () => void;
 }) {

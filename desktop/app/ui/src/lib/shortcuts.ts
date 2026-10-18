@@ -151,8 +151,8 @@ export const APP_KEYS = new Set([
   ...["k", ",", "i", "b", "d", "f", "[", "]", "q", "w", "m", "z", "x", "c", "v", "a"].map((k) => combo(k, PRIMARY)),
   ...["h", "p", "m", "l", "z"].map((k) => combo(k, PRIMARY, "shift")),
   ...(isMac ? [combo("h", "cmd"), combo("h", "alt", "cmd"), combo("f", "ctrl", "cmd")] : []),
-  // the review screen: help, rounds, closing, and handing over; J and K
-  // move through the inbox while a review is open beside it
+  // the review screen: help, rounds, closing, and handing over. J and K
+  // move through the inbox while a review is open in its side panel
   "shift+/",
   "[",
   "]",

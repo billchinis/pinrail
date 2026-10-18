@@ -17,8 +17,8 @@ export type MountOptions = {
    *  folder) or `{ path, media_type }`. A fixture's own `attachments` are
    *  served without this. */
   attachments?: Record<string, string | { path: string; media_type?: string }>;
-  /** the app can turn speech into text: "dictation" is in `init.capabilities`,
-   *  and the test speaks with `say()` */
+  /** offer dictation to the view: "dictation" is listed in `init.capabilities`,
+   *  and the test sends text with `say()` */
   dictation?: boolean;
 };
 
@@ -65,13 +65,13 @@ export type MountedPlugin = {
   >;
   /** holds the frame at a height, so a view taller than that has to scroll */
   setFrameHeight(px: number): Promise<void>;
-  /** what the app's recogniser has heard so far in the view's dictation;
-   *  waits a moment for one to start, and throws when the view started
-   *  none. Mount with `dictation: true`. */
+  /** sends the text recognised so far in the view's dictation, as the app's
+   *  recogniser would. Waits briefly for a dictation to start, and throws if
+   *  the view started none. Requires mounting with `dictation: true`. */
   say(text: string): Promise<void>;
-  /** ends the view's dictation, as the recogniser does, with an error when given */
+  /** ends the view's dictation as the recogniser would, with `error` when given */
   endDictation(error?: string): Promise<boolean>;
-  /** a dictation the view asked for is on */
+  /** whether a dictation the view requested is active */
   dictating(): Promise<boolean>;
   /** re-sends init with the last draft, as the shell does after a reload */
   reinit(overrides?: Partial<MountOptions>): Promise<void>;

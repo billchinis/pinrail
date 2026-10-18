@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { core, settingsDialog } from "./helpers";
 
-/** The app as the given release, by what the core says it runs. */
+/** Makes the app run as the given release by changing the version the core reports. */
 async function runAs(page: Page, version: string) {
   await page.route(`${core}/api/v1/info`, async (route) => {
     const info = await (await route.fetch()).json();
@@ -18,7 +18,7 @@ const seenNow = async (page: Page) =>
   ((await (await page.request.get(`${core}/api/v1/settings`)).json()) as { whats_new: { seen: string | null } })
     .whats_new.seen;
 
-// every other spec starts with What's new seen for any release
+// every other spec expects What's new to be marked as seen for any release
 test.afterEach(({ page }) => setSeen(page, "999.0.0"));
 
 test("a new release shows its cards once, one at a time, and a card opens what it is about", async ({ page }) => {
@@ -31,7 +31,7 @@ test("a new release shows its cards once, one at a time, and a card opens what i
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("New in 0.3.0");
   await expect(card).toHaveText("Reviews open beside the inbox");
-  // the picture is the theme's
+  // the image matches the theme
   await expect(dialog.locator("img")).toHaveAttribute("src", /inbox-panel-(light|dark)\.webp/);
 
   await dialog.getByTestId("whats-new-next").click();
@@ -41,13 +41,13 @@ test("a new release shows its cards once, one at a time, and a card opens what i
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("ArrowRight");
 
-  // a card's button closes the dialog and opens what the card is about
+  // a card's button closes the dialog and opens the screen the card describes
   await dialog.getByRole("button", { name: "Open Plugins" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(settingsDialog(page).getByRole("heading", { name: "Plugins" })).toBeVisible();
   await expect.poll(() => seenNow(page)).toBe("0.3.0");
 
-  // once seen, it does not come back
+  // once seen, the dialog does not appear again
   await page.reload();
   await expect(page.getByTestId("inbox-total")).toBeVisible();
   await expect(dialog).toHaveCount(0);
@@ -76,7 +76,7 @@ test("a release with no notes shows nothing, and counts as seen", async ({ page 
 test("the newest notes open again from ⌘K and from Settings › About, without changing what was seen", async ({
   page,
 }) => {
-  // a development build previews them, though the app runs an older release
+  // a development build previews the notes, even though it reports an older release
   await page.goto("/#/");
   await expect(page.getByTestId("inbox-total")).toBeVisible();
   const dialog = page.getByTestId("whats-new");

@@ -47,7 +47,7 @@
   const PROTOCOL = 1;
   /** The key of a client's teardown, for tests. */
   const TEARDOWN = Symbol.for("pinrail.teardown");
-  /** The key of a client's dictation watch, for the microphone buttons. */
+  /** The key of the method that subscribes the microphone buttons to dictation changes. */
   const HEARING = Symbol.for("pinrail.hearing");
   const THEMES = ["dark", "light"];
 
@@ -116,10 +116,10 @@
       settings: {},
       capabilities: [],
     };
-    // the one dictation that is on: its request number, the field it writes
-    // into, the text around the cursor it started at, and how to settle it
+    // the active dictation: its request number, the field it writes into,
+    // the text before and after the cursor at its start, and how to resolve it
     let speaking = null;
-    // told when a dictation starts or ends, for the SDK's microphone buttons
+    // listeners called when a dictation starts or ends, for the microphone buttons
     const hearing = new Set();
     const heard = () => {
       for (const fn of hearing) fn(speaking ? speaking.field : null);
@@ -204,7 +204,7 @@
           state.readonly = !!data.readonly;
           state.settings = settingsOf(data.settings);
           state.capabilities = Array.isArray(data.capabilities) ? data.capabilities.slice() : [];
-          // a review that turned read-only takes no more dictation
+          // a review that became read-only accepts no more dictation
           if (state.readonly && speaking) stopDictating();
           // every JSON value a view kept comes back as it was, false and 0 too
           call("onInit", {
@@ -335,11 +335,11 @@
       });
     }
 
-    /* Dictation: the app listens, and the text it hears goes into a field
-       of the view's at the cursor, replacing what was selected. The field
-       gets an `input` event for each change, so the view's own handlers
-       keep its draft. One field at a time: dictating into another ends the
-       one before, and dictating into the same one again stops it. */
+    /* The app runs speech recognition, and the recognised text is inserted
+       into a field of the view at the cursor, replacing the selection. The
+       field receives an `input` event for each change, so the view's own
+       handlers save its draft. Dictating into another field ends the active
+       dictation, and dictating into the same field again stops it. */
     function dictate(field) {
       if (!field) return Promise.reject(new TypeError("Pinrail: dictate needs a text field"));
       if (speaking && speaking.field === field) {
@@ -361,7 +361,7 @@
       speaking = {
         req: nextAsk++,
         field,
-        // what was said goes after a space, not against the word before
+        // insert a space before the dictated text unless one precedes it
         before: before && !/\s$/.test(before) ? before + " " : before,
         after: value.slice(end),
         done,
@@ -372,14 +372,14 @@
       return done;
     }
 
-    /** Asks the app to stop listening; the last words still arrive. */
+    /** Asks the app to stop the dictation; the final text still arrives. */
     function stopDictating() {
       if (speaking) post({ type: "dictation_stop", req: speaking.req });
     }
 
-    /* A view that draws its field again, as many do on each change, puts a
-       new one with the same id in its place: the dictation follows it.
-       True when it moved. */
+    /* A view that re-renders its field, as many do on each change, replaces
+       it with a new element with the same id, and the dictation moves to
+       that element. Returns true when it moved. */
     function follow() {
       if (!speaking || speaking.field.isConnected !== false || !env.again) return false;
       const next = env.again(speaking.field);
@@ -391,7 +391,7 @@
     function hear(text) {
       if (follow()) heard();
       const { field, before, after } = speaking;
-      // a field gone for good takes nothing more
+      // a field removed from the page receives no more text
       if (field.isConnected === false) {
         if (!speaking.stopping) stopDictating();
         speaking.stopping = true;
@@ -446,7 +446,7 @@
       get settings() {
         return state.settings;
       },
-      /** the app can turn speech into text for this view */
+      /** whether the app can run dictation for this view */
       get canDictate() {
         return state.capabilities.includes("dictation") && !state.readonly;
       },
@@ -455,9 +455,9 @@
         follow();
         return speaking ? speaking.field : null;
       },
-      /* Starts dictating into a text field, at its cursor, or stops when it
-         is the field already dictated into. Resolves when the dictation
-         ends, with `error` when it failed. */
+      /* Starts dictation into a text field at its cursor, or stops it when
+         that field is already being dictated into. Resolves when the
+         dictation ends, with `error` when it failed. */
       dictate,
       stopDictating,
       /* Asks the app to keep a setting of this plugin's. The app checks it
@@ -498,8 +498,8 @@
       [TEARDOWN]() {
         for (const stop of undo.splice(0)) stop();
       },
-      /* Told the field a dictation writes into whenever it changes, and
-         null when none does: for the SDK's microphone buttons. */
+      /* Subscribes a listener to the field a dictation writes into, which
+         is null when no dictation is active. The microphone buttons use it. */
       [HEARING](fn) {
         hearing.add(fn);
         return () => hearing.delete(fn);
@@ -909,9 +909,9 @@
       applyTheme: (theme) => {
         doc.documentElement.dataset.theme = theme;
       },
-      // dictated text, as the view's own handlers hear typing
+      // sends an input event for dictated text, as typing would
       changed: (field) => field.dispatchEvent(new win.Event("input", { bubbles: true })),
-      // the field a view drew in the place of one that is gone: the same id
+      // finds, by its id, the field a view rendered in place of a removed one
       again: (field) => (field.id ? doc.getElementById(field.id) : null),
       dispatchKey: (key) => {
         const event = new win.KeyboardEvent("keydown", Object.assign({ bubbles: true, cancelable: true }, key));
@@ -994,10 +994,11 @@
     };
   }
 
-  // the keys the app answers on the review screen, which a view passes up:
-  // help, the rounds, J and K, which move through the inbox, and Esc, which
-  // closes the inbox's panel. A view that uses one, such as Esc to close a
-  // dialog of its own, keeps it with preventDefault.
+  // the shortcuts the app handles on the review screen, which a view
+  // forwards to it: ? for help, [ and ] for the rounds, J and K to move
+  // through the inbox, and Esc to close the inbox's panel. A view that
+  // handles one itself, such as Esc to close its own dialog, calls
+  // preventDefault to keep it.
   const APP_KEYS = ["?", "[", "]", "j", "k", "Escape"];
 
   /* A document connects once. A second connect() is a mistake to catch
@@ -1014,7 +1015,7 @@
     connected = true;
     const plugin = createPlugin(browserEnv(root), handlers);
     if (root.document && root.MutationObserver) microphones(root, plugin);
-    // Esc stops a dictation before the view hears it: the next Esc is the view's
+    // Esc stops a dictation before the view receives it; the next Esc goes to the view
     root.addEventListener(
       "keydown",
       (event) => {
@@ -1031,12 +1032,12 @@
   const MIC =
     '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg>';
 
-  /* A microphone button for every text field marked data-pinrail-dictate,
-     while the app can dictate: a click dictates into the field, and a second
-     click stops. It goes into the element marked data-pinrail-dictate-for
-     with the field's id, when the view has one, and otherwise after the
-     field. The buttons follow the view as it draws its fields again, and
-     show which field is being dictated into. */
+  /* Adds a microphone button to every text field marked data-pinrail-dictate
+     while the app supports dictation. A click starts dictation into the
+     field, and a second click stops it. The button is placed in the element
+     marked data-pinrail-dictate-for with the field's id, if there is one,
+     and otherwise after the field. The buttons are updated when the view
+     re-renders its fields, and show which field is being dictated into. */
   function microphones(win, plugin) {
     const doc = win.document;
     const fieldOf = new WeakMap();
@@ -1062,8 +1063,8 @@
       button.innerHTML = MIC;
       fieldOf.set(button, field);
       buttonOf.set(field, button);
-      // the field keeps the focus while the button is pressed: a view that
-      // closes or tidies a field when it loses focus is left alone
+      // keep the focus in the field while the button is pressed, so a view
+      // that closes or cleans up a field on blur does not react
       button.addEventListener("mousedown", (event) => event.preventDefault());
       button.addEventListener("click", () => {
         void plugin.dictate(field);
@@ -1087,7 +1088,7 @@
         if (slot) slot.replaceChildren(button);
         else field.after(button);
       }
-      // a button whose field went with a redraw goes too
+      // remove a button whose field a re-render removed
       for (const button of doc.querySelectorAll("button.pinrail-dictate"))
         if (!fieldOf.get(button) || !fieldOf.get(button).isConnected) button.remove();
       sync();
@@ -1108,7 +1109,7 @@
       attributeFilter: ["data-pinrail-dictate", "data-pinrail-dictate-for", "id", "disabled", "readonly"],
     });
     plugin[HEARING](sync);
-    // init brings what the app can do
+    // the init message carries the app's capabilities
     win.addEventListener("message", later);
     later();
   }

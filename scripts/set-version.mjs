@@ -78,7 +78,7 @@ write("desktop/app/src-tauri/tauri.conf.json", /("version":\s*)"[^"]*"/, `$1"${v
 run("npm", ["version", version, "--no-git-tag-version", "--allow-same-version"], path.join(root, "desktop", "app"));
 
 for (const file of stamping ? stampChangelogs(root, plugins, version) : []) console.log(`named ${version} in ${file}`);
-// What's new keeps the last releases' notes; the release commit removes the rest
+// keep What's new notes for the last releases; the release commit removes the rest
 for (const file of stamping ? prune(root, version) : []) {
   released.push(file);
   console.log(`removed ${file}`);

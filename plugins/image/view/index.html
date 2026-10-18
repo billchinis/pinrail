@@ -45,8 +45,8 @@
 
   .sheet { overflow-y: auto; min-height: 0; }
   .sheet-inner { max-width: 1180px; margin: 0 auto; padding: 22px 28px 28px; display: grid; gap: 18px; }
-  /* the round's notes, across the whole width under the header; they fold
-     away to a line that starts them */
+  /* the round's notes, at full width under the header. They fold to a
+     single line that shows their beginning */
   .notes { flex: none; color: var(--pinrail-dim); font-size: 13px; line-height: 1.6; border-bottom: 1px solid var(--pinrail-border); border-left: 3px solid var(--pinrail-accent); background: var(--pinrail-bg-panel); }
   .notes summary { display: flex; align-items: center; gap: 6px; padding: 7px 20px 7px 14px; cursor: pointer; list-style: none; min-width: 0; }
   .notes summary::-webkit-details-marker { display: none; }
@@ -148,8 +148,8 @@
   .image-note > :first-child { margin-top: 0; } .image-note > :last-child { margin-bottom: 0; }
   .image-note.is-editable { cursor: text; }
   .image-note.is-editable:hover { border-left-color: var(--pinrail-accent); }
-  /* the app's microphone, where the app can dictate: in the note's corner,
-     and among the region comment's actions */
+  /* the app's microphone, when the app provides dictation, in the note's
+     corner and among the region comment's actions */
   .dictate-field { position: relative; display: block; }
   .dictate-field:has(.pinrail-dictate) #note { padding-right: 40px; }
   .dictate-mic { position: absolute; top: 6px; right: 6px; }
@@ -157,8 +157,8 @@
   #note { width: 100%; min-height: 44px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--pinrail-border); background: var(--pinrail-bg-raised); color: var(--pinrail-text); font: 13.5px/1.5 var(--pinrail-sans); box-sizing: border-box; }
 
   /* below 820 pixels, such as in the inbox's side panel, the whole view
-     scrolls as one: the header, the notes and the strip of images go by,
-     and the image gets the frame */
+     scrolls as one, so the header, the notes and the strip of images scroll
+     away and the image fills the frame */
   @media (max-width: 820px) {
     .shell { display: block; overflow-y: auto; }
     .work { display: block; }
@@ -171,9 +171,9 @@
     .foot .hint { display: none; }
   }
   /* below 520 pixels the stage runs edge to edge, and the zoom moves to its
-     foot, in place of the file's details, which the File section below
-     repeats; the buttons drop their keyboard hints, which their tooltips
-     keep; and the margins and the strip's thumbnails are smaller */
+     foot in place of the file's details, which the File section below
+     repeats. The buttons hide their keyboard hints, which their tooltips
+     still show, and the margins and the strip's thumbnails are smaller */
   @media (max-width: 520px) {
     .sheet-inner { padding: 16px 14px 24px; }
     .stage { margin-inline: -14px; border-radius: 0; box-shadow: inset 0 1px 0 var(--pinrail-border), inset 0 -1px 0 var(--pinrail-border); }
@@ -273,7 +273,7 @@ function shownImage() {
 }
 function fitScale(e) {
   const W = stage.clientWidth, H = stage.clientHeight;
-  // room for the bars above and below; a narrow stage gives the sides less
+  // leave room for the bars above and below, and less at the sides when narrow
   const side = W < 480 ? 16 : 48;
   return Math.min((W - side) / e.width, (H - 96) / e.height);
 }
@@ -651,8 +651,8 @@ function renderTop() {
     </div>`;
 }
 
-/* The round's notes under the header. They fold away to one line, and the
-   view remembers which way the person left them. */
+/* The round's notes under the header. They fold to one line, and the view
+   remembers whether the user left them open or folded. */
 function renderNotes() {
   if (!P.notes) return "";
   const html = Pinrail.markdown(P.notes);
@@ -766,7 +766,7 @@ function render() {
 function draw() {
   const sheet = document.getElementById("sheet");
   const scroll = sheet ? sheet.scrollTop : 0;
-  // in a narrow frame the whole view scrolls, and keeps its place
+  // in a narrow frame the whole view scrolls, so keep its scroll position
   const app = document.getElementById("app");
   const appScroll = app.scrollTop;
   const railEl = document.querySelector(".rail");
@@ -792,7 +792,7 @@ function draw() {
   stage.classList.toggle("panning", plugin.readonly || S.compare || S.pan);
   stage.setAttribute("aria-label", `${P.images[S.sel].name}${S.compare ? ", previous round" : ""}. ${plugin.readonly ? "" : "Drag a box or click a spot to comment."}`);
   document.getElementById("stage-slot").replaceWith(stage);
-  // with the stage back in place, the view is as tall as it was
+  // restore the scroll position once the stage is back at its full height
   app.scrollTop = appScroll;
   stageImage();
   if (S.picking) {

@@ -4,11 +4,12 @@ import path from "node:path";
 import { reviewFrom, mountPlugin } from "pinrail-sdk/testing";
 import { scratch } from "./scratch.cjs";
 
-// Dictation into a view's field, with the harness as the app's recogniser:
-// the SDK's microphone after a field marked data-pinrail-dictate, the text
-// at the cursor, and the view's own input handler keeping its draft.
+// Dictation into a view's field, with the harness as the app's recogniser.
+// Covers the SDK's microphone button after a field marked
+// data-pinrail-dictate, text inserted at the cursor, and the view's own
+// input handler saving its draft.
 
-/** A view with one note field the SDK can dictate into, which drafts as it is typed. */
+/** A view with one note field for dictation, which saves a draft on each input. */
 function notePlugin(): string {
   const dir = scratch("pinrail-dictation-");
   fs.mkdirSync(path.join(dir, "view"), { recursive: true });
@@ -41,7 +42,7 @@ test("a field marked for dictation gets a microphone, and what is said goes in a
   await plugin.say("the staging");
   await plugin.say("the staging bucket");
   await expect(note).toHaveValue("Keep it the staging bucket");
-  // the view's own input handler heard it, and kept the draft
+  // the view's own input handler received it and saved the draft
   await expect.poll(() => plugin.lastDraft()).toEqual({ note: "Keep it the staging bucket" });
 
   // a second click stops it
@@ -78,7 +79,7 @@ test("a field the view draws again keeps its microphone", async ({ page }) => {
 test("a placeholder that names the field holds its microphone, wherever the view puts it", async ({ page }) => {
   const plugin = await mountPlugin(page, notePlugin(), { review: reviewFrom({ payload: {} }), dictation: true });
   const f = plugin.frame;
-  // the view draws a toolbar above its field, with a place for the microphone
+  // the view renders a toolbar above its field, with a slot for the microphone
   await f.locator("body").evaluate((body) => {
     body.querySelector("div")!.innerHTML =
       '<div class="tools"><span id="slot" data-pinrail-dictate-for="comment"></span></div>' +
@@ -86,14 +87,14 @@ test("a placeholder that names the field holds its microphone, wherever the view
   });
   const mic = f.locator("#slot").getByRole("button", { name: "Dictate" });
   await expect(mic).toBeVisible();
-  // not after the field as well
+  // and not after the field as well
   await expect(f.getByRole("button", { name: "Dictate" })).toHaveCount(1);
   await mic.click();
   await plugin.say("a placeholder");
   await expect(f.getByRole("textbox", { name: "comment" })).toHaveValue("a placeholder");
   await expect(f.locator("#slot").getByRole("button", { name: "Stop dictating" })).toBeVisible();
 
-  // drawn again, it is filled again
+  // when the toolbar is rendered again, the slot is filled again
   await plugin.endDictation();
   await f.locator("body").evaluate((body) => {
     body.querySelector("div")!.innerHTML =
@@ -106,7 +107,7 @@ test("a placeholder that names the field holds its microphone, wherever the view
 
 test("a field the view draws again on every change keeps the dictation, by its id", async ({ page }) => {
   const dir = notePlugin();
-  // this view draws its field again on each input, as many views do
+  // this view re-renders its field on each input, as many views do
   fs.writeFileSync(
     path.join(dir, "view", "index.html"),
     `<!doctype html>

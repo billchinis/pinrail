@@ -108,8 +108,8 @@ export async function seed(app) {
       ...(f.revises ? { revises: created[f.revises] } : {}),
     });
     created[f.key] = review.id;
-    // `decided_with` names the client that decided, and who and from which
-    // session it says it did, when it was not the app
+    // `decided_with`, for a decision not made in the app, names the client
+    // that sent it and the user and session that the client reports
     if (f.decision)
       await app.api(
         "POST",
@@ -118,7 +118,7 @@ export async function seed(app) {
         f.decided_with?.client,
       );
     if (f.discard) await app.api("POST", `/api/v1/reviews/${review.id}/discard`, { reason: f.discard });
-    // the agent that asked withdraws, with the pinrail command
+    // the requesting agent withdraws the review with the pinrail command
     if (f.withdraw)
       await app.api("POST", `/api/v1/reviews/${review.id}/withdraw`, { reason: f.withdraw, by: f.requested_by }, "cli");
     plan[review.id] = { created: ms(f.age), ...(f.decided ? { outcome: ms(f.decided) } : {}) };

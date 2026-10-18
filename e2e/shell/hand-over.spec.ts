@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { clearInbox, createReview, onReviewPages } from "./helpers";
 
-// a review opened from the inbox or the sidebar is followed on its own page
+// these tests open a review from the inbox or the sidebar on a page of its own
 onReviewPages();
 
 test("handing over a decision returns to the inbox", async ({ page }) => {

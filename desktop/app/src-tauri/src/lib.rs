@@ -598,8 +598,8 @@ pub fn run() {
 }
 
 /// The standard menus plus a Navigate menu, whose accelerators reach the
-/// shell even while a plugin view has the keyboard, and What's New and Send
-/// Feedback in the Help menu.
+/// shell even while a plugin view has focus, and What's New and Send
+/// Feedback items in the Help menu.
 fn app_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let menu = Menu::default(app)?;
     let navigate = Submenu::with_items(

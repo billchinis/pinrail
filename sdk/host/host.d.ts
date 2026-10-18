@@ -61,13 +61,14 @@ export type HostOptions = {
   /** every message, as it comes in from the view or goes out to it */
   observe?: (direction: "in" | "out", message: AppMessage | PluginMessage) => void;
   capabilities?: Capability[];
-  /** listens for the view: starts turning speech into text, gives the
-   *  listener the text so far as it grows, then `done` with an error when it
-   *  failed, and returns how to stop. With it, `init` names "dictation". */
+  /** runs speech recognition for the view: starts it, sends the listener the
+   *  text recognised so far each time it grows, then `done`, with `error` when
+   *  it failed, and returns a function that stops it. When set, `init` lists
+   *  "dictation". */
   dictation?: (listener: (event: { text: string } | { done: true; error?: string }) => void) => () => void;
-  /** whether `dictation` can listen now, read at each `init`; true without it */
+  /** whether `dictation` is available now, checked at each `init`; true when omitted */
   canDictate?: () => boolean;
-  /** a dictation the view asked for started, or ended */
+  /** called when a dictation the view requested starts or ends */
   onDictation?: (listening: boolean) => void;
 };
 
@@ -97,9 +98,9 @@ export type Host = {
   readonly handingOver: boolean;
   /** a request for the decision is open */
   readonly collecting: boolean;
-  /** stops the view's dictation; its last words and its end still come */
+  /** stops the view's dictation; the final text and the end message still arrive */
   stopDictation(): void;
-  /** a dictation the view asked for is on */
+  /** whether a dictation the view requested is active */
   readonly dictating: boolean;
 };
 

@@ -33,9 +33,9 @@ import { currentTheme } from "../lib/theme";
 import { modalOpen } from "../lib/keys";
 import { canDictate, listen } from "../lib/dictation";
 
-/** The app's review-screen keys a view may pass up: help, the rounds, and
- *  J and K for the inbox, which come plain, and discarding and finding,
- *  which come with ⌘ or Ctrl. */
+/** The review-screen shortcuts a view may forward to the app. Help, the
+ *  rounds, and J and K for the inbox come without a modifier. Discard and
+ *  find come with ⌘ or Ctrl. */
 const VIEW_APP_KEYS = ["?", "[", "]", "j", "k", "Escape"];
 const VIEW_APP_MOD_KEYS = ["d", "f"];
 
@@ -64,7 +64,7 @@ type Options = {
   onSetSetting: (patch: Record<string, unknown>) => Promise<Violation[]>;
   /** the view asks to open a link; the screen decides whether it opens */
   onOpen: (url: string) => void;
-  /** a dictation the view asked for failed: the message to show */
+  /** shows the message of a failed dictation the view requested */
   onDictationError?: (message: string) => void;
 };
 
@@ -87,7 +87,7 @@ export type Bridge = {
   find: (query: string, backwards?: boolean) => void;
   /** what the view found for the latest search; null before it answers */
   found: Found | null;
-  /** the view is dictating into one of its fields */
+  /** whether the view is dictating into one of its fields */
   dictating: boolean;
   /** stops the view's dictation */
   stopDictation: () => void;
@@ -239,8 +239,8 @@ export function usePluginBridge(options: Options): Bridge {
       // the view may only ever write its own settings: the handler fills in
       // the plugin's name, and the core checks the values
       setSettings: (patch) => latest.current.onSetSetting(patch),
-      // the view's frame cannot listen itself: the app listens for it, and
-      // shows that it does
+      // a sandboxed frame cannot use speech recognition, so the app runs it
+      // on the view's behalf and shows that it is listening
       dictation: canDictate
         ? (listener) =>
             listen((heard) => {

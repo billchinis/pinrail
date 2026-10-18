@@ -808,8 +808,8 @@ mod shortcuts {
         Ok(out)
     }
 
-    /// The keys that move through the inbox while a review is open beside
-    /// it. A view passes them up to the app, so none may mean anything else.
+    /// The keys that move through the inbox while a review is open in its
+    /// side panel. A view forwards them to the app, so none may use them.
     const RESERVED: &[&str] = &["j", "k", "shift+j", "shift+k"];
 
     /// The order the shell writes a key press in, so a declared combination
@@ -1599,7 +1599,7 @@ mod tests {
                 r#","shortcuts":[{"keys":"n","does":"x","group":3}]"#,
                 "shortcuts/0/group:",
             ),
-            // J and K move through the inbox, from a view too
+            // J and K move through the inbox, and a view forwards them
             (
                 r#","shortcuts":[{"keys":"j","does":"Next"}]"#,
                 "use n and p",

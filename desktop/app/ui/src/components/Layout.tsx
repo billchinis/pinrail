@@ -103,9 +103,9 @@ export function Layout({ children }: { children: ReactNode }) {
     </Tooltip>
   );
 
-  // What's new, once per release that has notes: asked when the settings
-  // first arrive. A fresh install has nothing new to show, and starts
-  // counting from the release it installed.
+  // Show What's new once for each release that has notes, when the settings
+  // first load. A fresh install shows nothing and records the installed
+  // release as seen.
   const [whatsNew, setWhatsNew] = useState<Release[] | null>(null);
   const [running, setRunning] = useState<string | null>(null);
   const newsAsked = useRef(false);
@@ -120,12 +120,12 @@ export function Layout({ children }: { children: ReactNode }) {
         setRunning(version);
         const releases = releasesToShow(RELEASES, version, seen, fresh);
         if (releases.length) setWhatsNew(releases);
-        // a release with nothing new still counts as seen; never one older than recorded
+        // record a release without notes as seen, but never an older one than recorded
         else if (!seen || compareVersions(seen, version) < 0) void update({ whats_new: { seen: version } });
       })
       .catch(() => {});
   }, [loaded, prefs.welcome.seen, prefs.whats_new.seen, update]);
-  // asked for from the menu, the palette or Settings › About
+  // opened from the menu, the command palette or Settings › About
   const latest = running ? latestNotes(RELEASES, running, import.meta.env.DEV) : [];
   const openWhatsNew = () => {
     if (latest.length) setWhatsNew(latest);
@@ -227,7 +227,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   // The reviews waiting, oldest first, the order the global shortcut uses;
   // kept in a ref so the key handler below sees the current list.
-  // the review on screen, on its page or in the inbox's panel
+  // the review shown, on its own page or in the inbox's side panel
   const shown = reviewShown(location.pathname, location.search);
   const waiting = useMemo(
     () => [...live.pending].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)),
@@ -249,7 +249,7 @@ export function Layout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // ⌥↓ and ⌥↑ walk the waiting reviews from wherever you are
-      // the inbox walks its own list while a review is open in its panel
+      // the inbox handles them itself while a review is open in its side panel
       if (event.defaultPrevented) return;
       if (event.altKey && !hasMod(event) && !event.shiftKey && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
         const list = waitingRef.current;

@@ -47,13 +47,13 @@ export async function decide(request: APIRequestContext, id: string, data: unkno
   expect(response.status(), await response.text()).toBe(200);
 }
 
-/** Sets where the inbox opens a review: its panel, the default, or a page. */
+/** Sets where the inbox opens a review: in its side panel (the default) or on a page. */
 export async function openReviewsIn(request: APIRequestContext, where: "panel" | "page") {
   const response = await request.patch(`${core}/api/v1/settings`, { data: { inbox: { open_in: where } } });
   expect(response.status(), await response.text()).toBe(200);
 }
 
-/** These specs follow a review opened as a page: each sets it, and puts the default back. */
+/** Opens reviews on a page for each test in the spec, and restores the default after it. */
 export function onReviewPages() {
   test.beforeEach(({ request }) => openReviewsIn(request, "page"));
   test.afterEach(({ request }) => openReviewsIn(request, "panel"));

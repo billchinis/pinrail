@@ -446,7 +446,7 @@ test("submitted carries the decision as a view sees it", async () => {
   assert.deepEqual(last("submitted").decision, { data: { ok: true }, decided_by: "me", decided_at: "now" });
 });
 
-/** A host that can dictate, with a fake recogniser the test speaks into. */
+/** A host with dictation, using a fake recogniser that the test sends text to. */
 function dictating(overrides = {}) {
   const ear = { listener: null, stops: 0, listening: [] };
   const made = host({
@@ -488,7 +488,7 @@ test("the view hears the text so far as it grows, then that the dictation is don
   assert.equal(h.dictating, true);
   ear.listener({ text: "keep the" });
   ear.listener({ text: "keep the staging bucket" });
-  // the view asks to stop: the recogniser stops, and its end still comes
+  // the view asks to stop; the recogniser stops, and the end message still arrives
   from({ type: "dictation_stop", req: 4 });
   assert.equal(ear.stops, 1);
   ear.listener({ done: true });
@@ -502,7 +502,7 @@ test("the view hears the text so far as it grows, then that the dictation is don
   );
   assert.equal(h.dictating, false);
   assert.deepEqual(ear.listening, [true, false]);
-  // nothing after the end counts
+  // text after the end is ignored
   ear.listener({ text: "late" });
   assert.equal(dictation().length, 3);
 });
@@ -551,7 +551,7 @@ test("a dictation stops when the app stops it, when the review turns read-only, 
   three.from({ type: "ready" });
   assert.equal(three.h.dictating, false);
   assert.equal(three.ear.stops, 1);
-  // the page that left is told nothing
+  // a page that has unloaded is sent nothing
   assert.equal(three.dictation().length, 0);
   assert.deepEqual(three.ear.listening, [true, false]);
 });
