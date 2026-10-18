@@ -138,6 +138,16 @@ const AGENTS: &[Agent] = &[
         reads: &[],
         also_reads: None,
     },
+    Agent {
+        id: "augment",
+        name: "Augment CLI",
+        config: ".augment",
+        skills: ".augment/skills",
+        reads: &[],
+        // Augment also reads ~/.claude/skills and loads the first skill of
+        // a name it finds, so installing in both folders does not duplicate it
+        also_reads: Some("claude"),
+    },
 ];
 
 /// One agent, as Settings shows it.
@@ -659,6 +669,20 @@ mod tests {
         let path = home.path().join(".kiro/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
         assert_eq!(state(home.path(), "kiro").state, State::Connected);
+    }
+
+    #[test]
+    fn augment_gets_its_own_skill_beside_claude_codes() {
+        let home = home_with(&[".claude", ".augment"]);
+        connect(home.path(), "claude").unwrap();
+        let augment = state(home.path(), "augment");
+        assert!(augment.found);
+        assert_eq!(augment.state, State::Absent);
+        assert_eq!(augment.also_reads, Some("Claude Code"));
+        connect(home.path(), "augment").unwrap();
+        let path = home.path().join(".augment/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "augment").state, State::Connected);
     }
 
     #[test]
