@@ -8,6 +8,7 @@ import amp from "../assets/agents/amp.svg?raw";
 import antigravity from "../assets/agents/antigravity.svg?raw";
 import augment from "../assets/agents/augment.svg?raw";
 import claude from "../assets/agents/claude.svg?raw";
+import cline from "../assets/agents/cline.svg?raw";
 import codex from "../assets/agents/codex.svg?raw";
 import copilot from "../assets/agents/copilot.svg?raw";
 import cursor from "../assets/agents/cursor.svg?raw";
@@ -35,6 +36,7 @@ const AGENTS: Record<string, { label: string; svg: string }> = {
   kiro: { label: "Kiro CLI", svg: kiro },
   augment: { label: "Augment CLI", svg: augment },
   auggie: { label: "Augment CLI", svg: augment },
+  cline: { label: "Cline", svg: cline },
 };
 
 /** The agent a requester names, when the app knows it. */

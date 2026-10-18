@@ -133,6 +133,8 @@ fn pinrail() -> Command {
         .env_remove("COPILOT_AGENT_SESSION_ID")
         .env_remove("KIRO_SESSION_ID")
         .env_remove("AUGMENT_AGENT")
+        .env_remove("CLINE_ACTIVE")
+        .env_remove("CLINE_WRAPPER_PATH")
         .env_remove("CLAUDE_CODE_SESSION_ID")
         .env_remove("CODEX_SESSION_ID")
         .env_remove("OPENCODE_SESSION_ID")

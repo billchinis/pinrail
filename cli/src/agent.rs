@@ -5,7 +5,7 @@
 //! agent's own markers. An agent none of these name asks as `pinrail-cli`.
 
 /// The name a review gives each agent Pinrail knows, as the app shows it.
-const KNOWN: [(&str, &str); 13] = [
+const KNOWN: [(&str, &str); 14] = [
     ("claude-code", "claude"),
     ("codex", "codex"),
     ("cursor", "cursor"),
@@ -19,10 +19,11 @@ const KNOWN: [(&str, &str); 13] = [
     ("copilot", "copilot"),
     ("kiro", "kiro"),
     ("augment", "auggie"),
+    ("cline", "cline"),
 ];
 
 /// Each agent's own markers, in the order they are checked.
-const MARKERS: [(&str, &[&str]); 12] = [
+const MARKERS: [(&str, &[&str]); 13] = [
     // before Claude Code: older versions of Amp also set CLAUDECODE
     ("amp", &["AMP_CURRENT_THREAD_ID"]),
     ("claude-code", &["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]),
@@ -39,6 +40,9 @@ const MARKERS: [(&str, &[&str]); 12] = [
     ("copilot", &["COPILOT_CLI"]),
     ("kiro", &["KIRO_SESSION_ID"]),
     ("augment", &["AUGMENT_AGENT"]),
+    // CLINE_ACTIVE on the terminals of Cline's VS Code extension, and
+    // CLINE_WRAPPER_PATH from the launcher of its CLI
+    ("cline", &["CLINE_ACTIVE", "CLINE_WRAPPER_PATH"]),
     // Goose's shell tool sets only AGENT_SESSION_ID; GOOSE_TERMINAL and
     // AGENT=goose are set for its other commands. Checked last, since the
     // name is generic.
@@ -191,6 +195,14 @@ mod tests {
             Some("augment")
         );
         assert_eq!(detect(&[("AGENT", "auggie")]).as_deref(), Some("augment"));
+        assert_eq!(
+            detect(&[("CLINE_ACTIVE", "true")]).as_deref(),
+            Some("cline")
+        );
+        assert_eq!(
+            detect(&[("CLINE_WRAPPER_PATH", "/usr/local/bin/cline")]).as_deref(),
+            Some("cline")
+        );
         // the only variable Goose's shell tool sets
         assert_eq!(
             detect(&[("AGENT_SESSION_ID", "20260217_5")]).as_deref(),
