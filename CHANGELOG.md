@@ -16,6 +16,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 - Support for the Pi coding agent. Settings › Agents installs the
   `pinrail` skill to `~/.pi/agent/skills`, and reviews submitted from Pi
   show its name and icon.
+- Support for Goose. Settings › Agents installs the `pinrail` skill to
+  `~/.config/goose/skills`, and reviews submitted from Goose show its
+  name and icon.
 
 - What's new: the first time a new release starts, Pinrail shows a few
   cards about what changed, one at a time, each with a screenshot and a

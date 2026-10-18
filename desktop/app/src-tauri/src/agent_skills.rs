@@ -100,6 +100,17 @@ const AGENTS: &[Agent] = &[
         reads: &[],
         also_reads: None,
     },
+    Agent {
+        id: "goose",
+        name: "Goose",
+        config: ".config/goose",
+        // not ~/.agents/skills, which other agents read too
+        skills: ".config/goose/skills",
+        reads: &[],
+        // Goose also reads ~/.claude/skills and loads the first skill of a
+        // name it finds, so installing in both folders does not duplicate it
+        also_reads: Some("claude"),
+    },
 ];
 
 /// One agent, as Settings shows it.
@@ -573,6 +584,20 @@ mod tests {
         disconnect(home.path(), "cursor").unwrap();
         connect(home.path(), "grok").unwrap();
         assert_eq!(state(home.path(), "grok").state, State::Connected);
+    }
+
+    #[test]
+    fn goose_gets_its_own_skill_beside_claude_codes() {
+        let home = home_with(&[".claude", ".config/goose"]);
+        connect(home.path(), "claude").unwrap();
+        let goose = state(home.path(), "goose");
+        assert!(goose.found);
+        assert_eq!(goose.state, State::Absent);
+        assert_eq!(goose.also_reads, Some("Claude Code"));
+        connect(home.path(), "goose").unwrap();
+        let path = home.path().join(".config/goose/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "goose").state, State::Connected);
     }
 
     #[test]
