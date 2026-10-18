@@ -31,6 +31,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 - Support for Augment CLI (Auggie). Settings › Agents installs the
   `pinrail` skill to `~/.augment/skills`, and reviews submitted from
   Augment CLI show its name and icon.
+- Support for Cline. Settings › Agents installs the `pinrail` skill to
+  `~/.cline/skills`, and reviews submitted from Cline show its name and
+  icon.
 
 - What's new: the first time a new release starts, Pinrail shows a few
   cards about what changed, one at a time, each with a screenshot and a

@@ -148,6 +148,14 @@ const AGENTS: &[Agent] = &[
         // a name it finds, so installing in both folders does not duplicate it
         also_reads: Some("claude"),
     },
+    Agent {
+        id: "cline",
+        name: "Cline",
+        config: ".cline",
+        skills: ".cline/skills",
+        reads: &[],
+        also_reads: None,
+    },
 ];
 
 /// One agent, as Settings shows it.
@@ -683,6 +691,16 @@ mod tests {
         let path = home.path().join(".augment/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
         assert_eq!(state(home.path(), "augment").state, State::Connected);
+    }
+
+    #[test]
+    fn cline_keeps_its_skills_in_its_folder() {
+        let home = home_with(&[".cline"]);
+        assert!(state(home.path(), "cline").found);
+        connect(home.path(), "cline").unwrap();
+        let path = home.path().join(".cline/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "cline").state, State::Connected);
     }
 
     #[test]
