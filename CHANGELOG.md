@@ -22,6 +22,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 - Support for Amp. Settings › Agents installs the `pinrail` skill to
   `~/.config/amp/skills`, and reviews submitted from Amp show its name
   and icon.
+- Support for GitHub Copilot CLI. Settings › Agents installs the
+  `pinrail` skill to `~/.copilot/skills`, and reviews submitted from
+  Copilot CLI show its name and icon.
 
 - What's new: the first time a new release starts, Pinrail shows a few
   cards about what changed, one at a time, each with a screenshot and a

@@ -122,6 +122,14 @@ const AGENTS: &[Agent] = &[
         // name it finds, so installing in both folders does not duplicate it
         also_reads: Some("claude"),
     },
+    Agent {
+        id: "copilot",
+        name: "Copilot CLI",
+        config: ".copilot",
+        skills: ".copilot/skills",
+        reads: &[],
+        also_reads: None,
+    },
 ];
 
 /// One agent, as Settings shows it.
@@ -623,6 +631,16 @@ mod tests {
         let path = home.path().join(".config/amp/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
         assert_eq!(state(home.path(), "amp").state, State::Connected);
+    }
+
+    #[test]
+    fn copilot_cli_keeps_its_skills_in_its_folder() {
+        let home = home_with(&[".copilot"]);
+        assert!(state(home.path(), "copilot").found);
+        connect(home.path(), "copilot").unwrap();
+        let path = home.path().join(".copilot/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "copilot").state, State::Connected);
     }
 
     #[test]
