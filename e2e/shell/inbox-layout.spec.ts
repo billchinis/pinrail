@@ -58,3 +58,23 @@ test("⌘D discards the focused review, but not from behind a dialog, and D alon
   await expect(discard).toBeVisible();
   await expect(discard).toContainText("Quiet keys");
 });
+
+test("a row's details stay on one line beside the panel, and only the project shortens", async ({ page }) => {
+  await clearInbox(page.request);
+  await createReview(page.request, {
+    title: "Posts announcing the release, with every draft",
+    origin: { repo: "a-project-with-a-long-name", workflow: "outreach" },
+  });
+  await page.setViewportSize({ width: 1100, height: 600 });
+  await page.goto("/#/");
+  await page.getByRole("radio", { name: "One list" }).click();
+  const row = page.getByTestId("review-row");
+  await row.click();
+  await expect(page.getByTestId("review-panel")).toBeVisible();
+  const meta = row.locator(".review-row-meta");
+  const lineHeight = await meta.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight) || 16);
+  expect((await meta.boundingBox())!.height).toBeLessThan(lineHeight * 1.5);
+  const project = row.getByTestId("review-row-project");
+  expect(await project.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect(meta).toContainText("outreach");
+});
