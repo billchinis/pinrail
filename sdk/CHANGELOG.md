@@ -4,7 +4,7 @@ The package's version is the SDK's, and its major is the protocol's:
 `1.x` speaks protocol 1, served by the app at `/sdk/v1`. A breaking
 change to the protocol is a new major and a new path.
 
-## [Unreleased]
+## [1.2.0]
 
 ### Added
 
@@ -14,9 +14,9 @@ change to the protocol is a new major and a new path.
   `dictation` messages carrying the text heard so far, then that it is
   done. In the SDK, a text field marked `data-pinrail-dictate` gets a
   microphone button, after it or inside an element marked
-  `data-pinrail-dictate-for` with the field's id, and `plugin.dictate(field)`, `plugin.stopDictating()`,
-  `plugin.canDictate` and `plugin.dictating` serve a control of the
-  view's own. The text goes in at the cursor, with an `input` event for
+  `data-pinrail-dictate-for` with the field's id, and
+  `plugin.dictate(field)`, `plugin.stopDictating()`, `plugin.canDictate`
+  and `plugin.dictating` serve a control of the view's own. The text goes in at the cursor, with an `input` event for
   each change. A field the view draws again with the same `id` keeps the
   dictation, and Esc stops it before the view hears the key. The host
   takes a `dictation` listener and reports `onDictation`. The test
