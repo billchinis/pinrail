@@ -4,6 +4,8 @@ import type { Attachment, Capability, Decision, PluginMessage, Review, AppMessag
 
 export const PROTOCOL: 1;
 export const CAPABILITIES: Capability[];
+/** the longest text a view can copy, in characters */
+export const CLIPBOARD_TEXT_MAX: number;
 /** how long a view has to answer a request for its decision */
 export const COLLECT_TIMEOUT_MS: number;
 
@@ -70,6 +72,13 @@ export type HostOptions = {
   canDictate?: () => boolean;
   /** called when a dictation the view requested starts or ends */
   onDictation?: (listening: boolean) => void;
+  /** copies for the view: its text, or the bytes of an image the review
+   *  carries. Give it only to a plugin whose manifest declares the
+   *  "clipboard" capability. When set, `init` lists "clipboard". */
+  clipboard?: (content: { text: string } | { image: ArrayBuffer; media_type: string; name: string }) => Promise<void>;
+  /** whether `clipboard` is offered now, checked at each `init` and copy;
+   *  true when omitted. A host that learns the plugin later decides here. */
+  canCopy?: () => boolean;
 };
 
 export type Host = {

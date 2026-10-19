@@ -10,13 +10,15 @@
 //                    defer {req} | status {label} | settings_set {patch} |
 //                    key {key, code, metaKey, ctrlKey, shiftKey} |
 //                    attachment {req, name, round?: "previous"} |
-//                    found {req, count, current}
+//                    found {req, count, current} |
+//                    clipboard_write {req, text} | {req, attachment}
 //   shell -> plugin: init {review, previous, readonly, draft, settings, app_origin,
 //                          capabilities} |
 //                    violations {errors} | submitted {decision} | collect {req} |
 //                    appearance {theme} | settings {settings} |
 //                    attachment {req, ok, name, media_type, size, bytes} | {req, ok: false, error} |
-//                    find {req, query, backwards}
+//                    find {req, query, backwards} |
+//                    clipboard {req, ok} | {req, ok: false, error}
 //
 // A view cannot fetch anything, so a file its review carries comes this way:
 // the view asks by name, the shell fetches it from the core (only names the
@@ -31,6 +33,7 @@ import { api } from "../api/client";
 import type { Decision, Review, Violation } from "../api/types";
 import { currentTheme } from "../lib/theme";
 import { modalOpen } from "../lib/keys";
+import { copyImage, copyText } from "../lib/clipboard";
 import { canDictate, listen } from "../lib/dictation";
 
 /** The review-screen shortcuts a view may forward to the app. Help, the
@@ -66,6 +69,11 @@ type Options = {
   onOpen: (url: string) => void;
   /** shows the message of a failed dictation the view requested */
   onDictationError?: (message: string) => void;
+  /** the plugin's manifest declares the "clipboard" capability, so the app
+   *  copies for its view; the frame cannot reach the clipboard itself */
+  canCopy?: boolean;
+  /** tells the person what the view copied: the text, or the image by name */
+  onCopied?: (what: { text: string } | { image: string }) => void;
 };
 
 export type Bridge = {
@@ -107,6 +115,8 @@ export function usePluginBridge(options: Options): Bridge {
     onSetSetting,
     onOpen,
     onDictationError,
+    canCopy = false,
+    onCopied,
   } = options;
   const [loaded, setLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -128,6 +138,8 @@ export function usePluginBridge(options: Options): Bridge {
     onSetSetting,
     onOpen,
     onDictationError,
+    canCopy,
+    onCopied,
   });
   latest.current = {
     review,
@@ -139,6 +151,8 @@ export function usePluginBridge(options: Options): Bridge {
     onSetSetting,
     onOpen,
     onDictationError,
+    canCopy,
+    onCopied,
   };
 
   const draftKey = () => DRAFT_PREFIX + (latest.current.review?.id ?? "");
@@ -249,6 +263,19 @@ export function usePluginBridge(options: Options): Bridge {
             })
         : undefined,
       onDictation: setDictating,
+      // offered only to a plugin that declares the capability; every copy is
+      // shown to the person, since the frame cannot prove a click asked for it
+      clipboard: latest.current.canCopy
+        ? async (content) => {
+            if ("text" in content) {
+              await copyText(content.text);
+              latest.current.onCopied?.({ text: content.text });
+            } else {
+              await copyImage(content.image, content.media_type);
+              latest.current.onCopied?.({ image: content.name });
+            }
+          }
+        : undefined,
       label: setHandoverLabel,
       // one of the app's own keys, pressed inside the view: the app acts on
       // it as if pressed in its window; nothing else is accepted

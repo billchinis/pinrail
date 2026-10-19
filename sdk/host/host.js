@@ -16,8 +16,12 @@ export const PROTOCOL = 1;
 /** The capabilities every host offers a view beyond protocol 1, currently
  *  none. Each later addition is listed in `init.capabilities`, so a view can
  *  check whether the app it runs in supports it. A host with speech
- *  recognition adds "dictation". */
+ *  recognition adds "dictation", and one that copies for the view adds
+ *  "clipboard". */
 export const CAPABILITIES = [];
+
+/** The longest text a view can copy, in characters. */
+export const CLIPBOARD_TEXT_MAX = 1_000_000;
 
 /** How long a view has to answer a request for its decision. */
 export const COLLECT_TIMEOUT_MS = 60_000;
@@ -85,6 +89,8 @@ export function createHost(options) {
     dictation,
     canDictate = () => true,
     onDictation,
+    clipboard,
+    canCopy = () => true,
     capabilities = CAPABILITIES,
     collectTimeout = COLLECT_TIMEOUT_MS,
     setTimer = (fn, ms) => setTimeout(fn, ms),
@@ -172,7 +178,10 @@ export function createHost(options) {
 
   function capabilitiesNow() {
     const base = typeof capabilities === "function" ? capabilities() : capabilities;
-    return dictation && canDictate() && !base.includes("dictation") ? [...base, "dictation"] : base;
+    const offered = [...base];
+    if (dictation && canDictate() && !offered.includes("dictation")) offered.push("dictation");
+    if (clipboard && canCopy() && !offered.includes("clipboard")) offered.push("clipboard");
+    return offered;
   }
 
   /* The view requests a dictation, the host runs speech recognition through
@@ -244,6 +253,44 @@ export function createHost(options) {
       ]);
     } catch (error) {
       fail(error instanceof Error ? error.message : `could not fetch ${name}`);
+    }
+  }
+
+  /* The view asks to put text, or an image the review carries, on the
+     clipboard: its frame cannot reach the clipboard itself. The host copies
+     through `clipboard`, which only a host that lets this plugin copy is
+     given, and answers with the request's number. A decided review's text
+     can be copied too: it is what the person goes on to publish. */
+  async function answerClipboard(msg) {
+    const { req, text, attachment } = msg;
+    if (typeof req !== "number") return;
+    const fail = (error) => send({ type: "clipboard", req, ok: false, error });
+    if (!clipboard || !canCopy()) return fail("this app does not let the view copy to the clipboard");
+    const isText = typeof text === "string";
+    const isFile = typeof attachment === "string";
+    if (isText === isFile) return fail("a copy is either text or an attachment of the review");
+    let content;
+    if (isText) {
+      if (text.length > CLIPBOARD_TEXT_MAX) return fail(`the text is longer than ${CLIPBOARD_TEXT_MAX} characters`);
+      content = { text };
+    } else {
+      const from = review();
+      const listed = from && (from.attachments || []).find((a) => a.name === attachment);
+      if (!listed) return fail(`no attachment "${attachment}" on this review`);
+      if (!/^image\//.test(listed.media_type || ""))
+        return fail(`only an image can be copied, and ${attachment} is ${listed.media_type || "not an image"}`);
+      if (!file) return fail(`could not fetch ${attachment}`);
+      try {
+        content = { image: await file(from, listed, "current"), media_type: listed.media_type, name: listed.name };
+      } catch (error) {
+        return fail(error instanceof Error ? error.message : `could not fetch ${attachment}`);
+      }
+    }
+    try {
+      await clipboard(content);
+      send({ type: "clipboard", req, ok: true });
+    } catch (error) {
+      fail(error instanceof Error ? error.message : "could not copy to the clipboard");
     }
   }
 
@@ -343,6 +390,9 @@ export function createHost(options) {
         break;
       case "dictation_stop":
         if (dictating && msg.req === dictating.req) stopDictation();
+        break;
+      case "clipboard_write":
+        void answerClipboard(msg);
         break;
       case "submit":
         void answerSubmit(msg);

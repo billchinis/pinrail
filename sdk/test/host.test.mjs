@@ -555,3 +555,126 @@ test("a dictation stops when the app stops it, when the review turns read-only, 
   assert.equal(three.dictation().length, 0);
   assert.deepEqual(three.ear.listening, [true, false]);
 });
+
+/** A host that can copy, with what it was given to copy. */
+function copying(overrides = {}) {
+  const copied = [];
+  const png = { name: "card.png", media_type: "image/png", size: 4 };
+  const notes = { name: "notes.txt", media_type: "text/plain", size: 2 };
+  const made = host({
+    ...overrides,
+    state: { review: { ...review, attachments: [png, notes] }, ...overrides.state },
+    options: {
+      clipboard: async (content) => {
+        copied.push(content);
+      },
+      file: async () => new Uint8Array([137, 80, 78, 71]).buffer,
+      ...overrides.options,
+    },
+  });
+  return { ...made, copied };
+}
+
+test("a host that can copy says so in init, and one that cannot refuses a copy", async () => {
+  const can = copying();
+  can.from({ type: "ready" });
+  assert.deepEqual(can.last("init").capabilities, ["clipboard"]);
+
+  const cannot = host();
+  cannot.from({ type: "ready" });
+  cannot.from({ type: "clipboard_write", req: 1, text: "hi" });
+  await tick();
+  assert.deepEqual(cannot.last("clipboard"), {
+    pinrail: PROTOCOL,
+    type: "clipboard",
+    req: 1,
+    ok: false,
+    error: "this app does not let the view copy to the clipboard",
+  });
+});
+
+test("the view's text is copied, in a read-only review too", async () => {
+  const { from, last, copied, state } = copying();
+  from({ type: "ready" });
+  from({ type: "clipboard_write", req: 2, text: "Pinrail 0.3.0 is out." });
+  await tick();
+  assert.deepEqual(copied, [{ text: "Pinrail 0.3.0 is out." }]);
+  assert.deepEqual(last("clipboard"), { pinrail: PROTOCOL, type: "clipboard", req: 2, ok: true });
+
+  // a decided review's text is what the person copies to publish
+  state.readonly = true;
+  from({ type: "clipboard_write", req: 3, text: "again" });
+  await tick();
+  assert.equal(last("clipboard").ok, true);
+});
+
+test("an image the review carries is copied by its name, with its bytes and type", async () => {
+  const { from, last, copied } = copying();
+  from({ type: "ready" });
+  from({ type: "clipboard_write", req: 5, attachment: "card.png" });
+  await tick();
+  assert.equal(copied.length, 1);
+  assert.equal(copied[0].media_type, "image/png");
+  assert.equal(copied[0].name, "card.png");
+  assert.deepEqual([...new Uint8Array(copied[0].image)], [137, 80, 78, 71]);
+  assert.equal(last("clipboard").ok, true);
+});
+
+test("a copy of anything else is refused with the reason", async () => {
+  const { from, last, copied } = copying();
+  from({ type: "ready" });
+  const refused = async (msg) => {
+    from({ type: "clipboard_write", ...msg });
+    await tick();
+    const answer = last("clipboard");
+    assert.equal(answer.req, msg.req);
+    assert.equal(answer.ok, false);
+    return answer.error;
+  };
+  assert.equal(await refused({ req: 1 }), "a copy is either text or an attachment of the review");
+  assert.equal(
+    await refused({ req: 2, text: "a", attachment: "card.png" }),
+    "a copy is either text or an attachment of the review",
+  );
+  assert.equal(await refused({ req: 3, attachment: "missing.png" }), 'no attachment "missing.png" on this review');
+  assert.equal(
+    await refused({ req: 4, attachment: "notes.txt" }),
+    "only an image can be copied, and notes.txt is text/plain",
+  );
+  assert.equal(await refused({ req: 5, text: "x".repeat(1_000_001) }), "the text is longer than 1000000 characters");
+  assert.deepEqual(copied, []);
+  // a request without a number is not answered at all
+  from({ type: "clipboard_write", text: "a" });
+  await tick();
+  assert.equal(last("clipboard").req, 5);
+});
+
+test("a copy that fails says why", async () => {
+  const { from, last } = copying({
+    options: {
+      clipboard: async () => {
+        throw new Error("the clipboard is busy");
+      },
+    },
+  });
+  from({ type: "ready" });
+  from({ type: "clipboard_write", req: 7, text: "a" });
+  await tick();
+  assert.deepEqual(last("clipboard"), {
+    pinrail: PROTOCOL,
+    type: "clipboard",
+    req: 7,
+    ok: false,
+    error: "the clipboard is busy",
+  });
+});
+
+test("a host whose plugin may not copy offers no clipboard and refuses a copy", async () => {
+  const { from, last, copied } = copying({ options: { canCopy: () => false } });
+  from({ type: "ready" });
+  assert.deepEqual(last("init").capabilities, []);
+  from({ type: "clipboard_write", req: 1, text: "a" });
+  await tick();
+  assert.equal(last("clipboard").error, "this app does not let the view copy to the clipboard");
+  assert.deepEqual(copied, []);
+});

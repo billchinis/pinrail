@@ -12,7 +12,7 @@ The CLI suites run the `pinrail` command against the server
 | Suite | What it checks |
 |---|---|
 | `tests/cli.spec.ts` | submitting and waiting, two waiters, withdrawing, discarding, timeouts, refused payloads, Markdown output and installing plugins |
-| `tests/preview.spec.ts` | a review's preview in a browser: the view receives the review, and handing over checks the decision without deciding anything |
+| `tests/preview.spec.ts` | a review's preview in a browser: the view receives the review, handing over checks the decision without deciding anything, and a view that declares the clipboard copies its text |
 | `tests/zz-restart.spec.ts` | a wait that continues when the server is stopped and started again |
 
 The global setup builds the CLI and the desktop app if needed, starts the
@@ -29,6 +29,7 @@ The app suites run the app's UI from Vite against a headless server
 |---|---|
 | `shell/decide.spec.ts` | deciding in a plugin's view and handing over, a refused decision, forwarded shortcuts, drafts across a reload, a review withdrawn while open, and a CLI waiter receiving the decision |
 | `shell/sandbox.spec.ts` | a plugin view's sandbox: no network, no storage and no access to the app, including the plugin's own files opened as a page |
+| `shell/clipboard.spec.ts` | copying a view's text and an image of its review, with a notice for each, for a plugin that declares the `clipboard` capability and for no other |
 | `shell/attachments.spec.ts` | a view receives the files its review carries, and only those |
 | `shell/review-switch.spec.ts` | moving between reviews loads the right view and carries nothing over |
 | `shell/new-round.spec.ts` | a new round of the open review appears in the round switcher |

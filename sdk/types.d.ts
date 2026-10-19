@@ -48,6 +48,9 @@ export type Manifest = {
   settings_schema?: Record<string, unknown>;
   /** the keys the view answers, listed by the app and forwarded when the frame has no focus */
   shortcuts?: Shortcut[];
+  /** what the view may ask the app to do beyond the protocol, granted only to
+   *  a plugin that declares it: "clipboard" lets it ask the app to copy */
+  capabilities?: string[];
   /** marks a plugin under development in the app's listings */
   dev?: boolean;
   /** when an agent should ask with this plugin, for `pinrail plugins describe` */
@@ -137,7 +140,9 @@ export type Init<Payload = unknown, Data = unknown> = {
 };
 
 /** A capability the app offers a view beyond protocol 1, listed in `init`.
- *  "dictation" means the app can turn speech into text for the view. */
+ *  "dictation" means the app can turn speech into text for the view.
+ *  "clipboard" means the app copies text and images for the view, which it
+ *  offers only to a plugin whose manifest declares the capability. */
 export type Capability = string;
 
 export type Violation = { path: string; message: string };
@@ -183,7 +188,10 @@ export type AppMessage =
   /** the text recognised so far in the dictation with this `req`, sent as it grows */
   | { pinrail: Protocol; type: "dictation"; req: number; text: string }
   /** the dictation with this `req` has ended, with `error` when it failed */
-  | { pinrail: Protocol; type: "dictation"; req: number; done: true; error?: string };
+  | { pinrail: Protocol; type: "dictation"; req: number; done: true; error?: string }
+  /** the answer to `clipboard_write` with the same `req` */
+  | { pinrail: Protocol; type: "clipboard"; req: number; ok: true }
+  | { pinrail: Protocol; type: "clipboard"; req: number; ok: false; error: string };
 
 /** Plugin → shell, over `postMessage`. */
 export type PluginMessage =
@@ -239,7 +247,11 @@ export type PluginMessage =
   /** asks the app to start a dictation; requires "dictation" in `init.capabilities` */
   | { pinrail: Protocol; type: "dictation_start"; req: number }
   /** asks the app to stop the dictation with this `req` */
-  | { pinrail: Protocol; type: "dictation_stop"; req: number };
+  | { pinrail: Protocol; type: "dictation_stop"; req: number }
+  /** asks the app to copy text, or an image the review carries by its name;
+   *  requires "clipboard" in `init.capabilities` */
+  | { pinrail: Protocol; type: "clipboard_write"; req: number; text: string }
+  | { pinrail: Protocol; type: "clipboard_write"; req: number; attachment: string };
 
 // ---------------------------------------------------------------- the SDK
 
@@ -275,6 +287,14 @@ export type Plugin<Payload = unknown, Data = unknown> = {
   /** asks the app to keep one setting: the settings as they now stand, or
    *  a rejection whose error carries the `violations` */
   setSetting(key: string, value: string | number | boolean): Promise<Settings>;
+  /** whether the app copies to the clipboard for this view, which requires
+   *  "clipboard" in `init.capabilities`: the manifest declares the capability
+   *  and the app offers it */
+  readonly canCopy: boolean;
+  /** asks the app to copy text, or an image the review carries, by its
+   *  attachment name. Resolves once it is copied, and rejects with why not,
+   *  such as an app that does not let this plugin copy. */
+  copy(content: { text: string } | { attachment: string }): Promise<void>;
   /** whether the app can run dictation for this view, which requires
    *  "dictation" in `init.capabilities` and a review that is not read-only */
   readonly canDictate: boolean;

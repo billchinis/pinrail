@@ -251,9 +251,28 @@ function listen(listener) {
   return () => recognition.stop();
 }
 
+/** An image as PNG, the one type a browser puts on the clipboard. */
+async function asPng(bytes, mediaType) {
+  const blob = new Blob([bytes], { type: mediaType });
+  if (mediaType === "image/png") return blob;
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  return new Promise((resolve, reject) => canvas.toBlob((png) => (png ? resolve(png) : reject(new Error("cannot encode the image as PNG"))), "image/png"));
+}
+
 const host = connectFrame(frame, {
   origin: location.origin,
   dictation: Recognition ? listen : undefined,
+  // as the app: copies for a plugin whose manifest declares "clipboard",
+  // to this browser's clipboard, which this page can reach and the frame cannot
+  canCopy: () => Array.isArray(manifest.capabilities) && manifest.capabilities.includes("clipboard"),
+  clipboard: async (content) => {
+    if ("text" in content) await navigator.clipboard.writeText(content.text);
+    else await navigator.clipboard.write([new ClipboardItem({ "image/png": asPng(content.image, content.media_type) })]);
+  },
   review: () => review,
   previous: () => previous,
   readonly,

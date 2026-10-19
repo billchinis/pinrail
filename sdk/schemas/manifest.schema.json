@@ -56,6 +56,13 @@
         }
       }
     },
+    "capabilities": {
+      "type": ["array", "null"],
+      "description": "What the plugin's view may ask the app to do beyond the protocol. The app grants each one only to a plugin that declares it. With `clipboard`, the view can ask the app to copy text, or an image the review carries, to the clipboard. A name this Pinrail does not know is ignored, and `pinrail plugins check` warns about it.",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "examples": [["clipboard"]]
+    },
     "summary": {
       "type": ["object", "null"],
       "additionalProperties": false,

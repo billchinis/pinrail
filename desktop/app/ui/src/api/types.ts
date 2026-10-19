@@ -121,6 +121,11 @@ export type Plugin = {
   /** the keys the view answers, as the manifest declares them */
   shortcuts: PluginShortcut[];
   shortcuts_error: string | null;
+  /** what the view may ask the app to do beyond the protocol, as far as this
+   *  Pinrail grants it, such as "clipboard"; the app offers each only to a
+   *  plugin that declares it */
+  capabilities?: string[];
+  capabilities_error?: string | null;
   /** the files it takes beside a payload, as the manifest declares them; null for none */
   attachments?: AttachmentRules | null;
   /** the names of the sample reviews it ships, which anyone can send to see it, in order */

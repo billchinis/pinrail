@@ -9,6 +9,14 @@ wait for a release, and takes the version's name when it is tagged.
 
 The `pinrail` command ships inside the app and carries the app's version.
 
+## [Unreleased]
+
+### Added
+
+- Plugins can copy to the clipboard. A plugin that declares the
+  `clipboard` capability can copy the text or images of a review, and the
+  app shows a notice for each copy.
+
 ## [0.3.0]
 
 ### Added

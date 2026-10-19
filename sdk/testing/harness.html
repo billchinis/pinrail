@@ -20,6 +20,8 @@ let lastOpen = null;
 let lastSettingsSet = null;
 // the listener of the active dictation, or null
 let speaker = null;
+// what the view copied, in order: its text, or an image by name
+const copied = [];
 // the test waiting on handOver(): resolved with what became of the request
 let waiting = null;
 // the test waiting on collect(): resolved once the view has answered
@@ -100,6 +102,16 @@ const host = connectFrame(frame, {
       }
     };
   },
+  // as the app, for a plugin whose manifest declares "clipboard": the
+  // copy is recorded rather than put on the clipboard
+  canCopy: () => !!(pending && pending.clipboard),
+  clipboard: async (content) => {
+    copied.push(
+      "text" in content
+        ? { text: content.text }
+        : { image: content.name, media_type: content.media_type, size: content.image.byteLength },
+    );
+  },
   observe: (direction, msg) => {
     if (direction !== "in") return;
     log.push(msg);
@@ -132,6 +144,7 @@ window.__shell = {
   lastStatus: () => lastStatus,
   lastOpen: () => lastOpen,
   lastSettingsSet: () => lastSettingsSet,
+  copied: () => copied.slice(),
   /* the plugin's settings changed in the app: the values as they stand */
   settings(values) { host.send({ type: "settings", settings: values }); },
   /* a declared shortcut pressed while the shell had focus, as "shift+a" or "j" */

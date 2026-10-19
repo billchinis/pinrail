@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+import { scratch } from "../helpers/scratch";
 import { loadState } from "../helpers/state";
 
 // A review in a browser, as an agent with a browser tool sees it: the
@@ -36,4 +39,57 @@ test("a preview of no review says so", async ({ page }) => {
   const { url } = loadState();
   await page.goto(`${url}/preview/reviews/r_nope`);
   await expect(page.locator("main")).toHaveText("No review r_nope.");
+});
+
+// The preview copies for a view whose manifest declares the clipboard, as
+// the app does, with the browser's own clipboard.
+test("a preview copies the text of a view that declares the clipboard", async ({ page, context }) => {
+  const { url } = loadState();
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: url });
+  const dir = scratch("pinrail-preview-copier-");
+  fs.mkdirSync(path.join(dir, "view"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "schemas"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "schemas", "payload.schema.json"), "{}");
+  fs.writeFileSync(path.join(dir, "schemas", "decision.schema.json"), "{}");
+  fs.writeFileSync(
+    path.join(dir, "manifest.json"),
+    JSON.stringify({ name: "preview-copier", version: "1.0.0", capabilities: ["clipboard"] }),
+  );
+  fs.writeFileSync(
+    path.join(dir, "view", "index.html"),
+    `<!doctype html><meta charset="utf-8"><script src="/sdk/v1/pinrail-plugin.js"></script>
+<button id="copy">Copy</button><pre id="out"></pre>
+<script>
+  const plugin = Pinrail.connect({});
+  document.getElementById("copy").onclick = () =>
+    plugin.copy({ text: "from the preview" }).then(
+      () => (document.getElementById("out").textContent = "copied"),
+      (e) => (document.getElementById("out").textContent = "refused: " + e.message),
+    );
+</script>`,
+  );
+  const installed = await fetch(`${url}/api/v1/plugins/install`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ source: dir, link: true }),
+  });
+  expect(installed.status, await installed.text()).toBe(200);
+  const created = await (
+    await fetch(`${url}/api/v1/reviews`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        plugin: "preview-copier",
+        title: "Copy from a preview",
+        requested_by: "spec",
+        payload: {},
+      }),
+    })
+  ).json();
+
+  await page.goto(`${url}/preview/reviews/${created.id}`);
+  const view = page.frameLocator("#view");
+  await view.getByRole("button", { name: "Copy" }).click();
+  await expect(view.locator("#out")).toHaveText("copied");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("from the preview");
 });

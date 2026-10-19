@@ -51,7 +51,7 @@ import { connectFrame } from "/preview/host.js";
 const id = decodeURIComponent(location.pathname.split("/").pop());
 const frame = document.getElementById("view");
 const button = document.getElementById("handover");
-let review = null, previous = null, settings = {};
+let review = null, previous = null, settings = {}, capabilities = [];
 
 // a link a view asks for opens out in the world, never back to this machine
 const followable = (url) => {
@@ -69,6 +69,18 @@ const json = async (path, options) => {
   return { ok: response.ok, status: response.status, body };
 };
 const readonly = () => !review || review.status !== "pending";
+
+/** An image as PNG, the one type a browser puts on the clipboard. */
+async function asPng(bytes, mediaType) {
+  const blob = new Blob([bytes], { type: mediaType });
+  if (mediaType === "image/png") return blob;
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  return new Promise((resolve, reject) => canvas.toBlob((png) => (png ? resolve(png) : reject(new Error("cannot encode the image as PNG"))), "image/png"));
+}
 
 function showDecided() {
   const foot = document.getElementById("foot");
@@ -100,6 +112,13 @@ const host = connectFrame(frame, {
   label: (text) => (button.textContent = `Check: ${text}`),
   open: (url) => {
     if (followable(url)) window.open(url, "_blank", "noreferrer");
+  },
+  // the browser's clipboard, for a plugin that declares the capability, as
+  // in the app; this page is not sandboxed, so it can reach the clipboard
+  canCopy: () => capabilities.includes("clipboard"),
+  clipboard: async (content) => {
+    if ("text" in content) await navigator.clipboard.writeText(content.text);
+    else await navigator.clipboard.write([new ClipboardItem({ "image/png": asPng(content.image, content.media_type) })]);
   },
   file: async (from, listed) => {
     const response = await fetch(`/api/v1/reviews/${encodeURIComponent(from.id)}/attachments/${encodeURIComponent(listed.name)}`);
@@ -163,6 +182,7 @@ matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
   const listed = await json("/api/v1/plugins");
   const installed = ((listed.body && listed.body.plugins) || []).find((p) => p.name === review.plugin) || {};
   settings = installed.settings || {};
+  capabilities = installed.capabilities || [];
   document.title = `${review.title} · Pinrail`;
   document.getElementById("title").textContent = review.title;
   document.getElementById("meta").textContent = `${review.plugin} ${review.plugin_version} · ${review.status}`;

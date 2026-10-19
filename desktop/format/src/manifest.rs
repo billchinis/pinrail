@@ -36,6 +36,13 @@ pub struct Plugin {
     /// focus. `shortcuts_error` says why a declared list was dropped.
     pub shortcuts: Vec<Value>,
     pub shortcuts_error: Option<String>,
+    /// What the view may ask the app to do beyond the protocol (the
+    /// manifest's `capabilities`), as far as this Pinrail grants it: each
+    /// one the manifest names and [`CAPABILITIES`] lists. The app offers a
+    /// capability only to a plugin that declares it. `capabilities_error`
+    /// says which names were ignored, or why the list was dropped.
+    pub capabilities: Vec<String>,
+    pub capabilities_error: Option<String>,
     /// The plugin's own markdown rendering of a decision (the manifest's
     /// `decision_template`, a MiniJinja file beside it), compiled at load;
     /// `template_error` says why a declared one was dropped.
@@ -205,6 +212,8 @@ impl Plugin {
                 settings_error: None,
                 shortcuts: Vec::new(),
                 shortcuts_error: None,
+                capabilities: Vec::new(),
+                capabilities_error: None,
                 decision_template: None,
                 template_error: None,
                 summary: Default::default(),
@@ -347,6 +356,15 @@ impl Plugin {
                 Err(message) => (Vec::new(), Some(message)),
             },
         };
+        // a bad list costs the plugin its capabilities, and a name this
+        // Pinrail does not grant, such as a newer one, is only ignored
+        let (capabilities, capabilities_error) = match manifest.get("capabilities") {
+            _ if shape.dropped.contains_key("capabilities") => {
+                (Vec::new(), shape.dropped.get("capabilities").cloned())
+            }
+            None | Some(Value::Null) => (Vec::new(), None),
+            Some(raw) => capabilities_of(raw),
+        };
         let (decision_template, template_error) = if dir.join(TEMPLATE).exists() {
             match read_inside(dir, TEMPLATE) {
                 Ok(source) => match crate::compile_template(&source) {
@@ -406,6 +424,8 @@ impl Plugin {
             settings_error,
             shortcuts,
             shortcuts_error,
+            capabilities,
+            capabilities_error,
             decision_template,
             template_error,
             summary,
@@ -570,6 +590,7 @@ impl Plugin {
         let warnings: Vec<Value> = [
             ("settings_schema", &self.settings_error),
             ("shortcuts", &self.shortcuts_error),
+            ("capabilities", &self.capabilities_error),
             ("template", &self.template_error),
             ("summary", &self.summary_error),
             ("icon", &self.icon_error),
@@ -626,6 +647,8 @@ impl Plugin {
             "settings_error": self.settings_error,
             "shortcuts": self.shortcuts,
             "shortcuts_error": self.shortcuts_error,
+            "capabilities": self.capabilities,
+            "capabilities_error": self.capabilities_error,
             "template_error": self.template_error,
             "summary_error": self.summary_error,
             "description": self.manifest.get("description"),
@@ -637,6 +660,35 @@ impl Plugin {
             "install": self.install.as_ref().map(Install::to_json),
         })
     }
+}
+
+/// The capabilities this Pinrail grants a plugin that declares them.
+/// `clipboard`: the app copies text, or an image the review carries, for
+/// the view, whose frame cannot reach the clipboard.
+pub const CAPABILITIES: &[&str] = &["clipboard"];
+
+/// The capabilities a list the schema accepted names, and a warning that
+/// names those this Pinrail does not grant.
+fn capabilities_of(raw: &Value) -> (Vec<String>, Option<String>) {
+    let names: Vec<&str> = raw
+        .as_array()
+        .map(|list| list.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    let (known, unknown): (Vec<&str>, Vec<&str>) = names
+        .into_iter()
+        .partition(|name| CAPABILITIES.contains(name));
+    let error = (!unknown.is_empty()).then(|| {
+        let listed: Vec<String> = unknown.iter().map(|name| format!("{name:?}")).collect();
+        format!(
+            "{} not a capability this Pinrail grants, so it is ignored",
+            if listed.len() == 1 {
+                format!("{} is", listed[0])
+            } else {
+                format!("{} are", listed.join(", "))
+            }
+        )
+    });
+    (known.into_iter().map(str::to_string).collect(), error)
 }
 
 /// The largest icon file the app takes: an icon is a few paths.
@@ -697,7 +749,7 @@ mod shape {
     pub const SCHEMA: &str = include_str!(concat!(env!("OUT_DIR"), "/manifest.schema.json"));
 
     /// Keys whose violation costs the plugin that feature, not its place.
-    pub const FEATURES: &[&str] = &["settings_schema", "shortcuts", "summary"];
+    pub const FEATURES: &[&str] = &["settings_schema", "shortcuts", "capabilities", "summary"];
 
     pub struct Shape {
         /// violations that refuse the plugin, as `path: message`
@@ -1244,6 +1296,16 @@ mod tests {
             ),
             (json!({"summary": 3}), "summary", "summary: "),
             (
+                json!({"capabilities": "clipboard"}),
+                "capabilities",
+                "capabilities: ",
+            ),
+            (
+                json!({"capabilities": ["clipboard", "clipboard"]}),
+                "capabilities",
+                "capabilities: ",
+            ),
+            (
                 json!({"summary": {"request": {"counts": [{"items": "/a", "label": "x", "tone": "red"}]}}}),
                 "summary",
                 "summary/request/counts/0: tone",
@@ -1261,6 +1323,7 @@ mod tests {
                 "settings_schema" => p.settings_error.clone(),
                 "shortcuts" => p.shortcuts_error.clone(),
                 "summary" => p.summary_error.clone(),
+                "capabilities" => p.capabilities_error.clone(),
                 _ => p.template_error.clone(),
             }
             .unwrap_or_default();
@@ -1276,6 +1339,38 @@ mod tests {
         assert!(p.decision_template.is_none());
         let why = p.template_error.unwrap_or_default();
         assert!(why.starts_with("templates/decision.md.j2: "), "{why}");
+    }
+
+    #[test]
+    fn the_capabilities_this_pinrail_grants_are_kept_and_any_other_is_ignored() {
+        use serde_json::json;
+        let tmp = tempfile::tempdir().unwrap();
+        let none = Plugin::load(&with_manifest(tmp.path(), "none", manifest(json!({}))));
+        assert!(none.capabilities.is_empty());
+        assert_eq!(none.capabilities_error, None);
+        assert_eq!(none.to_json()["capabilities"], json!([]));
+
+        let dir = with_manifest(
+            tmp.path(),
+            "copies",
+            manifest(json!({"capabilities": ["clipboard", "telepathy"]})),
+        );
+        let p = Plugin::load(&dir);
+        assert!(p.usable(), "{:?}", p.error);
+        assert_eq!(p.capabilities, vec!["clipboard".to_string()]);
+        assert_eq!(p.to_json()["capabilities"], json!(["clipboard"]));
+        let why = p.capabilities_error.clone().unwrap_or_default();
+        assert!(why.contains("\"telepathy\""), "{why}");
+        // the check warns about the name, and the plugin is still taken
+        let warnings = p.verdict()["warnings"].clone();
+        assert!(
+            warnings
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|w| w["key"] == "capabilities"),
+            "{warnings}"
+        );
     }
 
     #[test]

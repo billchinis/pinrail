@@ -295,6 +295,8 @@ function PluginEntry({
       <span className="danger">Sample ignored: {p.sample_errors.join("; ")}</span>
     ) : p.attachment_errors?.length ? (
       <span className="danger">Files: {p.attachment_errors.join("; ")}</span>
+    ) : p.capabilities_error ? (
+      <span className="danger">Capabilities: {p.capabilities_error}</span>
     ) : null);
 
   return (
@@ -420,6 +422,12 @@ function PluginEntry({
               <>
                 <dt>Files</dt>
                 <dd data-testid="plugin-takes">{takes(p.attachments)}</dd>
+              </>
+            ) : null}
+            {p.capabilities?.includes("clipboard") ? (
+              <>
+                <dt>Clipboard</dt>
+                <dd data-testid="plugin-clipboard">Can copy text and images from its reviews</dd>
               </>
             ) : null}
             {links.length ? (

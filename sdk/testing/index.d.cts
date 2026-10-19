@@ -38,6 +38,9 @@ export type MountedPlugin = {
   lastOpen(): Promise<string | null>;
   /** the last setting the view asked the shell to keep, as a patch */
   lastSettingsSet(): Promise<Settings | null>;
+  /** what the view copied, in order, when its manifest declares the
+   *  "clipboard" capability: its text, or an image the review carries */
+  copied(): Promise<({ text: string } | { image: string; media_type: string; size: number })[]>;
   /** the plugin's settings changed in the app: sends them as they stand */
   settings(values: Settings): Promise<void>;
   /** a declared shortcut pressed while the shell had focus: "j", "shift+a";

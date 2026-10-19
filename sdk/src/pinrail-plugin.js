@@ -128,6 +128,8 @@
     // number, which the two share
     const asked = new Map();
     const changing = new Map();
+    // copies waiting on the app, by request number
+    const copying = new Map();
     let nextAsk = 1;
 
     const post = (msg) => env.post(Object.assign({ pinrail: PROTOCOL }, msg), state.appOrigin || "*");
@@ -285,6 +287,15 @@
           answer(env.find ? env.find(data.query, !!data.backwards, answer) : { count: 0, current: 0 });
           break;
         }
+        case "clipboard": {
+          // the app's answer to copy(): copied, or why not
+          const waiting = copying.get(data.req);
+          if (!waiting) break;
+          copying.delete(data.req);
+          if (data.ok) waiting.resolve();
+          else waiting.reject(new Error(typeof data.error === "string" ? data.error : "the app could not copy"));
+          break;
+        }
         case "dictation":
           if (!speaking || data.req !== speaking.req) break;
           if (typeof data.text === "string") hear(data.text);
@@ -332,6 +343,32 @@
         const req = nextAsk++;
         asked.set(req, { resolve, reject, name });
         post(Object.assign({ type: "attachment", req, name }, round === "previous" ? { round } : {}));
+      });
+    }
+
+    /* The view's frame cannot reach the clipboard, so it asks the app to
+       copy for it: `{ text }`, or `{ attachment }` for an image the review
+       carries, by its name. Only a plugin whose manifest declares the
+       "clipboard" capability is let copy; the promise resolves once the app
+       has copied, and rejects with why it did not. */
+    function copy(content) {
+      if (!state.capabilities.includes("clipboard"))
+        return Promise.reject(
+          new Error('the app does not let this plugin copy: declare the "clipboard" capability in its manifest'),
+        );
+      const text = content && typeof content.text === "string" ? content.text : null;
+      const name = content && typeof content.attachment === "string" ? content.attachment : null;
+      if ((text === null) === (name === null))
+        return Promise.reject(new TypeError("Pinrail: copy takes either { text } or { attachment }"));
+      if (name !== null) {
+        const listed = state.review && Array.isArray(state.review.attachments) ? state.review.attachments : [];
+        if (!listed.some((a) => a && a.name === name))
+          return Promise.reject(new Error(`no attachment "${name}" on this review`));
+      }
+      return new Promise((resolve, reject) => {
+        const req = nextAsk++;
+        copying.set(req, { resolve, reject });
+        post(Object.assign({ type: "clipboard_write", req }, text !== null ? { text } : { attachment: name }));
       });
     }
 
@@ -446,6 +483,11 @@
       get settings() {
         return state.settings;
       },
+      /** whether the app copies to the clipboard for this view, as copy() asks */
+      get canCopy() {
+        return state.capabilities.includes("clipboard");
+      },
+      copy,
       /** whether the app can run dictation for this view */
       get canDictate() {
         return state.capabilities.includes("dictation") && !state.readonly;

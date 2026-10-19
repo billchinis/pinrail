@@ -224,6 +224,8 @@ async function mountPlugin(page, pluginDir, opts) {
     draft: opts.draft ?? null,
     settings: opts.settings ?? {},
     dictation: !!opts.dictation,
+    // the app copies only for a plugin that declares the capability
+    clipboard: Array.isArray(manifest.capabilities) && manifest.capabilities.includes("clipboard"),
   };
   await page.evaluate((i) => window.__shell.init(i), init);
 
@@ -251,6 +253,7 @@ async function mountPlugin(page, pluginDir, opts) {
     lastStatus: () => page.evaluate(() => window.__shell.lastStatus()),
     lastOpen: () => page.evaluate(() => window.__shell.lastOpen()),
     lastSettingsSet: () => page.evaluate(() => window.__shell.lastSettingsSet()),
+    copied: () => page.evaluate(() => window.__shell.copied()),
     settings: (values) => page.evaluate((v) => window.__shell.settings(v), values),
     // what the app does with a key pressed while the shell has focus: it
     // forwards a combination the manifest declares, and not one it keeps

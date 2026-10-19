@@ -4,6 +4,19 @@ The package's version is the SDK's, and its major is the protocol's:
 `1.x` speaks protocol 1, served by the app at `/sdk/v1`. A breaking
 change to the protocol is a new major and a new path.
 
+## [Unreleased]
+
+### Added
+
+- Copying to the clipboard. A plugin that declares
+  `"capabilities": ["clipboard"]` in its manifest can ask the app to copy
+  text, or an image the review carries, with `plugin.copy({ text })` or
+  `plugin.copy({ attachment })`, and `plugin.canCopy` says whether the app
+  offers it. The view sends `clipboard_write`, and the app answers with
+  `clipboard`. The host takes a `clipboard` function and a `canCopy` check.
+  The dev shell copies to the browser's clipboard, and the test harness
+  records each copy for `copied()`.
+
 ## [1.2.0]
 
 ### Added

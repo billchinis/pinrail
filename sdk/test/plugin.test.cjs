@@ -403,7 +403,9 @@ test("the plugin object has the members a view uses, and no others", () => {
     "attachment",
     "attachmentUrl",
     "attachments",
+    "canCopy",
     "canDictate",
+    "copy",
     "dictate",
     "dictating",
     "draft",
@@ -940,4 +942,46 @@ test("a dictation follows the field a view draws in the place of its own, by the
   assert.equal(plugin.dictating, replacement);
   env.deliver(shell({ type: "dictation", req, text: "one two" }));
   assert.equal(replacement.value, "one two");
+});
+
+test("copy asks the app to copy text or an attachment, and settles with its answer", async () => {
+  const env = fakeEnv();
+  const plugin = Pinrail.createPlugin(env, {});
+  env.deliver(
+    init({
+      capabilities: ["clipboard"],
+      review: review({ attachments: [{ name: "card.png", media_type: "image/png", size: 4 }] }),
+    }),
+  );
+  assert.equal(plugin.canCopy, true);
+
+  const text = plugin.copy({ text: "Pinrail 0.3.0 is out." });
+  const asked = env.last("clipboard_write").msg;
+  assert.deepEqual(asked, { pinrail: 1, type: "clipboard_write", req: asked.req, text: "Pinrail 0.3.0 is out." });
+  env.deliver(shell({ type: "clipboard", req: asked.req, ok: true }));
+  assert.equal(await text, undefined);
+
+  const image = plugin.copy({ attachment: "card.png" });
+  const second = env.last("clipboard_write").msg;
+  assert.equal(second.attachment, "card.png");
+  assert.equal(second.text, undefined);
+  env.deliver(shell({ type: "clipboard", req: second.req, ok: false, error: "the clipboard is busy" }));
+  await assert.rejects(image, /the clipboard is busy/);
+});
+
+test("copy is refused without the app's capability, and for anything but text or an attachment", async () => {
+  const env = fakeEnv();
+  const plugin = Pinrail.createPlugin(env, {});
+  env.deliver(init());
+  assert.equal(plugin.canCopy, false);
+  await assert.rejects(plugin.copy({ text: "a" }), /does not let this plugin copy/);
+  assert.equal(env.last("clipboard_write"), undefined);
+
+  env.deliver(init({ capabilities: ["clipboard"] }));
+  await assert.rejects(plugin.copy({}), /either \{ text \} or \{ attachment \}/);
+  await assert.rejects(plugin.copy({ text: "a", attachment: "b" }), /either \{ text \} or \{ attachment \}/);
+  await assert.rejects(plugin.copy({ attachment: "missing.png" }), /no attachment "missing.png"/);
+  // a decided review can still be copied from
+  env.deliver(init({ capabilities: ["clipboard"], readonly: true }));
+  assert.equal(plugin.canCopy, true);
 });

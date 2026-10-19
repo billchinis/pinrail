@@ -369,6 +369,8 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
     onSetSetting,
     onOpen,
     onDictationError: (message) => toast(message, "danger"),
+    canCopy: !!plugin?.capabilities?.includes("clipboard"),
+    onCopied: (what) => toast("text" in what ? "Copied the text" : `Copied ${what.image}`),
   });
 
   // closing the find bar clears what it highlighted, and the keys go back
