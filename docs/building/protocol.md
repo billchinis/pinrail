@@ -49,6 +49,7 @@ sequenceDiagram
 | `key` | `key`, `code`, `metaKey`, `ctrlKey`, `altKey`, `shiftKey` | A shortcut the manifest declares, pressed while the app, not the frame, had focus. |
 | `find` | `req`, `query`, `backwards` | The person searched the view from the app's find bar. The view answers with `found` and the same `req`. |
 | `dictation` | `req`, and `text`; or `done: true` and `error` when it failed | For the view's `dictation_start` with the same `req`: the text heard so far, sent again each time it grows, then once that the dictation is over. |
+| `clipboard` | `req`, `ok`, and `error` when not `ok` | The answer to the view's `clipboard_write` with the same `req`: `ok: true` once the app has copied, or `ok: false` and why it did not. |
 
 ### `init`
 
@@ -62,7 +63,7 @@ sequenceDiagram
 | `draft` | any or `null` | What the view last posted as a draft for this review. |
 | `settings` | object | The plugin's own settings: every key the manifest declares, with its current value. |
 | `app_origin` | string | The app's origin. Accept messages from it alone. |
-| `capabilities` | string array | What the app can do beyond the messages that every app answers. `"dictation"` means it can turn speech into text for the view, with `dictation_start`. A later addition is named here too, so a view can tell whether the app it runs in has it. |
+| `capabilities` | string array | What the app can do beyond the messages that every app answers. `"dictation"` means it can turn speech into text for the view, with `dictation_start`. `"clipboard"` means it copies for the view, with `clipboard_write`; the app offers it only to a plugin whose manifest declares the `clipboard` capability. A later addition is named here too, so a view can tell whether the app it runs in has it. |
 
 `review` and `previous` have these fields, and no others:
 
@@ -124,6 +125,16 @@ Show them next to the fields they name, and let the person hand over again.
 
 The view's frame cannot use the microphone. The app listens instead, and shows the person that it is listening. It stops the dictation when the person stops it in the app, when the review becomes read-only, and when the view goes. With the SDK, `plugin.dictate(field)` writes the text into a field at its cursor, and a field marked `data-pinrail-dictate` gets a microphone button.
 
+### `clipboard`
+
+The view's frame cannot write to the clipboard, so the app copies for it. Only a plugin whose manifest declares the capability is offered this:
+
+```json title="manifest.json"
+{ "capabilities": ["clipboard"] }
+```
+
+`clipboard_write` carries either `text` or `attachment`, the name of an image the review carries. The app copies an image as PNG, and shows the person a notice for every copy, since a request from the view cannot prove that the person clicked something. It refuses a request that has neither field or both, an attachment that the review does not carry or that is not an image, and text longer than 1,000,000 characters. A read-only review can copy too, so a person can copy the text of a decided review to publish it. With the SDK, `plugin.canCopy` says whether the app offers the clipboard, and `plugin.copy({ text })` or `plugin.copy({ attachment })` returns a promise that resolves once the app has copied.
+
 ### `key`
 
 A shortcut you declare in the manifest reaches your view even when the person pressed it with the app in focus. The SDK dispatches it as a `keydown` on your document, marked `pinrailForwarded: true`, so the listener you already have handles both. See [Settings and keys](/docs/building/settings-and-keys/#keyboard-shortcuts).
@@ -150,6 +161,7 @@ The SDK answers `find` for you. It searches the text the view shows, ignoring ca
 | `attachment` | `req`, `name`, and `round: "previous"` for a file of the round this one revises | Asks for the bytes of a file the review carries. The app answers with `attachment` and the same `req`. |
 | `dictation_start` | `req` | Asks the app to listen and turn speech into text, when `init.capabilities` has `"dictation"`. The app answers with `dictation` messages and the same `req`. One dictation is on at a time: a new request ends the one before. An app that cannot dictate, or a read-only review, answers at once with `done: true` and an `error`. |
 | `dictation_stop` | `req` | Asks the app to stop the dictation with the same `req`. The last words, and the message that it is done, still come. |
+| `clipboard_write` | `req`, and `text` or `attachment` | Asks the app to copy text, or an image the review carries, by its name, when `init.capabilities` has `"clipboard"`. The app answers with `clipboard` and the same `req`. |
 
 ### `attachment`
 

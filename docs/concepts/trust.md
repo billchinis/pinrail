@@ -30,6 +30,7 @@ A plugin's view is a page the app shows inside a sandboxed frame. However the pl
 
 - **can** draw, and exchange [messages](/docs/building/protocol/) with the app;
 - **can** ask the app to open a link in your browser or mail client. The app asks you first, showing the site, unless you allowed that site for this plugin. It never opens an address on your own computer, and it always asks about an email or a very long address;
+- **can** ask the app to copy text, or an image its review carries, to the clipboard, but only when the plugin's manifest declares the `clipboard` capability. The app shows you a notice for every copy;
 - **cannot** use the network, so it cannot make requests or load web fonts, scripts or styles from elsewhere;
 - **cannot** store data, and can read only what the app sends it. When the view asks for one of its review's attachments by name, the app sends it, but the view cannot read another review's attachments;
 - **cannot** see other reviews, other plugins, or your files.

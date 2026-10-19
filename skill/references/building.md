@@ -112,6 +112,12 @@ plugin.handOverLabel("Hand over: yes"); // the words on the hand-over button
   `await plugin.attachment(name)`.
 - Links: `plugin.open(url)`. The app asks the person before it opens a
   link, unless they allowed that site for the plugin.
+- Copying: a view cannot write to the clipboard itself. Declare
+  `"capabilities": ["clipboard"]` in the manifest, and `plugin.copy({ text })`
+  or `plugin.copy({ attachment: name })` asks the app to copy text or an
+  image the review carries. `plugin.canCopy` says whether the app offers
+  it. Use it when the person takes something from the review into another
+  program, such as a post to publish.
 - Dictation: mark a text field the person writes in, such as a note or a
   comment, with `data-pinrail-dictate`. In the macOS app the SDK puts a
   microphone after it, or inside an element marked

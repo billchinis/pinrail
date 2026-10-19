@@ -92,7 +92,7 @@ When the plugin is installed, Pinrail copies these entries and nothing else. Sou
 
 Write `use_when` for an agent deciding between plugins: name the moment, not the feature. *You triaged a queue of support tickets and need a person to confirm each call* tells an agent when to reach for the plugin; *Ticket triage view* does not.
 
-The manifest can also declare [settings and keyboard shortcuts](/docs/building/settings-and-keys/), a template that [renders decisions as markdown](#decisions-as-markdown), a `build` command for a view that compiles (see [Building with a framework](/docs/building/frameworks/)), and the [files](#files-beside-the-payload) the plugin takes.
+The manifest can also declare [settings and keyboard shortcuts](/docs/building/settings-and-keys/), a template that [renders decisions as markdown](#decisions-as-markdown), a `build` command for a view that compiles (see [Building with a framework](/docs/building/frameworks/)), the [files](#files-beside-the-payload) the plugin takes, and the [capabilities](#copying-to-the-clipboard) its view needs beyond the protocol.
 
 :::tip[Check before you install]
 `pinrail plugins check ./ticket_triage` reads the folder the way the app will and reports what it would refuse, installing nothing.
@@ -264,6 +264,29 @@ if (plugin.canDictate) {
 plugin.stopDictating();
 plugin.dictating; // the field being dictated into, or null
 ```
+
+### Copying to the clipboard
+
+A view cannot write to the clipboard from its frame, so the app copies for it. Use this when the person takes something from the review into another program, such as the text of a post they are about to publish or an image to paste with it. Declare the capability in the manifest:
+
+```json title="manifest.json"
+{
+  "name": "x_posts",
+  "version": "0.1.0",
+  "capabilities": ["clipboard"]
+}
+```
+
+The app then lets the view copy text, or an image the review carries, by its attachment name:
+
+```js
+if (plugin.canCopy) {
+  await plugin.copy({ text: post.text });          // resolves once it is copied
+  await plugin.copy({ attachment: "launch.png" }); // copied as PNG
+}
+```
+
+`plugin.copy` rejects with the reason when the app does not copy, for example when the manifest does not declare the capability or the attachment is not an image. Copying works in a read-only review too. The app shows the person a notice for every copy, so a view cannot change the clipboard without the person seeing it.
 
 ## The sandbox
 

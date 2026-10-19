@@ -55,6 +55,7 @@ The plugin it returns has the view's frame, `plugin.frame`, and the app's side o
 | `lastDraft()`, `lastStatus()`, `messages()` | What the view sent: its draft, the label of the hand-over button, and every message. |
 | `sendKey("n")` | Presses a shortcut the manifest declares, as the app forwards it. |
 | `settings({ … })` | Changes the plugin's settings, as *Settings › Plugins* does. |
+| `copied()` | What the view copied, in order, as `{ text }` or `{ image, media_type, size }`. The harness lets the view copy only when the manifest declares the `clipboard` capability, as the app does. |
 | `reinit()`, `reload()` | Opens the review again, with the last draft, or reloads the frame. |
 
 The package's types describe every call.
