@@ -1,0 +1,182 @@
+---
+title: Build the review view your work needs
+dek: We asked an agent for a database schema reviewer, then shaped it by pointing at what we wanted changed. Here is the whole cycle.
+description: How to build a custom Pinrail plugin with an agent and the plugin SDK, from the first request to a review in the inbox, using a database schema reviewer as the example.
+date: "2026-10-19"
+kind: Walkthrough
+minutes: 8
+---
+
+import Shot from "../../../components/blog/Shot.astro";
+import Pull from "../../../components/blog/Pull.astro";
+import roundOne from "./round-1.png";
+import comment from "./comment.png";
+import devShell from "./dev-shell.png";
+import roundTwo from "./round-2.png";
+import replies from "./round-2-replies.png";
+
+<p class="lead">An agent has written a migration. It adds three tables, changes two, moves a foreign key and drops a column, and it wants your approval before it runs. You get a few hundred lines of SQL and a question. What you need is a diagram you can point at.</p>
+
+No review tool ships with a view for that exact moment, and it should not have to. In Pinrail, each kind of review is a plugin, and a plugin is small enough for an agent to write while you watch. This post follows one from the first request to a real review: a plugin that draws a schema as a diagram, takes comments on its tables, columns and relationships, and carries the conversation into the agent's next version.
+
+<Shot
+  n={1}
+  src={roundOne}
+  alt="The db-schema plugin: a diagram of six tables with their columns and relationships, new tables in green and changed ones in amber, and a side panel with the agent's summary."
+  caption="The finished plugin, showing a migration. New tables are green, changed ones are amber, and the removed column is struck through."
+/>
+
+## What a plugin is
+
+A plugin is a folder with four parts:
+
+- a **manifest**, which names the plugin and tells agents when to use it;
+- a **payload schema**, which describes what the agent sends;
+- a **decision schema**, which describes what the person sends back;
+- a **view**, a web page that draws the payload and builds the decision.
+
+Pinrail sits between the agent and the view and checks both directions. A payload that does not fit the schema never reaches your inbox, and a decision that does not fit never reaches the agent. The view runs in a sandbox and cannot reach the network, so it is safe to run one that was written an hour ago.
+
+This is what makes a plugin cheap to build. The agent writes the view, which is most of the code. You decide the two schemas, which are the only part another program depends on.
+
+## Ask for it
+
+The request to the agent was a short paragraph. It asked for a plugin that shows a database schema as a diagram, with comments on tables, fields and relationships, and said that the input and output schemas mattered more than the HTML and JavaScript.
+
+The agent had what it needed to start. The Pinrail skill points it to the building guide, which `pinrail docs building` also prints. One command creates a plugin that already works, with a React view and a first test:
+
+```sh
+pinrail plugins new db-schema --template react --playwright
+```
+
+The agent also read two existing plugins whose decisions pin comments to parts of the work, one for HTML pages and one for 3D models. Copying a pattern that already works is faster than inventing one.
+
+## Agree on the contract first
+
+The agent stopped after the schemas and asked for a review before it wrote the view. That pause is worth insisting on. Two short JSON files are quick to review, and any change to them later touches the view, the samples and the tests as well.
+
+The decision schema comes first, because it is shaped by what the agent will do next. After a schema review, the agent either applies the schema or changes it and asks again. Every field in the decision serves one of those two actions:
+
+```json
+{
+  "verdict": "revise",
+  "comments": [
+    { "id": "c1", "target": { "table": "memberships", "column": "role" },
+      "kind": "change", "text": "Use an enum." },
+    { "id": "c2", "target": { "relationship": "projects_workspace_id_fkey" },
+      "kind": "question", "text": "Why restrict rather than cascade?" },
+    { "id": "c3", "kind": "change", "text": "Add updated_at to every new table." }
+  ],
+  "answers": [{ "id": "q1", "choice": "enum type" }],
+  "unanswered": ["q2"]
+}
+```
+
+Each comment has an address: a table, a column of a table, a relationship, or, with no target, the whole schema. The agent finds the part by name in its own payload, so nobody has to describe a location in prose. A comment is a `change` or a `question`, and the verdict follows from them. Change comments ask for a new version, and questions alone let the agent go ahead once it has answered them.
+
+The payload is structured JSON rather than SQL, so the view needs no parser for each database's dialect. It lists the tables, columns, indexes and relationships, marks what a migration adds, removes or changes, and can carry the migration itself for a SQL tab. Two rules in it do most of the work:
+
+- **Every question from the agent carries a proposal.** The agent cannot ask "enum or text?" and wait. It says what it will do if you do not answer, and the decision lists the questions you skipped, so silence has one meaning.
+- **A new version replies to the last one.** When the agent revises, it answers each of your comments in `replies`, and the view shows each answer under its comment.
+
+The descriptions inside the schemas are written for agents, because `pinrail plugins describe db-schema` prints them. That is how the next agent that designs a migration learns to use the plugin without being told.
+
+## Iterate in the dev shell
+
+With the contract agreed, the agent built the view: React, with React Flow to draw the diagram and dagre to lay it out. You review a view in the plugin SDK's dev shell, which runs it in your browser inside a stand-in for the app:
+
+```sh
+npx pinrail-sdk@1.1.0 dev plugins/db-schema
+```
+
+The shell's bar switches between the plugin's sample reviews, a previous round and the light and dark themes. Its side panel plays the app's part, so you can press the hand-over button and see the decision checked against the schema. The view reloads whenever a file changes, so a change from the agent is on screen a moment after the agent saves it.
+
+The fastest way to give feedback is the shell's *Select* mode. Turn it on, click any part of the view, and write what should change there. *Copy comments* puts every comment on the clipboard as Markdown, with the selector of the element each one is about. You paste them to the agent, and the view reloads with the changes.
+
+<Shot
+  n={2}
+  src={devShell}
+  alt="The plugin SDK's dev shell with Select mode on. A comment box is open on an index card in the plugin's side panel, with the element's selector above it."
+  caption="Commenting on the view itself, in the dev shell. Select mode pins a comment to any element, and the agent receives it with the element's selector."
+/>
+
+A round of comments looks like ordinary review feedback. These are some of the ones we sent, in our own words:
+
+- "Can we add icons to Diagram and SQL?"
+- "Long relationship names do not render well."
+- "Can we move the layout controls to the bottom left, with icons and nice menus?"
+- "In the About tab I should be able to comment on the whole schema."
+- "If I ask a question, it should not be treated as a request for changes."
+
+Most comments changed only the view, and the agent made those changes without touching the schemas. A few changed what the payload or the decision means, such as the last two. For those, the agent changed the schema and the view together, and `pinrail plugins check` confirmed that the samples and a recorded decision still fit. Each change in behaviour also got a test under the SDK's harness, which mounts the view without the app and plays the app's side, so a later round of comments could not quietly undo it.
+
+<Pull>The view changed every few minutes. The schemas changed a handful of times, and each change was checked against the samples before the next round began.</Pull>
+
+## Try it in the app
+
+When the view is right, you install the folder as a link, so the app serves it as it changes, and send yourself a review of its first sample:
+
+```sh
+pinrail plugins check plugins/db-schema
+pinrail plugins install plugins/db-schema --link
+pinrail submit db-schema --sample
+```
+
+The review arrives in your inbox like any other, and the plugin is now listed for every agent on your machine.
+
+<Shot
+  n={3}
+  src={comment}
+  alt="A column selected in the diagram. The side panel shows its type and default, the agent's question about it with the chosen answer, and a comment asking for an enum."
+  caption="A review in progress. The selected column shows the agent's question about it and the reviewer's comment, and the hand-over button says what will happen."
+/>
+
+## Use it
+
+From here, the plugin is part of the workflow. Tell your agent to ask through Pinrail before it writes or runs a migration. It submits the schema and waits:
+
+```sh
+pinrail submit db-schema --title "Add team workspaces" --data schema.json --wait
+```
+
+You click a column, a table or a line, write a change or a question, answer the agent's questions, and hand over. The command prints the decision as Markdown that the plugin's template writes for the agent:
+
+```md
+Changes requested. Make the changes below and send the new version for
+review with `--revises`, with a reply to each comment in its `replies`.
+Answer the questions below first.
+
+## Changes
+
+- `memberships.role`: Use an enum. We have not added a role in three years.
+- The whole schema: Add an updated_at column to every new table.
+
+## Questions from the reviewer
+
+- relationship `projects_workspace_id_fkey`: Why restrict rather than
+  cascade? Archiving first seems like extra work for the user.
+```
+
+The agent makes the changes and submits the next round with `--revises`. Parts you commented on carry a small history mark, and selecting one shows your comment with the agent's reply under it. You check each reply against the diagram, and approve.
+
+<Shot
+  n={4}
+  images={[
+    { src: roundTwo, alt: "Round two: the role column selected, now of type membership_role, with last round's comment and the agent's reply under it." },
+    { src: replies, alt: "Round two's Comments tab: the three comments of the last round, each with the agent's reply." },
+  ]}
+  caption="The second round. Each comment from the first round is shown with the agent's reply, on its part of the diagram and together in the Comments tab."
+/>
+
+## Build yours
+
+The database schema plugin is in the [sample plugins repository](https://github.com/forgeplane/pinrail-plugins), with its tests and the samples used here. Copy it, or start from nothing with `pinrail plugins new`.
+
+The cycle is the same for any kind of review:
+
+1. Ask an agent for the view, and tell it to start with the schemas.
+2. Review the decision schema against what the agent should do next, then the payload against what you need to see.
+3. Comment on the view in the dev shell until it is right.
+4. Link it into the app, and tell your agents when to use it.
+
+[Writing a plugin](/docs/building/writing/) covers every part in detail. The view that helps most is the one built for your exact decision, and with an agent writing the code, building it is mostly a matter of saying what you want to see.
