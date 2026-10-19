@@ -9,39 +9,20 @@ wait for a release, and takes the version's name when it is tagged.
 
 The `pinrail` command ships inside the app and carries the app's version.
 
-## [Unreleased]
+## [0.3.0]
 
 ### Added
 
-- Support for the Pi coding agent. Settings › Agents installs the
-  `pinrail` skill to `~/.pi/agent/skills`, and reviews submitted from Pi
-  show its name and icon.
-- Support for Goose. Settings › Agents installs the `pinrail` skill to
-  `~/.config/goose/skills`, and reviews submitted from Goose show its
-  name and icon.
-- Support for Amp. Settings › Agents installs the `pinrail` skill to
-  `~/.config/amp/skills`, and reviews submitted from Amp show its name
-  and icon.
-- Support for GitHub Copilot CLI. Settings › Agents installs the
-  `pinrail` skill to `~/.copilot/skills`, and reviews submitted from
-  Copilot CLI show its name and icon.
-- Support for Kiro CLI. Settings › Agents installs the `pinrail` skill
-  to `~/.kiro/skills`, and reviews submitted from Kiro CLI show its name
-  and icon.
-- Support for Augment CLI (Auggie). Settings › Agents installs the
-  `pinrail` skill to `~/.augment/skills`, and reviews submitted from
-  Augment CLI show its name and icon.
-- Support for Cline. Settings › Agents installs the `pinrail` skill to
-  `~/.cline/skills`, and reviews submitted from Cline show its name and
-  icon.
-
+- Support for Amp, Augment CLI (Auggie), Cline, GitHub Copilot CLI,
+  Goose, Kiro CLI and Pi. Settings › Agents installs the `pinrail` skill
+  in each agent's skill folder, and reviews submitted from these agents
+  show the agent's name and icon.
 - What's new: the first time a new release starts, Pinrail shows a few
   cards about what changed, one at a time, each with a screenshot and a
   button that opens the change. A release without notes shows nothing,
   and a fresh install starts counting from the release it installed. The
   newest notes open again from Settings › About, Help › What's New in
   Pinrail and ⌘K.
-
 - Pinrail records whether a decision or a discard was made in the app,
   with `pinrail decide` or `pinrail discard`, or by another program
   through the API, and in which agent session. The review page, the
@@ -167,6 +148,7 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 Initial version of Pinrail.
 
+[0.3.0]: https://github.com/forgeplane/pinrail/releases/tag/v0.3.0
 [0.2.0]: https://github.com/forgeplane/pinrail/releases/tag/v0.2.0
 [0.1.3]: https://github.com/forgeplane/pinrail/releases/tag/v0.1.3
 [0.1.2]: https://github.com/forgeplane/pinrail/releases/tag/v0.1.2
