@@ -1,6 +1,6 @@
 import { Archive, Blocks, CircleDot, FolderGit2, Search, SearchX } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, type To } from "react-router";
 import { api } from "../api/client";
 import type { ReviewListing } from "../api/types";
 import { AgentIcon } from "../components/AgentIcon";
@@ -16,6 +16,8 @@ import { useLive } from "../state/live";
 import { NO_PROJECT } from "../lib/url";
 import { modalOpen } from "../lib/keys";
 import { SourceBadge } from "../components/SourceBadge";
+import { SidePanel } from "../components/SidePanel";
+import { useSettings } from "../state/settings";
 
 const ENDED = "decided,withdrawn,discarded,expired";
 /** How long the search waits for typing to pause before it asks the server. */
@@ -25,6 +27,7 @@ export function History() {
   const live = useLive();
   const [params, updateParams] = useUrlParams();
   const navigate = useNavigate();
+  const { settings: prefs } = useSettings();
   const [data, setData] = useState<ReviewListing | null>(null);
   const [focused, setFocused] = useState(0);
   const search = useRef<HTMLInputElement>(null);
@@ -48,6 +51,9 @@ export function History() {
   const page = pageOf(params.get("page"));
   const size = pageSizeOf(params.get("per"));
   const filtered = !!(q || status || plugin || repo);
+  // with the side panel, as the inbox opens reviews, ?open= names the review shown beside the list
+  const panelMode = prefs.inbox.open_in === "panel";
+  const openId = panelMode ? params.get("open") : null;
 
   // The server filters and pages: the history can be far longer than any
   // one fetch. The search waits for typing to pause.
@@ -121,6 +127,65 @@ export function History() {
 
   const plugins = data?.facets?.plugins ?? [];
 
+  /** The link of a review's row: the side panel, keeping the filters, or its page. */
+  const hrefFor = useCallback(
+    (id: string): To => {
+      if (!panelMode) return `/reviews/${id}`;
+      const next = new URLSearchParams(params);
+      next.set("open", id);
+      return { pathname: "/history", search: `?${next}` };
+    },
+    [panelMode, params],
+  );
+  /** Opens a review in the side panel, or closes the panel with null. */
+  const openInPanel = useCallback(
+    (id: string | null, options?: { replace?: boolean }) =>
+      updateParams((next) => {
+        if (id) next.set("open", id);
+        else next.delete("open");
+      }, options),
+    [updateParams],
+  );
+  const closePanel = useCallback(() => openInPanel(null), [openInPanel]);
+  /** Opens a review: in the side panel, or on its own page. */
+  const open = (id: string) => {
+    if (panelMode) openInPanel(id, { replace: !!openId });
+    else navigate(`/reviews/${id}`, { state: { from: "history" } });
+  };
+  // the element that holds the list and the side panel
+  const split = useRef<HTMLDivElement>(null);
+
+  // The focus follows the review open in the side panel. Opened from the
+  // keyboard, the list may scroll under a still pointer, and the row that
+  // slides under it must not take the focus back.
+  useEffect(() => {
+    if (!openId) return;
+    const at = reviews.findIndex((r) => r.id === openId);
+    if (at < 0) return;
+    keyboard.current = true;
+    setFocused(at);
+  }, [openId, reviews]);
+
+  // With a review open beside the list, J and K open the next and previous
+  // review, from the list or from the view, which forwards them, and wrap
+  // around at the ends of the page.
+  useEffect(() => {
+    const onWalk = (event: KeyboardEvent) => {
+      if (!openId || modalOpen() || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (event.key !== "j" && event.key !== "k") return;
+      const el = event.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (!reviews.length) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const at = reviews.findIndex((r) => r.id === openId);
+      const next = at < 0 ? 0 : (at + (event.key === "j" ? 1 : reviews.length - 1)) % reviews.length;
+      if (reviews[next].id !== openId) openInPanel(reviews[next].id, { replace: true });
+    };
+    window.addEventListener("keydown", onWalk, true);
+    return () => window.removeEventListener("keydown", onWalk, true);
+  }, [openId, reviews, openInPanel]);
+
   useEffect(() => {
     setFocused((f) => Math.min(f, Math.max(0, reviews.length - 1)));
   }, [reviews.length]);
@@ -149,12 +214,11 @@ export function History() {
       if (event.key === "j" || event.key === "k") keyboard.current = true;
       if (event.key === "j") setFocused((f) => Math.min(f + 1, reviews.length - 1));
       if (event.key === "k") setFocused((f) => Math.max(f - 1, 0));
-      if (event.key === "Enter" && reviews[focused])
-        navigate(`/reviews/${reviews[focused].id}`, { state: { from: "history" } });
+      if (event.key === "Enter" && reviews[focused] && !openId) open(reviews[focused].id);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [reviews, focused, navigate]);
+  }, [reviews, focused, navigate, openId, panelMode]); // eslint-disable-line react-hooks/exhaustive-deps -- open follows panelMode and openId
 
   useEffect(() => {
     document.querySelector<HTMLElement>(`[data-history-row="${focused}"]`)?.scrollIntoView({ block: "nearest" });
@@ -162,189 +226,200 @@ export function History() {
   const repos = data?.facets?.repos ?? [];
 
   return (
-    <div className="history">
-      <header className="page-head">
-        <h1>History</h1>
-        <div className="inbox-controls">
-          <Tooltip label="Search titles, plugins, requesters, projects, workflows and refs" hoverOnly>
-            <label className="search-field">
-              <Search size={14} aria-hidden="true" />
-              <input
-                ref={search}
-                type="search"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                placeholder="Search history…"
-                aria-label="Search history"
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setFilter("q", e.target.value);
-                }}
-              />
-            </label>
-          </Tooltip>
-          <Select
-            label="Outcome"
-            icon={<CircleDot size={14} />}
-            value={status}
-            onChange={(v) => setFilter("status", v)}
-            options={[
-              { value: "", label: "All outcomes", icon: <CircleDot size={14} /> },
-              { value: "decided", label: "Decided" },
-              { value: "withdrawn", label: "Withdrawn" },
-              { value: "discarded", label: "Discarded" },
-              { value: "expired", label: "Expired" },
-            ]}
-          />
-          <Select
-            label="Project"
-            icon={<FolderGit2 size={14} />}
-            value={repo}
-            onChange={(v) => setFilter("repo", v)}
-            options={[
-              { value: "", label: "All projects", icon: <FolderGit2 size={14} /> },
-              ...repos.map((r) => ({ value: r, label: r, icon: <FolderGit2 size={14} /> })),
-              ...(data?.facets?.unassigned || repo === NO_PROJECT
-                ? [{ value: NO_PROJECT, label: "No project", icon: <FolderGit2 size={14} /> }]
-                : []),
-            ]}
-          />
-          <Select
-            label="Plugin"
-            icon={<Blocks size={14} />}
-            value={plugin}
-            onChange={(v) => setFilter("plugin", v)}
-            options={[
-              { value: "", label: "All plugins", icon: <Blocks size={14} /> },
-              ...plugins.map((p) => ({
-                value: p,
-                label: p,
-                icon: <PluginIcon icon={live.pluginIcon(p)} size={14} />,
-              })),
-            ]}
-          />
-          {filtered ? (
-            <button
-              type="button"
-              className="chrome-button"
-              onClick={() => {
-                setQ("");
-                updateParams(clearAll, { replace: true });
-              }}
-            >
-              Clear
-            </button>
-          ) : null}
-        </div>
-      </header>
-      {!data ? null : total === 0 ? (
-        <EmptyState
-          title={filtered ? "No matching decisions" : "Your decisions belong here"}
-          icon={filtered ? <SearchX size={28} strokeWidth={1.5} /> : <Archive size={28} strokeWidth={1.5} />}
-        >
-          {filtered
-            ? "Nothing matches these filters."
-            : "Decided, withdrawn, discarded and expired reviews appear here, with the view they were decided in."}
-        </EmptyState>
-      ) : (
-        <div className="history-table-wrap">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th>Review / requester</th>
-                <th>Outcome</th>
-                <th>Repository</th>
-                <th>Recorded</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reviews.map((r, i) => (
-                <tr
-                  key={r.id}
-                  className={i === focused ? "is-focused" : ""}
-                  data-history-row={i}
-                  data-testid="history-row"
-                  onMouseEnter={() => !keyboard.current && setFocused(i)}
-                  onClick={(event) => {
-                    // the title is a link of its own, which has already gone there
-                    if (event.defaultPrevented || (event.target as Element).closest("a")) return;
-                    navigate(`/reviews/${r.id}`, { state: { from: "history" } });
+    <div className={`history ${openId ? "has-panel" : ""}`} ref={split}>
+      <div className="history-side split-side">
+        <header className="page-head">
+          <h1>History</h1>
+          <div className="inbox-controls">
+            <Tooltip label="Search titles, plugins, requesters, projects, workflows and refs" hoverOnly>
+              <label className="search-field">
+                <Search size={14} aria-hidden="true" />
+                <input
+                  ref={search}
+                  type="search"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  placeholder="Search history…"
+                  aria-label="Search history"
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    setFilter("q", e.target.value);
                   }}
-                >
-                  <td>
-                    <Link to={`/reviews/${r.id}`} state={{ from: "history" }} className="history-title">
-                      {r.title}
-                    </Link>
-                    <small>
-                      {r.requested_by ? (
-                        <span className="requester">
-                          <AgentIcon requestedBy={r.requested_by} size={12} />
-                          {r.requested_by}
-                        </span>
-                      ) : null}
-                      {r.requested_by ? " · " : ""}
-                      <span className="history-plugin" title={r.plugin}>
-                        <PluginIcon icon={live.pluginIcon(r.plugin)} size={12} />
-                        {r.plugin}
-                      </span>{" "}
-                      <FilesCount total={r.attachments_total} />
-                    </small>
-                  </td>
-                  <td>
-                    <span className="history-outcome">
-                      <OutcomeBadge review={r} />
-                      <SummaryCounts summary={r.decision?.summary} />
-                    </span>
-                  </td>
-                  <td>
-                    {r.origin.repo}
-                    {r.origin.ref ? <small className="mono">{r.origin.ref}</small> : null}
-                  </td>
-                  <td>
-                    <span title={stamp(settledAt(r))}>{stamp(settledAt(r))}</span>
-                    {r.decision ? (
-                      <small>
-                        {r.decision.decided_by ? `Decided by ${r.decision.decided_by}` : "Decided"}
-                        <SourceBadge review={r} made={r.decision} command="decide" />
-                      </small>
-                    ) : null}
-                    {r.status === "withdrawn" ? (
-                      <small>
-                        <Reason
-                          text={r.withdrawn_by ? `Withdrawn by ${r.withdrawn_by}` : "Withdrawn"}
-                          reason={r.withdrawn_reason}
-                        />
-                        <SourceBadge
-                          review={r}
-                          made={{ via: r.withdrawn_via, session: r.withdrawn_session }}
-                          command="withdraw"
-                        />
-                      </small>
-                    ) : null}
-                    {r.status === "discarded" ? (
-                      <small>
-                        <Reason
-                          text={r.discarded_by ? `Discarded by ${r.discarded_by}` : "Discarded"}
-                          reason={r.discarded_reason}
-                        />
-                        <SourceBadge
-                          review={r}
-                          made={{ via: r.discarded_via, session: r.discarded_session }}
-                          command="discard"
-                        />
-                      </small>
-                    ) : null}
-                  </td>
+                />
+              </label>
+            </Tooltip>
+            <Select
+              label="Outcome"
+              icon={<CircleDot size={14} />}
+              value={status}
+              onChange={(v) => setFilter("status", v)}
+              options={[
+                { value: "", label: "All outcomes", icon: <CircleDot size={14} /> },
+                { value: "decided", label: "Decided" },
+                { value: "withdrawn", label: "Withdrawn" },
+                { value: "discarded", label: "Discarded" },
+                { value: "expired", label: "Expired" },
+              ]}
+            />
+            <Select
+              label="Project"
+              icon={<FolderGit2 size={14} />}
+              value={repo}
+              onChange={(v) => setFilter("repo", v)}
+              options={[
+                { value: "", label: "All projects", icon: <FolderGit2 size={14} /> },
+                ...repos.map((r) => ({ value: r, label: r, icon: <FolderGit2 size={14} /> })),
+                ...(data?.facets?.unassigned || repo === NO_PROJECT
+                  ? [{ value: NO_PROJECT, label: "No project", icon: <FolderGit2 size={14} /> }]
+                  : []),
+              ]}
+            />
+            <Select
+              label="Plugin"
+              icon={<Blocks size={14} />}
+              value={plugin}
+              onChange={(v) => setFilter("plugin", v)}
+              options={[
+                { value: "", label: "All plugins", icon: <Blocks size={14} /> },
+                ...plugins.map((p) => ({
+                  value: p,
+                  label: p,
+                  icon: <PluginIcon icon={live.pluginIcon(p)} size={14} />,
+                })),
+              ]}
+            />
+            {filtered ? (
+              <button
+                type="button"
+                className="chrome-button"
+                onClick={() => {
+                  setQ("");
+                  updateParams(clearAll, { replace: true });
+                }}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+        </header>
+        {!data ? null : total === 0 ? (
+          <EmptyState
+            title={filtered ? "No matching decisions" : "Your decisions belong here"}
+            icon={filtered ? <SearchX size={28} strokeWidth={1.5} /> : <Archive size={28} strokeWidth={1.5} />}
+          >
+            {filtered
+              ? "Nothing matches these filters."
+              : "Decided, withdrawn, discarded and expired reviews appear here, with the view they were decided in."}
+          </EmptyState>
+        ) : (
+          <div className="history-table-wrap">
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>Review / requester</th>
+                  <th>Outcome</th>
+                  <th className="history-col-repo">Repository</th>
+                  <th className="history-col-recorded">Recorded</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {data ? <Pager label="History" page={page} size={size} total={total} onPage={setPage} onSize={setSize} /> : null}
+              </thead>
+              <tbody>
+                {reviews.map((r, i) => (
+                  <tr
+                    key={r.id}
+                    className={`${i === focused ? "is-focused" : ""} ${r.id === openId ? "is-open" : ""}`}
+                    aria-current={r.id === openId ? "true" : undefined}
+                    data-history-row={i}
+                    data-testid="history-row"
+                    onMouseEnter={() => !keyboard.current && setFocused(i)}
+                    onClick={(event) => {
+                      // the title is a link of its own, which has already gone there
+                      if (event.defaultPrevented || (event.target as Element).closest("a")) return;
+                      open(r.id);
+                    }}
+                  >
+                    <td>
+                      <Link
+                        to={hrefFor(r.id)}
+                        replace={!!openId}
+                        state={panelMode ? undefined : { from: "history" }}
+                        className="history-title"
+                      >
+                        {r.title}
+                      </Link>
+                      <small>
+                        {r.requested_by ? (
+                          <span className="requester">
+                            <AgentIcon requestedBy={r.requested_by} size={12} />
+                            {r.requested_by}
+                          </span>
+                        ) : null}
+                        {r.requested_by ? " · " : ""}
+                        <span className="history-plugin" title={r.plugin}>
+                          <PluginIcon icon={live.pluginIcon(r.plugin)} size={12} />
+                          {r.plugin}
+                        </span>{" "}
+                        <FilesCount total={r.attachments_total} />
+                      </small>
+                    </td>
+                    <td>
+                      <span className="history-outcome">
+                        <OutcomeBadge review={r} />
+                        <SummaryCounts summary={r.decision?.summary} />
+                      </span>
+                    </td>
+                    <td className="history-col-repo">
+                      {r.origin.repo}
+                      {r.origin.ref ? <small className="mono">{r.origin.ref}</small> : null}
+                    </td>
+                    <td className="history-col-recorded">
+                      <span title={stamp(settledAt(r))}>{stamp(settledAt(r))}</span>
+                      {r.decision ? (
+                        <small>
+                          {r.decision.decided_by ? `Decided by ${r.decision.decided_by}` : "Decided"}
+                          <SourceBadge review={r} made={r.decision} command="decide" />
+                        </small>
+                      ) : null}
+                      {r.status === "withdrawn" ? (
+                        <small>
+                          <Reason
+                            text={r.withdrawn_by ? `Withdrawn by ${r.withdrawn_by}` : "Withdrawn"}
+                            reason={r.withdrawn_reason}
+                          />
+                          <SourceBadge
+                            review={r}
+                            made={{ via: r.withdrawn_via, session: r.withdrawn_session }}
+                            command="withdraw"
+                          />
+                        </small>
+                      ) : null}
+                      {r.status === "discarded" ? (
+                        <small>
+                          <Reason
+                            text={r.discarded_by ? `Discarded by ${r.discarded_by}` : "Discarded"}
+                            reason={r.discarded_reason}
+                          />
+                          <SourceBadge
+                            review={r}
+                            made={{ via: r.discarded_via, session: r.discarded_session }}
+                            command="discard"
+                          />
+                        </small>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {data ? (
+          <Pager label="History" page={page} size={size} total={total} onPage={setPage} onSize={setSize} />
+        ) : null}
+      </div>
+      {openId ? <SidePanel id={openId} split={split} linkTo={hrefFor} onClose={closePanel} /> : null}
     </div>
   );
 }

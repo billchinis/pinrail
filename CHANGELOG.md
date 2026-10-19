@@ -13,6 +13,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Added
 
+- The history opens a review in a panel beside the list, as the inbox
+  does. J and K step through the history from it. *Settings › General ›
+  Opening a review* applies to both.
 - *Settings › Agents › Update skills automatically* updates the skill of
   each connected agent when Pinrail starts, after an update of Pinrail
   changed it. It is off by default.

@@ -240,7 +240,7 @@ export function SettingsDialog({
                   description={
                     settings.inbox.open_in === "page"
                       ? "A review opens as a page of its own."
-                      : "A review opens in a panel beside the inbox, which stays in view."
+                      : "A review opens in a panel beside the inbox or the history, which stays in view."
                   }
                 >
                   <Segmented
@@ -248,7 +248,7 @@ export function SettingsDialog({
                     value={settings.inbox.open_in}
                     onChange={(v) => update({ inbox: { open_in: v } })}
                     options={[
-                      { value: "panel", label: "Beside the inbox" },
+                      { value: "panel", label: "Beside the list" },
                       { value: "page", label: "As a page" },
                     ]}
                   />

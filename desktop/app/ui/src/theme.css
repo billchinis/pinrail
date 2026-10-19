@@ -640,16 +640,17 @@ h1 {
   min-height: 0;
 }
 
-/* The inbox with a review open in the side panel. The list and the panel
-   scroll independently, separated by an edge that resizes the panel. */
-.app-main > .inbox.has-panel {
+/* The inbox or the history with a review open in the side panel. The list
+   and the panel scroll independently, separated by an edge that resizes
+   the panel. */
+.app-main > .has-panel {
   flex: 1 1 auto;
   min-height: 0;
   padding: 0;
   display: flex;
   position: relative;
 }
-.inbox.has-panel .inbox-side {
+.has-panel > .split-side {
   flex: 1 1 0;
   min-width: 0;
   overflow-y: auto;
@@ -723,14 +724,14 @@ body.is-resizing iframe {
 }
 /* in a narrow window, the side panel covers the list */
 @media (max-width: 900px) {
-  .inbox.has-panel .review-panel {
+  .has-panel > .review-panel {
     position: absolute;
     inset: 0;
     width: auto !important;
     min-width: 0;
     z-index: 2;
   }
-  .inbox.has-panel .panel-resizer {
+  .has-panel > .panel-resizer {
     display: none;
   }
 }
@@ -2610,6 +2611,16 @@ body.is-resizing iframe {
 }
 .history-table tr.is-focused td {
   background: var(--bg-hover);
+}
+.history-table tr.is-open td {
+  background: var(--accent-bg);
+}
+/* beside the side panel, the history shows the review and its outcome */
+@container (max-width: 640px) {
+  .history-col-repo,
+  .history-col-recorded {
+    display: none;
+  }
 }
 .history-table tr.is-focused td:first-child {
   box-shadow: inset 2px 0 0 var(--accent);

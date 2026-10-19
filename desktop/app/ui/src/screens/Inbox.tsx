@@ -16,7 +16,7 @@ import { useLive } from "../state/live";
 import { NO_PROJECT, inProject } from "../lib/url";
 import { MOD, hasMod, modalOpen } from "../lib/keys";
 import { useSettings } from "../state/settings";
-import { ReviewView } from "./ReviewScreen";
+import { SidePanel } from "../components/SidePanel";
 
 /** How the inbox is laid out, remembered on this machine. */
 type Layout = "projects" | "list";
@@ -26,20 +26,6 @@ function savedLayout(): Layout {
     return localStorage.getItem(LAYOUT) === "list" ? "list" : "projects";
   } catch {
     return "projects";
-  }
-}
-
-/** The side panel's width, stored on this machine. */
-const PANEL_WIDTH = "pinrail.inbox.panel";
-const PANEL_MIN = 420;
-// the minimum width of the list beside the side panel
-const LIST_MIN = 320;
-function savedWidth(): number | null {
-  try {
-    const n = Number(localStorage.getItem(PANEL_WIDTH));
-    return n >= PANEL_MIN ? n : null;
-  } catch {
-    return null;
   }
 }
 
@@ -225,44 +211,8 @@ export function Inbox() {
   }, [openId, openInPanel]);
   const closePanel = useCallback(() => openInPanel(null), [openInPanel]);
 
-  // the side panel's width, resized by dragging its edge, within the window's limits
+  // the element that holds the list and the side panel
   const split = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState<number | null>(savedWidth);
-  const clampWidth = (w: number) => {
-    const room = split.current?.clientWidth ?? window.innerWidth;
-    return Math.round(Math.max(PANEL_MIN, Math.min(w, room - LIST_MIN)));
-  };
-  const keepWidth = (w: number) => {
-    setWidth(w);
-    try {
-      localStorage.setItem(PANEL_WIDTH, String(w));
-    } catch {
-      // without storage, the width is kept until the app restarts
-    }
-  };
-  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const right = split.current?.getBoundingClientRect().right ?? window.innerWidth;
-    // stop the view's frame from capturing pointer events during the drag
-    document.body.classList.add("is-resizing");
-    const onMove = (e: PointerEvent) => setWidth(clampWidth(right - e.clientX));
-    const onUp = (e: PointerEvent) => {
-      document.body.classList.remove("is-resizing");
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      keepWidth(clampWidth(right - e.clientX));
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  };
-  const resizeBy = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? 80 : 20;
-    const now = width ?? split.current?.querySelector<HTMLElement>(".review-panel")?.offsetWidth ?? PANEL_MIN;
-    if (event.key === "ArrowLeft") keepWidth(clampWidth(now + step));
-    else if (event.key === "ArrowRight") keepWidth(clampWidth(now - step));
-    else return;
-    event.preventDefault();
-  };
 
   // With a review open beside the list, J and K move to the next and
   // previous review, from the list or from the view, which forwards them;
@@ -404,7 +354,7 @@ export function Inbox() {
 
   return (
     <div className={`inbox ${openId ? "has-panel" : ""}`} ref={split}>
-      <div className="inbox-side">
+      <div className="inbox-side split-side">
         <header className="page-head">
           <div className="heading-inline">
             <h1>Inbox</h1>
@@ -563,27 +513,7 @@ export function Inbox() {
           )}
         </footer>
       </div>
-      {openId ? (
-        <>
-          <div
-            className="panel-resizer"
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize the review panel"
-            tabIndex={0}
-            onPointerDown={startResize}
-            onKeyDown={resizeBy}
-          />
-          <aside
-            className="review-panel"
-            aria-label="Review"
-            data-testid="review-panel"
-            style={width ? { width: clampWidth(width) } : undefined}
-          >
-            <ReviewView id={openId} inPanel linkTo={hrefFor} onEnded={openNext} onClose={closePanel} />
-          </aside>
-        </>
-      ) : null}
+      {openId ? <SidePanel id={openId} split={split} linkTo={hrefFor} onEnded={openNext} onClose={closePanel} /> : null}
     </div>
   );
 }
