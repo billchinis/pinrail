@@ -54,6 +54,9 @@ test("a pending review follows its linked folder, and keeps what was decided", a
   await view.locator("#yes").click();
   await page.getByTestId("handover").click();
   await expect.poll(() => status(page, id)).toBe("decided");
+  // the app goes back to the inbox once the decision is recorded; opening
+  // the review before then would be undone by that move
+  await expect(page).toHaveURL(/#\/$/);
 
   // the link and the folder go; the review shows what was decided with
   const removed = await page.request.delete(`${core}/api/v1/plugins/loop`);
