@@ -138,6 +138,12 @@ const LEAVES: &[Leaf] = &[
         "Delete ended reviews older than this many days. `null` keeps them forever.",
     ),
     (
+        "/agents/auto_update",
+        Kind::Bool,
+        || json!(false),
+        "Update the `pinrail` skill of every connected agent when Pinrail starts, after an update of Pinrail changed the skill.",
+    ),
+    (
         "/updates/check",
         Kind::Bool,
         || json!(true),

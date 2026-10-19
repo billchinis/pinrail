@@ -2745,6 +2745,9 @@ body.is-resizing iframe {
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
+.agent-auto-update {
+  margin-bottom: 14px;
+}
 .agent-group {
   margin-bottom: 14px;
 }

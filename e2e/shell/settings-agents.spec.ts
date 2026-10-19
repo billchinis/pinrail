@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { settingsSection } from "./helpers";
+import { core, settingsSection } from "./helpers";
 
 // The browser build has no native side: the section is there, and says the
 // desktop app does the connecting. The skill itself is tested in the app's
@@ -220,4 +220,46 @@ test("an agent that reads a connected agent's skill says it already uses it", as
   await expect(notConnected.getByTestId("agent-opencode").getByRole("button", { name: "Connect" })).toBeVisible();
   // Cursor is not connected, so Amp only reads its skills
   await expect(notConnected.getByTestId("agent-amp")).toContainText("Reads Cursor's skills too");
+});
+
+test("Update skills automatically is off at first, and turned on it updates the outdated skills", async ({ page }) => {
+  await page.request.patch(`${core}/api/v1/settings`, { data: { agents: { auto_update: false } } });
+  await page.goto("/#/");
+  await page.getByRole("main").waitFor();
+  await page.evaluate(() => {
+    const agent = (id: string, name: string, state: string) => ({
+      id,
+      name,
+      found: true,
+      skill: `/Users/you/.${id}/skills/pinrail/SKILL.md`,
+      state,
+      also_reads: [],
+    });
+    const agents = [agent("claude", "Claude Code", "outdated"), agent("codex", "Codex", "connected")];
+    const w = window as unknown as Record<string, unknown>;
+    w.__connected = [] as string[];
+    w.__TAURI_INTERNALS__ = {
+      invoke: async (command: string, args: { id?: string }) => {
+        if (command === "agents_status") return agents;
+        if (command === "connect_agent") {
+          (w.__connected as string[]).push(args.id!);
+          agents.find((a) => a.id === args.id)!.state = "connected";
+          return agents;
+        }
+        return null;
+      },
+    };
+  });
+  await page.keyboard.press("ControlOrMeta+,");
+  await settingsSection(page, "Agents").click();
+  const toggle = page.getByRole("switch", { name: "Update agent skills automatically" });
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("agent-claude")).toHaveClass(/\bis-connected\b/);
+  expect(await page.evaluate(() => (window as unknown as { __connected: string[] }).__connected)).toEqual(["claude"]);
+  await expect
+    .poll(async () => (await (await page.request.get(`${core}/api/v1/settings`)).json()).agents?.auto_update)
+    .toBe(true);
+  await page.request.patch(`${core}/api/v1/settings`, { data: { agents: { auto_update: false } } });
 });

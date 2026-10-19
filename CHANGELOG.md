@@ -13,6 +13,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Added
 
+- *Settings › Agents › Update skills automatically* updates the skill of
+  each connected agent when Pinrail starts, after an update of Pinrail
+  changed it. It is off by default.
 - Plugins can copy to the clipboard. A plugin that declares the
   `clipboard` capability can copy the text or images of a review, and the
   app shows a notice for each copy.

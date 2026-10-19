@@ -32,6 +32,8 @@ export type Settings = {
   history: { keep_days: number | null };
   /** look for a new version at start and every few hours */
   updates: { check: boolean };
+  /** update the connected agents' skills when the app starts */
+  agents: { auto_update: boolean };
   /** the welcome screen was closed; until then the app opens on it */
   welcome: { seen: boolean };
   /** the release whose notes were last shown, or null if none has been */
@@ -55,6 +57,7 @@ type Patch = {
   port?: number;
   history?: Partial<Settings["history"]>;
   updates?: Partial<Settings["updates"]>;
+  agents?: Partial<Settings["agents"]>;
   welcome?: Partial<Settings["welcome"]>;
   whats_new?: Partial<Settings["whats_new"]>;
   autostart?: boolean;
@@ -85,6 +88,7 @@ type Served = Pick<
   | "port"
   | "history"
   | "updates"
+  | "agents"
   | "welcome"
   | "whats_new"
 >;
@@ -106,6 +110,7 @@ const fromServer = (s: ServerSettings): Served => ({
   port: s.port,
   history: { keep_days: s.history?.keep_days ?? null },
   updates: { check: s.updates?.check ?? true },
+  agents: { auto_update: s.agents?.auto_update ?? false },
   welcome: { seen: s.welcome?.seen ?? false },
   whats_new: { seen: s.whats_new?.seen ?? null },
 });
@@ -143,6 +148,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     port: 4747,
     history: { keep_days: null },
     updates: { check: true },
+    agents: { auto_update: false },
     welcome: { seen: false },
     whats_new: { seen: null },
     autostart: null,
@@ -225,6 +231,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         patch.port !== undefined ||
         patch.history ||
         patch.updates ||
+        patch.agents ||
         patch.welcome ||
         patch.whats_new
       ) {
@@ -242,6 +249,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           port: patch.port ?? base.port,
           history: { ...base.history, ...patch.history },
           updates: { ...base.updates, ...patch.updates },
+          agents: { ...base.agents, ...patch.agents },
           welcome: { ...base.welcome, ...patch.welcome },
           whats_new: { ...base.whats_new, ...patch.whats_new },
         };
@@ -261,6 +269,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (patch.port !== undefined) body.port = patch.port;
         if (patch.history) body.history = patch.history;
         if (patch.updates) body.updates = patch.updates;
+        if (patch.agents) body.agents = patch.agents;
         if (patch.welcome) body.welcome = patch.welcome;
         if (patch.whats_new) body.whats_new = patch.whats_new;
         const mine = ++sent.current;

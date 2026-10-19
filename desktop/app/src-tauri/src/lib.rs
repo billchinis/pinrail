@@ -477,6 +477,22 @@ pub fn run() {
                     .unwrap_or(true)
             });
 
+            // the agents' skills follow the app, when the person asked for it
+            if state
+                .settings()
+                .value("/agents/auto_update")
+                .as_bool()
+                .unwrap_or(false)
+            {
+                std::thread::spawn(|| {
+                    if let Ok(home) = home() {
+                        for name in agent_skills::update_outdated(&home) {
+                            eprintln!("pinrail: updated the pinrail skill of {name}");
+                        }
+                    }
+                });
+            }
+
             // an update replaces the app, not a copy of the CLI that Install
             // the CLI made from it (the AppImage's way): bring it up to date
             if let Some(bundled) = cli_install::bundled()

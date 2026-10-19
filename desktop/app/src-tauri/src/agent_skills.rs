@@ -292,6 +292,18 @@ pub fn connect(home: &Path, id: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Brings every agent's outdated skill up to date, and returns the names of
+/// the agents it updated. An agent whose skill is missing, current or the
+/// person's own is left as it is.
+pub fn update_outdated(home: &Path) -> Vec<&'static str> {
+    status(home)
+        .into_iter()
+        .filter(|a| a.found && a.state == State::Outdated)
+        .filter(|a| connect(home, a.id).is_ok())
+        .map(|a| a.name)
+        .collect()
+}
+
 /// Writes one file beside where it goes and renames it, so an agent never
 /// reads half of it.
 fn write(path: &Path, text: &str) -> Result<(), String> {
@@ -487,6 +499,27 @@ mod tests {
             skill_text()
         );
         assert!(!dir.join("references/dropped.md").exists());
+    }
+
+    #[test]
+    fn updating_outdated_skills_leaves_the_others_alone() {
+        let home = home_with(&[".claude", ".codex", ".cursor", ".config/opencode"]);
+        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "codex").unwrap();
+        // Claude Code's skill as an older app wrote it
+        let claude = home.path().join(".claude/skills/pinrail/SKILL.md");
+        fs::write(&claude, skill_text().replace(SHA, "0123")).unwrap();
+        // a skill of the person's own
+        let cursor = home.path().join(".cursor/skills/pinrail");
+        fs::create_dir_all(&cursor).unwrap();
+        fs::write(cursor.join("SKILL.md"), "---\nname: pinrail\n---\nmine\n").unwrap();
+
+        assert_eq!(update_outdated(home.path()), ["Claude Code"]);
+        assert_eq!(fs::read_to_string(&claude).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "codex").state, State::Connected);
+        assert_eq!(state(home.path(), "cursor").state, State::Theirs);
+        // an agent never connected is not connected by an update
+        assert_eq!(state(home.path(), "opencode").state, State::Absent);
     }
 
     #[test]

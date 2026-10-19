@@ -34,6 +34,7 @@ const settings = {
   port: 4747,
   history: { keep_days: 30 },
   updates: { check: true },
+  agents: { auto_update: false },
 } as ServerSettings;
 
 describe("describeDiagnostics", () => {

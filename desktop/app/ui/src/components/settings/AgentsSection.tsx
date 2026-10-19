@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { inTauri } from "../../api/client";
 import { AgentIcon } from "../AgentIcon";
 import { copyText } from "../../lib/clipboard";
+import { useSettings } from "../../state/settings";
+import { Toggle } from "./controls";
 import { SettingsRow } from "./layout";
 
 export type AgentStatus = {
@@ -219,6 +221,7 @@ function AnotherAgent() {
 
 export function AgentsSection({ open }: { open: boolean }) {
   const { agents, busy, error, act } = useAgents(open);
+  const { settings, update } = useSettings();
   const [updating, setUpdating] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
   const outdated = (agents ?? []).filter((a) => a.found && a.state === "outdated");
@@ -226,6 +229,11 @@ export function AgentsSection({ open }: { open: boolean }) {
     setUpdating(true);
     for (const agent of outdated) await act("connect_agent", agent.id);
     setUpdating(false);
+  };
+  // turned on, it also updates the skills that are outdated now
+  const setAutoUpdate = (on: boolean) => {
+    update({ agents: { auto_update: on } });
+    if (on && outdated.length && !updating) updateAll();
   };
   return (
     <>
@@ -237,6 +245,20 @@ export function AgentsSection({ open }: { open: boolean }) {
           Connecting an agent adds a global skill named pinrail. It tells the agent how to submit a review and read your
           decision, whenever a prompt or another skill asks it to use Pinrail.
         </p>
+        {inTauri() ? (
+          <div className="settings-card agent-auto-update">
+            <SettingsRow
+              label="Update skills automatically"
+              description="When Pinrail starts, updates the skill of each connected agent that an update of Pinrail changed"
+            >
+              <Toggle
+                label="Update agent skills automatically"
+                checked={settings.agents.auto_update}
+                onChange={setAutoUpdate}
+              />
+            </SettingsRow>
+          </div>
+        ) : null}
         {!inTauri() ? (
           <div className="settings-card">
             <SettingsRow label="Agents" description="The desktop app finds your agents and connects them" />
