@@ -348,7 +348,7 @@ struct SubmitArgs {
     /// agent's icon when the app knows the agent [default: the coding agent
     /// the command runs under, detected from the variables it sets
     /// (claude-code, codex, cursor, antigravity, grok, opencode, pi,
-    /// goose, amp, copilot, kiro, augment, cline, kimi), or else
+    /// goose, amp, copilot, kiro, augment, cline, hermes-agent, kimi), or else
     /// pinrail-cli]
     #[arg(long, env = "PINRAIL_REQUESTED_BY")]
     requested_by: Option<String>,

@@ -14,6 +14,7 @@ import copilot from "../assets/agents/copilot.svg?raw";
 import cursor from "../assets/agents/cursor.svg?raw";
 import goose from "../assets/agents/goose.svg?raw";
 import grok from "../assets/agents/grok.svg?raw";
+import hermes from "../assets/agents/hermes.svg?raw";
 import kimi from "../assets/agents/kimi.svg?raw";
 import kiro from "../assets/agents/kiro.svg?raw";
 import opencode from "../assets/agents/opencode.svg?raw";
@@ -37,6 +38,8 @@ const AGENTS: Record<string, { label: string; svg: string }> = {
   augment: { label: "Augment CLI", svg: augment },
   auggie: { label: "Augment CLI", svg: augment },
   cline: { label: "Cline", svg: cline },
+  "hermes-agent": { label: "Hermes Agent", svg: hermes },
+  hermes: { label: "Hermes Agent", svg: hermes },
 };
 
 /** The agent a requester names, when the app knows it. */

@@ -5,7 +5,7 @@
 //! agent's own markers. An agent none of these name asks as `pinrail-cli`.
 
 /// The name a review gives each agent Pinrail knows, as the app shows it.
-const KNOWN: [(&str, &str); 14] = [
+const KNOWN: [(&str, &str); 15] = [
     ("claude-code", "claude"),
     ("codex", "codex"),
     ("cursor", "cursor"),
@@ -20,10 +20,11 @@ const KNOWN: [(&str, &str); 14] = [
     ("kiro", "kiro"),
     ("augment", "auggie"),
     ("cline", "cline"),
+    ("hermes-agent", "hermes"),
 ];
 
 /// Each agent's own markers, in the order they are checked.
-const MARKERS: [(&str, &[&str]); 13] = [
+const MARKERS: [(&str, &[&str]); 14] = [
     // before Claude Code: older versions of Amp also set CLAUDECODE
     ("amp", &["AMP_CURRENT_THREAD_ID"]),
     ("claude-code", &["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]),
@@ -43,6 +44,7 @@ const MARKERS: [(&str, &[&str]); 13] = [
     // CLINE_ACTIVE on the terminals of Cline's VS Code extension, and
     // CLINE_WRAPPER_PATH from the launcher of its CLI
     ("cline", &["CLINE_ACTIVE", "CLINE_WRAPPER_PATH"]),
+    ("hermes-agent", &["HERMES_SESSION_ID"]),
     // Goose's shell tool sets only AGENT_SESSION_ID; GOOSE_TERMINAL and
     // AGENT=goose are set for its other commands. Checked last, since the
     // name is generic.
@@ -50,7 +52,7 @@ const MARKERS: [(&str, &[&str]); 13] = [
 ];
 
 /// The variable each agent keeps its session's id in.
-const SESSIONS: [(&str, &str); 10] = [
+const SESSIONS: [(&str, &str); 11] = [
     ("claude-code", "CLAUDE_CODE_SESSION_ID"),
     ("codex", "CODEX_SESSION_ID"),
     ("opencode", "OPENCODE_SESSION_ID"),
@@ -62,6 +64,7 @@ const SESSIONS: [(&str, &str); 10] = [
     ("amp", "AMP_CURRENT_THREAD_ID"),
     ("copilot", "COPILOT_AGENT_SESSION_ID"),
     ("kiro", "KIRO_SESSION_ID"),
+    ("hermes-agent", "HERMES_SESSION_ID"),
 ];
 
 pub fn detect() -> Option<String> {
@@ -202,6 +205,19 @@ mod tests {
         assert_eq!(
             detect(&[("CLINE_WRAPPER_PATH", "/usr/local/bin/cline")]).as_deref(),
             Some("cline")
+        );
+        assert_eq!(
+            detect(&[("HERMES_SESSION_ID", "20261019_1")]).as_deref(),
+            Some("hermes-agent")
+        );
+        // the name Hermes gives itself
+        assert_eq!(
+            detect(&[("AI_AGENT", "hermes-agent")]).as_deref(),
+            Some("hermes-agent")
+        );
+        assert_eq!(
+            detect(&[("AGENT", "hermes")]).as_deref(),
+            Some("hermes-agent")
         );
         // the only variable Goose's shell tool sets
         assert_eq!(

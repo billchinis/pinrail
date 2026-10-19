@@ -135,6 +135,7 @@ fn pinrail() -> Command {
         .env_remove("AUGMENT_AGENT")
         .env_remove("CLINE_ACTIVE")
         .env_remove("CLINE_WRAPPER_PATH")
+        .env_remove("HERMES_SESSION_ID")
         .env_remove("CLAUDE_CODE_SESSION_ID")
         .env_remove("CODEX_SESSION_ID")
         .env_remove("OPENCODE_SESSION_ID")
@@ -397,6 +398,7 @@ fn a_review_carries_the_session_of_the_agent_the_cli_runs_under() {
     submit(&[("AMP_CURRENT_THREAD_ID", "T-8")]);
     submit(&[("COPILOT_CLI", "1"), ("COPILOT_AGENT_SESSION_ID", "s-9")]);
     submit(&[("KIRO_SESSION_ID", "k-10")]);
+    submit(&[("AI_AGENT", "hermes-agent"), ("HERMES_SESSION_ID", "h-11")]);
     // another agent's session is not this review's
     submit(&[("CLAUDECODE", "1"), ("CODEX_SESSION_ID", "x-6")]);
     submit(&[]);
@@ -413,6 +415,7 @@ fn a_review_carries_the_session_of_the_agent_the_cli_runs_under() {
             serde_json::json!("T-8"),
             serde_json::json!("s-9"),
             serde_json::json!("k-10"),
+            serde_json::json!("h-11"),
             serde_json::Value::Null,
             serde_json::Value::Null,
         ]
