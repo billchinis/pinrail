@@ -16,6 +16,9 @@ The `pinrail` command ships inside the app and carries the app's version.
 - *Settings › Agents › Update skills automatically* updates the skill of
   each connected agent when Pinrail starts, after an update of Pinrail
   changed it. It is off by default.
+- Support for Hermes Agent. Settings › Agents installs the `pinrail`
+  skill to `~/.hermes/skills`, and reviews submitted from Hermes Agent
+  show its name and icon.
 - Plugins can copy to the clipboard. A plugin that declares the
   `clipboard` capability can copy the text or images of a review, and the
   app shows a notice for each copy.

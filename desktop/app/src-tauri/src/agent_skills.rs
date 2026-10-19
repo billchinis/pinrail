@@ -140,6 +140,13 @@ const AGENTS: &[Agent] = &[
         skills: ".cline/skills",
         also_reads: &[],
     },
+    Agent {
+        id: "hermes",
+        name: "Hermes Agent",
+        config: ".hermes",
+        skills: ".hermes/skills",
+        also_reads: &[],
+    },
 ];
 
 /// One agent, as Settings shows it.
@@ -685,6 +692,16 @@ mod tests {
         let path = home.path().join(".cline/skills/pinrail/SKILL.md");
         assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
         assert_eq!(state(home.path(), "cline").state, State::Connected);
+    }
+
+    #[test]
+    fn hermes_agent_keeps_its_skills_in_its_folder() {
+        let home = home_with(&[".hermes"]);
+        assert!(state(home.path(), "hermes").found);
+        connect(home.path(), "hermes").unwrap();
+        let path = home.path().join(".hermes/skills/pinrail/SKILL.md");
+        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(state(home.path(), "hermes").state, State::Connected);
     }
 
     #[test]
