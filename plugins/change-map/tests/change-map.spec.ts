@@ -109,7 +109,9 @@ test("selecting another part of the same file scrolls the drawer to its lines", 
   await expect.poll(inView).toBe(true);
 });
 
-test("a drag over a screenshot comments on that area, shown on the image and in the sidebar", async ({ page }) => {
+test("a drag over a screenshot comments on that area, marked on the image and listed in the sidebar", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 860 });
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;
@@ -130,10 +132,15 @@ test("a drag over a screenshot comments on that area, shown on the image and in 
   await expect(f.getByTestId("screen-viewer").locator("figure", { hasText: "After" }).getByTestId("area")).toHaveCount(
     1,
   );
-  await expect(f.getByTestId("area-comments")).toContainText("The spinner hides the label.");
-  // the sidebar: the screenshot's badge, and the comment under the part's comments
+  // the comment is listed once, in the sidebar, not again under the screenshots
+  await expect(f.getByTestId("screen-viewer")).not.toContainText("The spinner hides the label.");
+  // the sidebar: the screenshot's badge, and the comment under the part's
+  // comments, headed as a screenshot comment with the number of its box
   await expect(f.locator(".cm-screens-head .cm-mark")).toHaveText("1");
-  await expect(f.getByTestId("part-detail")).toContainText("Save while saving · after #1");
+  const comment = f.getByTestId("part-detail").locator(".cm-comment", { hasText: "The spinner hides the label." });
+  await expect(comment.getByRole("button", { name: "Show the screenshot with this area" })).toHaveText(
+    "1Screenshot · Save while saving · After",
+  );
   // and the part's badge on the map counts it
   await expect(f.locator('[data-node="ticket-form"] .cm-mark-comment')).toHaveText("1");
   await page.mouse.move(1100, 60);

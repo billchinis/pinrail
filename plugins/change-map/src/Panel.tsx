@@ -11,6 +11,7 @@ import {
   FileCode,
   GitBranch,
   GitFork,
+  Image as ImageIcon,
   ListOrdered,
   MessageCircle,
 } from "lucide-react";
@@ -568,15 +569,19 @@ export function Comments({
                 head={
                   <button
                     type="button"
-                    className="cm-line-ref"
+                    className="cm-line-ref cm-screen-ref"
                     onClick={(e) => {
                       e.stopPropagation();
                       openScreen(index);
                     }}
-                    title="Show the screen with this area"
+                    aria-label="Show the screenshot with this area"
+                    title="Show the screenshot with this area"
                   >
+                    {/* the number of the area's box on the screenshot */}
+                    <span className="cm-area-n">{n + 1}</span>
+                    <ImageIcon aria-hidden="true" />
                     <span>
-                      {sc.title ?? "Screen"} · {c.target.screen.image} #{n + 1}
+                      Screenshot · {sc.title ?? part.title} · {c.target.screen.image === "before" ? "Before" : "After"}
                     </span>
                   </button>
                 }

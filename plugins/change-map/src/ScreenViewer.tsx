@@ -3,7 +3,7 @@
 // The wheel zooms on the pointer; a drag marks an area to comment on, or
 // pans with the hand tool, Space held or the middle button. The before and
 // the after share one view, so a detail stays lined up across both. Comments
-// on areas show as numbered boxes and as a list under the stages. The slider
+// on areas show as numbered boxes, and the side panel lists them. The slider
 // lays the after over the before with a handle to wipe between them, and
 // After only shows the latest image alone. The
 // header steps through the part's screens. Esc cancels the comment being
@@ -20,7 +20,6 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CommentItem } from "./CommentItem";
 import { Compose } from "./Compose";
 import { resizeDrawer } from "./DiffViewer";
 import { isScreen, type Comment, type Part, type Region, type ScreenTarget, type Target } from "./types";
@@ -70,8 +69,6 @@ export function ScreenViewer({
   readonly,
   comments,
   addComment,
-  editComment,
-  removeComment,
   onClose,
   mode,
   setMode,
@@ -85,8 +82,6 @@ export function ScreenViewer({
   readonly: boolean;
   comments: Comment[];
   addComment(target: Target, body: string): void;
-  editComment(comment: Comment, body: string): void;
-  removeComment(comment: Comment): void;
   onClose(): void;
   /** the comparison the person chose last, which the screen_mode setting keeps */
   mode: Mode;
@@ -465,27 +460,6 @@ export function ScreenViewer({
               onCancel={() => setDraft(null)}
             />
           </div>
-        ) : null}
-        {mine.length ? (
-          <ol className="cm-shot-comments" data-testid="area-comments">
-            {mine.map((c, n) => (
-              <li key={n} onMouseEnter={() => setLit(n + 1)} onMouseLeave={() => setLit(null)}>
-                <CommentItem
-                  comment={c}
-                  readonly={readonly}
-                  className={lit === n + 1 ? "cm-lit-comment" : ""}
-                  head={
-                    <span className="cm-area-ref">
-                      <span className="cm-area-n">{n + 1}</span>
-                      {c.target.screen.image === "before" ? "Before" : "After"}
-                    </span>
-                  }
-                  onEdit={(body) => editComment(c, body)}
-                  onDelete={() => removeComment(c)}
-                />
-              </li>
-            ))}
-          </ol>
         ) : null}
       </div>
       {compare !== "wipe" ? (

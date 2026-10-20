@@ -479,8 +479,6 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               readonly={readonly}
               comments={draft.comments}
               addComment={addComment}
-              editComment={editComment}
-              removeComment={removeComment}
               onClose={() => setFile(null)}
               mode={screenMode}
               setMode={setScreenMode}
