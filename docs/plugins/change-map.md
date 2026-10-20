@@ -142,7 +142,7 @@ When you finish a change, submit a map of it to Pinrail with the
 | Field | What the agent does with it |
 |---|---|
 | `verdict` | `approve`: goes on, and reads any comments as notes. `request_changes`: applies the comments in a new version. |
-| `comments[].target` | What the comment is about: a part (`node`), an interaction (`edge`), lines of a file (`file`, `line`, `start_line` and `side`), an area of a screenshot (`screen` and `region`), or an entity of a diagram (`diagram` and `item`). |
+| `comments[].target` | What the comment is about: a part (`node`), an interaction (`edge`), lines of a file (`file`, `line`, `start_line` and `side`), an area of a screenshot (`screen` and `region`, in fractions of the image, with `pixels` and `image_size` giving the same area in the image's own pixels), or an entity of a diagram (`diagram` and `item`). |
 | `reviewed` | The parts, interactions and diagram entities the person marked as reviewed. |
 
 ## Reference

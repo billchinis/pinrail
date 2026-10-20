@@ -47,4 +47,8 @@ pinrail submit change-map --title "Dedup tickets on save" --data map.json \
 A comment on an area of a screenshot has the target
 `{"screen": {"node": "ticket-form", "index": 0, "image": "after"}, "region": {"x": 0.6, "y": 0.72, "width": 0.3, "height": 0.16}}`.
 `index` is the screen's place in `screens`, and the region is in fractions
-of the image's width and height, from its top-left corner.
+of the image's width and height, from its top-left corner. The target also
+gives the area in the image's own pixels, as `pixels`, with the size of the
+image the view showed as `image_size`, such as
+`{"pixels": {"x": 619, "y": 432, "width": 310, "height": 96}, "image_size": {"width": 1032, "height": 600}}`.
+Use those to crop or mark up the file you sent.

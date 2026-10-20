@@ -105,6 +105,9 @@ export type Region = { x: number; y: number; width: number; height: number };
 export type ScreenTarget = {
   screen: { node: string; index: number; image: "before" | "after" };
   region: Region;
+  /** the same area in the image's own pixels, and the image's size */
+  pixels?: Region;
+  image_size?: { width: number; height: number };
 };
 export const isScreen = (t: Target): t is ScreenTarget => "screen" in t;
 /** An entity of an extra diagram that has no part or interaction of the map. */

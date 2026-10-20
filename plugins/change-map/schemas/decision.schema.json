@@ -145,6 +145,54 @@
                         "maximum": 1
                       }
                     }
+                  },
+                  "pixels": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "x",
+                      "y",
+                      "width",
+                      "height"
+                    ],
+                    "description": "The same area in the image's own pixels, from its top-left corner.",
+                    "properties": {
+                      "x": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "y": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "image_size": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "width",
+                      "height"
+                    ],
+                    "description": "The image's own size in pixels, which `pixels` is in.",
+                    "properties": {
+                      "width": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
                   }
                 }
               },
@@ -175,7 +223,9 @@
               "screen": {},
               "region": {},
               "diagram": {},
-              "item": {}
+              "item": {},
+              "pixels": {},
+              "image_size": {}
             }
           },
           "body": {

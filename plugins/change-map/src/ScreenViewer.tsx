@@ -234,7 +234,28 @@ export function ScreenViewer({
 
   const save = () => {
     if (!draft || !text.trim()) return;
-    addComment({ screen: { node: part.id, index, image: draft.image }, region: draft.region }, text.trim());
+    // the area in the image's own pixels too, for an agent that crops or
+    // marks up the file it sent
+    const size = sizes.current.get(draft.image);
+    const r = draft.region;
+    addComment(
+      {
+        screen: { node: part.id, index, image: draft.image },
+        region: r,
+        ...(size?.w && size.h
+          ? {
+              pixels: {
+                x: Math.round(r.x * size.w),
+                y: Math.round(r.y * size.h),
+                width: Math.round(r.width * size.w),
+                height: Math.round(r.height * size.h),
+              },
+              image_size: { width: size.w, height: size.h },
+            }
+          : {}),
+      },
+      text.trim(),
+    );
     setDraft(null);
     setText("");
   };

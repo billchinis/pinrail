@@ -811,6 +811,16 @@
               "y": 0.72,
               "width": 0.3,
               "height": 0.16
+            },
+            "pixels": {
+              "x": 619,
+              "y": 432,
+              "width": 310,
+              "height": 96
+            },
+            "image_size": {
+              "width": 1032,
+              "height": 600
             }
           },
           "body": "The spinner hides the button's label."

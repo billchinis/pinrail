@@ -144,6 +144,13 @@ test("a drag over a screenshot comments on that area, shown on the image and in 
   expect(target.screen).toEqual({ node: "ticket-form", index: 0, image: "after" });
   expect(target.region.x).toBeCloseTo(0.6, 1);
   expect(target.region.width).toBeCloseTo(0.3, 1);
+  // the same area in the image's own pixels, for an agent that crops the file
+  const sized = target as unknown as { pixels: Record<string, number>; image_size: Record<string, number> };
+  expect(sized.image_size).toEqual({ width: 1032, height: 600 });
+  expect(sized.pixels.x).toBe(Math.round(target.region.x * 1032));
+  expect(sized.pixels.y).toBe(Math.round(target.region.y * 600));
+  expect(sized.pixels.width).toBe(Math.round(target.region.width * 1032));
+  expect(sized.pixels.height).toBe(Math.round(target.region.height * 600));
 });
 
 test("the wheel zooms a screenshot on the pointer, keeping that spot under it", async ({ page }) => {

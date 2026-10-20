@@ -16,7 +16,7 @@ Decided by Maya at 2026-10-20 12:00
    Keep the key after a failed save, so a retry sends it again.
 4. `lib/helpdesk/tickets.ex:76` (the old side)
    Keep the old doc's example.
-5. **Screenshot** *Save while saving* of *Ticket form*, after, the area at 60% across and 72% down, 30% × 16% of the image
+5. **Screenshot** *Save while saving* of *Ticket form*, after, the area at 60% across and 72% down, 30% × 16% of the image (310×96 px at 619, 432 in the 1032×600 image)
    The spinner hides the button's label.
 6. **Transition** *failed / setSaving(false)* in the state diagram *The Save button*
    Show why the save failed.
