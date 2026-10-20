@@ -19,9 +19,21 @@ import {
 } from "@xyflow/react";
 import { FileCode, GitCommitHorizontal, GitCommitVertical } from "lucide-react";
 import { memo, useContext, useMemo, useRef } from "react";
-import { fitOptions, Fitter, Follower, Marked, SharedContext, Zoom, statusLabel, type Shared } from "./Diagram";
+import {
+  FilesMark,
+  filesSaid,
+  fitOptions,
+  Fitter,
+  Follower,
+  Marked,
+  SharedContext,
+  Zoom,
+  statusLabel,
+  type Shared,
+} from "./Diagram";
 import { routePath, stateLayout, type Direction, type Loop, type Route } from "./layout";
 import {
+  changesOf,
   markOf,
   sameSelection,
   selectionOf,
@@ -92,6 +104,7 @@ const TransitionEdge = memo(function TransitionEdge(props: EdgeProps<TransitionE
   const { transition, diagram, payload, route, loop } = props.data!;
   const mine = selectionOf(payload, diagram, transition);
   const selected = sameSelection(mine, selection);
+  const files = changesOf(payload, mine).length;
   const status = lineStatus(transition.status);
   const [path, labelX, labelY] = loop
     ? [loop.path, loop.label.x, loop.label.y]
@@ -114,11 +127,12 @@ const TransitionEdge = memo(function TransitionEdge(props: EdgeProps<TransitionE
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
           onClick={() => select(mine)}
           aria-pressed={selected}
-          aria-label={`${transition.label ?? "Transition"}, ${statusLabel[status]}`}
+          aria-label={`${transition.label ?? "Transition"}, ${statusLabel[status]}${filesSaid(files)}`}
           title={transition.label ?? "Transition"}
           data-item={transition.id}
         >
           {transition.label ? <span className="cm-link-text">{transition.label}</span> : null}
+          <FilesMark count={files} />
           <Marked id={markOf(mine!)} />
         </button>
       </EdgeLabelRenderer>

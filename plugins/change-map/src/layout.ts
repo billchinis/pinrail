@@ -40,7 +40,8 @@ export const LABEL_HEIGHT = 22;
 export const LABEL_MAX = 220;
 
 /** A label's width on the diagram, for the layout to leave room for it. */
-export const labelWidth = (label: string) => Math.min(LABEL_MAX, Math.round(label.length * 6.7 + 34));
+export const labelWidth = (label: string, files = 0) =>
+  Math.min(LABEL_MAX, Math.round(label.length * 6.7 + 34)) + (files ? 26 : 0);
 
 /** An interaction's line, as dagre routes it clear of the parts, and where its label goes. */
 export type Route = { points: { x: number; y: number }[]; label: { x: number; y: number } };
@@ -73,7 +74,12 @@ export function layout(
   for (const e of payload.edges ?? []) {
     if (e.from === e.to || !g.hasNode(e.from) || !g.hasNode(e.to)) continue;
     // the label's size, so that the gap between the parts has room for it
-    g.setEdge(e.from, e.to, { width: labelWidth(e.label ?? e.kind ?? "call"), height: 24, labelpos: "c" }, e.id);
+    g.setEdge(
+      e.from,
+      e.to,
+      { width: labelWidth(e.label ?? e.kind ?? "call", e.changes?.length), height: 24, labelpos: "c" },
+      e.id,
+    );
   }
   dagre.layout(g);
   const box = (name: string): Box => {
@@ -102,7 +108,7 @@ export function layout(
     const d =
       g.hasNode(e.from) && g.hasNode(e.to) && e.from !== e.to ? g.edge({ v: e.from, w: e.to, name: e.id }) : null;
     if (!d?.points?.length) continue;
-    const size = { width: labelWidth(e.label ?? e.kind ?? "call"), height: LABEL_HEIGHT };
+    const size = { width: labelWidth(e.label ?? e.kind ?? "call", e.changes?.length), height: LABEL_HEIGHT };
     // on the line as drawn, which cuts the corners dagre's point may sit in
     const label = onLine(d.points, { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y }, size, taken);
     taken.push({ x: label.x - size.width / 2, y: label.y - size.height / 2, ...size });
@@ -177,7 +183,7 @@ export function stateLayout(
     g.setEdge(
       t.from,
       t.to,
-      { width: label ? labelWidth(label) : 1, height: label ? LABEL_HEIGHT : 1, labelpos: "c" },
+      { width: label ? labelWidth(label, t.changes?.length) : 1, height: label ? LABEL_HEIGHT : 1, labelpos: "c" },
       t.id,
     );
   }
@@ -196,7 +202,7 @@ export function stateLayout(
   for (const t of diagram.transitions ?? []) {
     const box = t.from === t.to ? nodes.get(t.from) : undefined;
     if (!box) continue;
-    const size = { width: t.label ? labelWidth(t.label) : 0, height: t.label ? LABEL_HEIGHT : 0 };
+    const size = { width: t.label ? labelWidth(t.label, t.changes?.length) : 0, height: t.label ? LABEL_HEIGHT : 0 };
     const loop = loopOf(box, direction, size);
     loops.set(t.id, loop);
     if (t.label) take(loop.label, size);
@@ -205,7 +211,7 @@ export function stateLayout(
     const d =
       t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to) ? g.edge({ v: t.from, w: t.to, name: t.id }) : null;
     if (!d?.points?.length) continue;
-    const size = { width: t.label ? labelWidth(t.label) : 1, height: t.label ? LABEL_HEIGHT : 1 };
+    const size = { width: t.label ? labelWidth(t.label, t.changes?.length) : 1, height: t.label ? LABEL_HEIGHT : 1 };
     // on the line as drawn, which cuts the corners dagre's point may sit in
     const label = onLine(d.points, { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y }, size, taken);
     if (t.label) take(label, size);
@@ -255,7 +261,7 @@ export function sequenceLayout(diagram: ExtraDiagram): SequenceLayout {
   for (const m of messages) {
     const a = people.findIndex((p) => p.id === m.from);
     const b = people.findIndex((p) => p.id === m.to);
-    const want = labelWidth(m.label ?? "") + 16;
+    const want = labelWidth(m.label ?? "", m.changes?.length) + 16;
     if (a === b) gaps[a] = Math.max(gaps[a], want + 40 - widths[a] / 2);
     else {
       // the label sits over the span between the two lifelines
@@ -301,7 +307,14 @@ export function sequenceLayout(diagram: ExtraDiagram): SequenceLayout {
     const self = m.from === m.to || m.kind === "self";
     const height = self ? SELF_ROW : ROW;
     if (self)
-      rows.set(m.id, { x: a, y, width: Math.max(60, labelWidth(m.label ?? "") + 40), height, self, leftward: false });
+      rows.set(m.id, {
+        x: a,
+        y,
+        width: Math.max(60, labelWidth(m.label ?? "", m.changes?.length) + 40),
+        height,
+        self,
+        leftward: false,
+      });
     else rows.set(m.id, { x: Math.min(a, b), y, width: Math.abs(b - a), height, self, leftward: b < a });
     y += height;
     for (const g of groups.filter((g) => g.last === m.id).reverse()) {

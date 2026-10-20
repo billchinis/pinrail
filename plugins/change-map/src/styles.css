@@ -1665,6 +1665,19 @@ body.cm-panning * {
     0 0 0 2px var(--pinrail-bg),
     0 0 0 4px var(--pinrail-accent);
 }
+/* the number of files behind an interaction, after its label */
+.cm-link-files {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  font: 500 10.5px var(--pinrail-mono);
+  color: var(--pinrail-faint);
+}
+.cm-app .cm-link-files svg.lucide {
+  width: 11px;
+  height: 11px;
+}
 .cm-link-label-bare {
   padding: 2px 4px;
 }

@@ -284,6 +284,30 @@ test("a state diagram shows each state's name whole, beside its files", async ({
   }
 });
 
+test("an interaction's label shows how many files it has, on the map and in the diagrams", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  // on the map
+  await expect(f.locator('.cm-link-label[data-edge="save"] .cm-link-files')).toHaveText("1");
+  await expect(f.locator('.cm-link-label[data-edge="save"]')).toHaveAttribute("aria-label", /1 file/);
+  // a message of a sequence diagram, with files of its own, or those of the
+  // interaction it stands for
+  await f.locator('[data-tab="first-save"]').click();
+  await expect(f.locator('[data-item="m5"] .cm-link-files')).toHaveText("1");
+  await expect(f.locator('[data-item="m1"] .cm-link-files')).toHaveText("1");
+  // a transition of a state diagram
+  await f.locator('[data-tab="save-button"]').click();
+  await expect(f.locator('.cm-link-label[data-item="t2"] .cm-link-files')).toHaveText("1");
+});
+
+test("a map whose interactions have no files shows no file counts on them", async ({ page }) => {
+  const map = fixture(path.join(dir, "tests", "maps", "change-map-itself.json"));
+  const plugin = await mountPlugin(page, dir, { review: map });
+  const f = plugin.frame;
+  await expect(f.locator(".cm-link-label").first()).toBeVisible();
+  await expect(f.locator(".cm-link-files")).toHaveCount(0);
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

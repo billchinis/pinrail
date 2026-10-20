@@ -39,7 +39,16 @@ import {
 import { createContext, memo, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { heightOf, layout, routePath, widthOf, type CardStyle, type Route as LineRoute } from "./layout";
 import { lineCount, type LineCount } from "./lines";
-import { edgeStatus, nodeStatus, type Link, type NodeKind, type Part, type Payload, type Selection } from "./types";
+import {
+  changesOf,
+  edgeStatus,
+  nodeStatus,
+  type Link,
+  type NodeKind,
+  type Part,
+  type Payload,
+  type Selection,
+} from "./types";
 
 /** What the diagram shows on each part and interaction, by its id. */
 export type Marks = Map<string, { comments: number; reviewed: boolean }>;
@@ -91,9 +100,26 @@ type PartData = { part: Part; style: CardStyle; lines: LineCount | null };
 type PartNodeType = Node<PartData, "part">;
 type LaneData = { title: string };
 type LaneNodeType = Node<LaneData, "lane">;
-/** `route`: the line and the label's place, as the layout routed them clear of the parts */
-type LinkData = { link: Link; route?: LineRoute };
+/** `route`: the line and the label's place, as the layout routed them clear
+ *  of the parts; `files`: how many files implement the interaction */
+type LinkData = { link: Link; route?: LineRoute; files: number };
 type LinkEdgeType = Edge<LinkData, "link">;
+
+/** The number of files behind an interaction, a message or a transition,
+ *  on its label, so that one with code to read stands out from one
+ *  without. Nothing without files. */
+export function FilesMark({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <span className="cm-link-files" aria-hidden="true">
+      <FileCode />
+      {count}
+    </span>
+  );
+}
+
+/** How a label names its files, for its accessible name. */
+export const filesSaid = (count: number) => (count ? `, ${count} ${count === 1 ? "file" : "files"}` : "");
 
 /** Badges on a part's corner, or beside an interaction's label: its
  *  comments, and whether it was reviewed. */
@@ -213,7 +239,7 @@ const LaneNode = memo(function LaneNode({ data }: NodeProps<LaneNodeType>) {
 
 const LinkEdge = memo(function LinkEdge(props: EdgeProps<LinkEdgeType>) {
   const { selection, select } = useContext(SharedContext);
-  const { link, route } = props.data!;
+  const { link, route, files } = props.data!;
   const [path, labelX, labelY] = route ? [routePath(route.points), route.label.x, route.label.y] : getBezierPath(props);
   const status = edgeStatus(link);
   const selected = !!selection && "edge" in selection && selection.edge === link.id;
@@ -234,11 +260,12 @@ const LinkEdge = memo(function LinkEdge(props: EdgeProps<LinkEdgeType>) {
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
           onClick={() => select({ edge: link.id })}
           aria-pressed={selected}
-          aria-label={`${link.label ?? "Interaction"}, ${statusLabel[status]}`}
+          aria-label={`${link.label ?? "Interaction"}, ${statusLabel[status]}${filesSaid(files)}`}
           title={link.label ?? kind}
           data-edge={link.id}
         >
           <span className="cm-link-text">{link.label ?? kind}</span>
+          <FilesMark count={files} />
           <Marked id={link.id} />
         </button>
       </EdgeLabelRenderer>
@@ -497,7 +524,7 @@ export function Diagram({
       source: e.from,
       target: e.to,
       type: "link",
-      data: { link: e, route: placed.edges.get(e.id) },
+      data: { link: e, route: placed.edges.get(e.id), files: changesOf(payload, { edge: e.id }).length },
       markerEnd: { type: "arrowclosed" as const, width: 16, height: 16 },
       selectable: false,
     }));

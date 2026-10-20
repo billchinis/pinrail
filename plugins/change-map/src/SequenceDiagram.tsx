@@ -8,6 +8,8 @@ import { memo, useContext, useMemo, useRef } from "react";
 import {
   fitOptions,
   Fitter,
+  FilesMark,
+  filesSaid,
   Follower,
   Marked,
   SharedContext,
@@ -18,6 +20,7 @@ import {
 } from "./Diagram";
 import { sequenceLayout } from "./layout";
 import {
+  changesOf,
   edgeStatus,
   markOf,
   nodeStatus,
@@ -114,6 +117,8 @@ const MessageRow = memo(function MessageRow({ data, width, height }: NodeProps<N
   const mine = selectionOf(payload, diagram, message);
   const selected = sameSelection(mine, selection);
   const status = messageStatus(payload, message);
+  // its own files, or those of the interaction it stands for
+  const files = changesOf(payload, mine).length;
   const kind = message.kind ?? "call";
   const w = width ?? 0;
   const h = height ?? 0;
@@ -126,7 +131,7 @@ const MessageRow = memo(function MessageRow({ data, width, height }: NodeProps<N
       style={{ width: w, height: h }}
       onClick={() => select(mine)}
       aria-pressed={selected}
-      aria-label={`${message.label ?? "Message"}, ${statusLabel[status]}`}
+      aria-label={`${message.label ?? "Message"}, ${statusLabel[status]}${filesSaid(files)}`}
       title={message.label ?? "Message"}
       data-item={message.id}
     >
@@ -145,6 +150,7 @@ const MessageRow = memo(function MessageRow({ data, width, height }: NodeProps<N
       </svg>
       <span className={`cm-seq-label cm-link-label-${status}`}>
         <span className="cm-link-text">{message.label ?? kind}</span>
+        <FilesMark count={files} />
         <Marked id={markOf(mine!)} />
       </span>
     </button>
