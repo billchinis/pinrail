@@ -33,8 +33,9 @@ span several files, and a file several parts.
   `external`, `config` or `test`.
 - `status`: `added`, `changed`, `removed`, or `context` for a part the
   change does not touch but that explains it. Keep context parts few.
-- `summary`: what changed in the part and why, in Markdown, two or three
-  sentences.
+- `summary`: what changed in the part and why, in Markdown. As long as
+  the part needs: a sentence for a small change, and for a complex one the
+  design, the trade-offs and what to look at, with lists, tables or code.
 - `changes`: the files and the line ranges, on the new side, that
   implement this part, such as `{"file": "lib/tickets.ex", "lines": [[90, 93]]}`.
   Take the ranges from the hunks, and narrow them to the part's own lines.
