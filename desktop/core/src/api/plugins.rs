@@ -27,7 +27,10 @@ pub fn routes() -> Router<ApiState> {
         .route("/api/v1/plugins/{name}", delete(remove))
         .route("/api/v1/plugins/{name}/describe", get(describe))
         .route("/api/v1/plugins/{name}/sample", post(sample))
-        .route("/api/v1/plugins/{name}/skill", patch(allow_skill))
+        .route(
+            "/api/v1/plugins/{name}/skill",
+            patch(allow_skill).get(skill),
+        )
 }
 
 async fn index(State(state): State<Arc<Pinrail>>) -> Json<Value> {
@@ -56,6 +59,20 @@ async fn sample(
 /// registry's compiled index.
 async fn catalog(State(state): State<Arc<Pinrail>>) -> Json<Value> {
     Json(state.plugins().catalog())
+}
+
+/// A file of the plugin's skill, `SKILL.md` unless `?file=` names another,
+/// with the list of its files.
+async fn skill(
+    State(state): State<Arc<Pinrail>>,
+    Path(name): Path<String>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    Ok(Json(
+        state
+            .plugins()
+            .skill(&name, query.get("file").map(String::as_str))?,
+    ))
 }
 
 /// Allows the skill of a plugin copied from a folder or a zip to reach the

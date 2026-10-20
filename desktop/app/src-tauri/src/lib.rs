@@ -239,10 +239,13 @@ async fn agents_status(
     .map_err(|e| e.to_string())?
 }
 
-/// The skill as this version writes it, for an agent the app does not know.
+/// The skill as the app writes it now, for an agent the app does not know.
 #[tauri::command]
-fn agent_skill() -> String {
-    agent_skills::skill_to_copy()
+async fn agent_skill(native: State<'_, Native>) -> Result<String, String> {
+    let state = native.state.clone();
+    tauri::async_runtime::spawn_blocking(move || current_skill(&state).to_copy())
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Writes or updates the `pinrail` skill for an agent, then reports as

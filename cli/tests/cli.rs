@@ -1920,6 +1920,33 @@ fn attachments_lists_a_review_s_files_and_saves_one() {
 }
 
 #[test]
+fn the_plugins_listing_points_at_a_skill_that_may_reach_the_agents() {
+    let server = MockServer::start(Box::new(|_, path, _| {
+        match path {
+        "/api/v1/plugins" => (
+            200,
+            r#"{"plugins":[
+                {"name":"change-map","version":"1.0.0","skill":{"files":["SKILL.md"]},"install":{"source_kind":"index","source":"forgeplane/change-map","skill_allowed":true}},
+                {"name":"copied","version":"1.0.0","skill":{"files":["SKILL.md"]},"install":{"source_kind":"folder","source":"/p/copied","skill_allowed":false}}]}"#
+                .into(),
+        ),
+        other => panic!("unexpected {other}"),
+    }
+    }));
+    let (code, stdout, stderr) = run(&server, &["plugins", "--markdown"]);
+    assert_eq!(code, 0, "{stderr}");
+    assert!(
+        stdout.contains(
+            "- change-map · 1.0.0 · official plugin · ready\n  \
+             Has a skill: read it with pinrail plugins skill change-map before you submit.\n"
+        ),
+        "{stdout}"
+    );
+    // a skill not allowed is not pointed at
+    assert_eq!(stdout.matches("Has a skill").count(), 1, "{stdout}");
+}
+
+#[test]
 fn plugins_and_describe_say_what_files_a_plugin_takes_and_how_to_send_them() {
     let server = MockServer::start(Box::new(|_, path, _| {
         let body = r#"{"plugins":[
@@ -2340,6 +2367,49 @@ fn installing_a_plugin_with_a_skill_says_whether_it_reaches_the_agents() {
     assert_eq!(
         stdout,
         "Installed mapper 1.0.0 from /dl/mapper.zip.\nIts skill reaches your connected agents.\n"
+    );
+}
+
+#[test]
+fn plugins_skill_prints_a_plugins_skill_or_one_of_its_files() {
+    let server = MockServer::start(Box::new(|method, path, _| {
+        match (method, path) {
+        ("GET", "/api/v1/plugins/change-map/skill") => (
+            200,
+            r##"{"name":"change-map","file":"SKILL.md","text":"# Change map\n\nRead references/payload.md.\n","files":["SKILL.md","references/payload.md"]}"##.into(),
+        ),
+        ("GET", "/api/v1/plugins/change-map/skill?file=references%2Fpayload.md") => (
+            200,
+            r##"{"name":"change-map","file":"references/payload.md","text":"# The payload\n","files":["SKILL.md","references/payload.md"]}"##.into(),
+        ),
+        ("GET", "/api/v1/plugins/copied/skill") => (
+            422,
+            r#"{"error":"invalid","message":"invalid","violations":[{"path":"/plugin","message":"the copied plugin's skill is not allowed to reach your agents"}]}"#.into(),
+        ),
+        ("GET", "/api/v1/plugins") => (200, r#"{"plugins":[{"name":"copied","usable":true}]}"#.into()),
+        other => panic!("unexpected {other:?}"),
+    }
+    }));
+    let (code, stdout, stderr) = run(&server, &["plugins", "skill", "change-map", "--markdown"]);
+    assert_eq!(code, 0, "{stderr}");
+    assert_eq!(stdout, "# Change map\n\nRead references/payload.md.\n");
+    let (code, stdout, stderr) = run(
+        &server,
+        &[
+            "plugins",
+            "skill",
+            "change-map",
+            "references/payload.md",
+            "--markdown",
+        ],
+    );
+    assert_eq!(code, 0, "{stderr}");
+    assert_eq!(stdout, "# The payload\n");
+    let (code, _, stderr) = run(&server, &["plugins", "skill", "copied"]);
+    assert_eq!(code, 2, "{stderr}");
+    assert!(
+        stderr.contains("not allowed to reach your agents"),
+        "{stderr}"
     );
 }
 

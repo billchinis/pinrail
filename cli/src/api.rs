@@ -276,6 +276,13 @@ impl Client {
         self.delete(&format!("/api/v1/plugins/{}", segment(name)))
     }
 
+    /// A file of a plugin's skill, SKILL.md unless `file` names another.
+    pub fn plugins_skill(&self, name: &str, file: Option<&str>) -> Result<Value> {
+        let query: Vec<(&str, String)> =
+            file.map(|f| ("file", f.to_string())).into_iter().collect();
+        self.get(&format!("/api/v1/plugins/{}/skill", segment(name)), &query)
+    }
+
     pub fn plugins_describe(&self, name: &str) -> Result<Value> {
         self.get(&format!("/api/v1/plugins/{}/describe", segment(name)), &[])
     }

@@ -132,8 +132,19 @@ impl Skill {
         Skill { files, sha }
     }
 
+    /// SKILL.md on its own, to give an agent the app does not know: each
+    /// link to a reference or to a plugin's skill, which is not beside it
+    /// there, becomes the command that prints the same text.
+    pub fn to_copy(&self) -> String {
+        let text = links_to_commands(&self.text(), "references/", ".md", |name| {
+            format!("pinrail docs {name}")
+        });
+        links_to_commands(&text, &format!("{PLUGINS}/"), "/SKILL.md", |name| {
+            format!("pinrail plugins skill {name}")
+        })
+    }
+
     /// SKILL.md as it is written.
-    #[cfg(test)]
     pub fn text(&self) -> String {
         self.files
             .iter()
@@ -295,33 +306,28 @@ pub enum State {
     Theirs,
 }
 
-/// The app's own SKILL.md, without the installed plugins.
-fn base_text() -> String {
-    FILES
-        .iter()
-        .find(|(path, _)| *path == "SKILL.md")
-        .map(|(_, text)| text.replace("{sha}", BASE).replace("{base}", BASE))
-        .expect("the skill has a SKILL.md")
-}
-
-/// SKILL.md on its own, to give an agent the app does not know: each link
-/// to a reference, which is not beside it there, becomes the `pinrail docs`
-/// command that prints the same text.
-pub fn skill_to_copy() -> String {
+/// Replaces each markdown link whose target starts with `prefix` and ends
+/// with `suffix` by the command `command` makes of the part between.
+fn links_to_commands(
+    text: &str,
+    prefix: &str,
+    suffix: &str,
+    command: impl Fn(&str) -> String,
+) -> String {
     let mut out = String::new();
-    let text = base_text();
-    let mut rest = text.as_str();
-    while let Some(at) = rest.find("](references/") {
+    let mut rest = text;
+    let opening = format!("]({prefix}");
+    while let Some(at) = rest.find(&opening) {
         let Some(open) = rest[..at].rfind('[') else {
             break;
         };
-        let target = &rest[at + "](references/".len()..];
-        let Some(end) = target.find(".md)") else {
+        let target = &rest[at + opening.len()..];
+        let Some(end) = target.find(&format!("{suffix})")) else {
             break;
         };
         out.push_str(&rest[..open]);
-        out.push_str(&format!("`pinrail docs {}`", &target[..end]));
-        rest = &target[end + ".md)".len()..];
+        out.push_str(&format!("`{}`", command(&target[..end])));
+        rest = &target[end + suffix.len() + 1..];
     }
     out.push_str(rest);
     out
@@ -544,7 +550,7 @@ mod tests {
 
     #[test]
     fn the_skill_to_copy_names_the_commands_for_its_references() {
-        let text = skill_to_copy();
+        let text = none().to_copy();
         assert!(
             text.contains("- `pinrail docs building`: Make a plugin"),
             "{text}"
@@ -649,6 +655,20 @@ mod tests {
         );
         assert_eq!(fs::read_to_string(dir.join("SKILL.md")).unwrap(), text);
         assert_eq!(status(home.path(), &skill)[0].state, State::Connected);
+    }
+
+    #[test]
+    fn the_skill_to_copy_names_the_command_for_each_plugins_skill() {
+        let root = tempfile::tempdir().unwrap();
+        let text = Skill::with(&plugins(root.path())).to_copy();
+        assert!(
+            text.contains(
+                "A code change to review as a diagram. Before you submit to it, read \
+                 `pinrail plugins skill change-map`.\n"
+            ),
+            "{text}"
+        );
+        assert!(!text.contains("](plugins/"), "{text}");
     }
 
     #[test]

@@ -510,6 +510,20 @@ enum PluginsCommand {
         /// The plugin's name
         name: String,
     },
+    /// Print a plugin's skill: how to build a payload for it
+    ///
+    /// A plugin can ship a skill for the agents that ask with it, such as how
+    /// to derive its payload from the work. This prints its SKILL.md, or
+    /// another file of the skill that SKILL.md names, such as a reference.
+    /// `pinrail plugins` says which plugins have one. A copied plugin's skill
+    /// is printed once the person allowed it.
+    Skill {
+        /// The plugin's name
+        name: String,
+        /// A file of the skill, such as references/payload.md; SKILL.md
+        /// when none is given
+        file: Option<String>,
+    },
     /// Show what an agent needs to submit a review with a plugin
     ///
     /// The description includes the payload schema, an example payload and
@@ -860,7 +874,10 @@ fn run(cli: Cli) -> Result<u8> {
     let auto_start = match &cli.command {
         Command::Submit(args) => !args.no_start,
         Command::Plugins(args) => {
-            matches!(args.command, None | Some(PluginsCommand::Describe { .. }))
+            matches!(
+                args.command,
+                None | Some(PluginsCommand::Describe { .. } | PluginsCommand::Skill { .. })
+            )
         }
         _ => false,
     };
@@ -1127,6 +1144,17 @@ fn run(cli: Cli) -> Result<u8> {
             )
         }
         Command::Plugins(PluginsArgs {
+            command: Some(PluginsCommand::Skill { name, file }),
+        }) => {
+            let skill = client
+                .plugins_skill(&name, file.as_deref())
+                .map_err(|err| unusable(&client, &name, err))?;
+            output.data(&skill, |skill| {
+                skill["text"].as_str().unwrap_or_default().to_string()
+            });
+            Ok(0)
+        }
+        Command::Plugins(PluginsArgs {
             command:
                 Some(PluginsCommand::Describe {
                     name,
@@ -1199,6 +1227,7 @@ fn run(cli: Cli) -> Result<u8> {
                 Some(PluginsCommand::Remove { name }) => client.plugins_remove(&name)?,
                 Some(
                     PluginsCommand::Describe { .. }
+                    | PluginsCommand::Skill { .. }
                     | PluginsCommand::Check { .. }
                     | PluginsCommand::New { .. }
                     | PluginsCommand::Schema { .. },

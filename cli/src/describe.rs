@@ -151,6 +151,12 @@ pub fn listing(listed: &Value) -> String {
         if let Some(kinds) = files(plugin) {
             out.push_str(&format!("  Takes files: {kinds}.\n"));
         }
+        if !plugin["skill"].is_null() && install["skill_allowed"] == true {
+            out.push_str(&format!(
+                "  Has a skill: read it with pinrail plugins skill {} before you submit.\n",
+                text(&plugin["name"])
+            ));
+        }
     }
     out
 }

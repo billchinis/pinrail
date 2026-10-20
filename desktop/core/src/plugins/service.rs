@@ -164,6 +164,45 @@ impl PluginService {
         Ok(answer)
     }
 
+    /// A file of a plugin's skill, `SKILL.md` unless another is named, with
+    /// the list of the skill's files: what `pinrail plugins skill` prints
+    /// for an agent. A linked plugin is read as its folder is now. Only a
+    /// skill that may reach the agents is given.
+    pub fn skill(&self, name: &str, file: Option<&str>) -> Result<Value, Error> {
+        if self.registry.capture(name)? {
+            self.announce()?;
+        }
+        let plugin = self.registry.fetch(name)?;
+        let Some(skill) = &plugin.skill else {
+            return Err(Error::NotFound(format!("a skill of plugin {name}")));
+        };
+        if !plugin.install.as_ref().is_some_and(|i| i.skill_allowed) {
+            return Err(Error::invalid(
+                "/plugin",
+                format!(
+                    "the {name} plugin's skill is not allowed to reach your agents: allow it in \
+                     Settings › Plugins, or install the plugin again with --allow-skill"
+                ),
+            ));
+        }
+        let file = file.unwrap_or(crate::skill::MAIN);
+        if !skill.files.iter().any(|f| f == file) {
+            return Err(Error::NotFound(format!(
+                "{file} in the {name} plugin's skill; its files are {}",
+                skill.files.join(", ")
+            )));
+        }
+        let bytes = std::fs::read(plugin.path.join(crate::skill::FOLDER).join(file))?;
+        let text = String::from_utf8(bytes)
+            .map_err(|_| Error::invalid("/file", format!("{file} is not text")))?;
+        Ok(serde_json::json!({
+            "name": name,
+            "file": file,
+            "text": text,
+            "files": skill.files,
+        }))
+    }
+
     /// Allows the skill of an installed plugin to reach the agents, or stops
     /// it, and announces the change so that the agents' skills follow. An
     /// official or linked plugin's skill reaches them whatever this says.

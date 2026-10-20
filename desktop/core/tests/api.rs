@@ -2729,9 +2729,27 @@ async fn a_copied_plugins_skill_reaches_the_agents_once_allowed_and_from_its_sou
         row["install"]["skill_allowed"], false,
         "a copy waits to be allowed"
     );
+    // nor is it given to an agent
+    let (status, refused) = call(&app, "GET", "/api/v1/plugins/hello/skill", None).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     let (status, row) = allow(json!(true)).await;
     assert_eq!(status, StatusCode::OK, "{row}");
     assert_eq!(row["install"]["skill_allowed"], true);
+    // the skill is given to an agent once it may reach them
+    let (status, skill) = call(&app, "GET", "/api/v1/plugins/hello/skill", None).await;
+    assert_eq!(status, StatusCode::OK, "{skill}");
+    assert_eq!(skill["file"], "SKILL.md");
+    assert_eq!(skill["text"], "---\ndescription: Say hello\n---\n");
+    assert_eq!(skill["files"], json!(["SKILL.md"]));
+    let (status, _) = call(
+        &app,
+        "GET",
+        "/api/v1/plugins/hello/skill?file=../manifest.json",
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "only the skill's own files");
+
     // an update from the same folder keeps it
     let (_, row) = install(&app, &hello, json!({})).await;
     assert_eq!(row["install"]["skill_allowed"], true);

@@ -21,6 +21,9 @@ The `pinrail` command ships inside the app and carries the app's version.
   reach the agents at once. A copied plugin's skill waits until you
   allow it in Settings › Plugins or with `pinrail plugins install
   --allow-skill`.
+- `pinrail plugins skill <name>` prints a plugin's skill, or a file it
+  names, for an agent without the `pinrail` skill installed, and
+  `pinrail plugins` says which plugins have one.
 - The change map plugin, `change-map`, among the official plugins. It
   shows a code change, such as a pull request, as a diagram of the parts
   it touches and how they interact, with each part's diff, screenshots

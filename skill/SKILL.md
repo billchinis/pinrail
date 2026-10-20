@@ -107,7 +107,11 @@ what is waiting on the person in this project.
 pinrail plugins                                    # every plugin, a line each: when to use it
 pinrail plugins describe <plugin>                  # its payload schema and an example
 pinrail plugins describe <plugin> --decision-schema   # what it returns
+pinrail plugins skill <plugin>                     # how to build its payload, if it has a skill
 ```
+
+When a plugin has a skill, read it before you submit to it: it says how to
+derive the payload from the work.
 
 A plugin fits only if it both shows what the person needs to review and
 returns the decision you need: a diff view does not make a plugin fit for

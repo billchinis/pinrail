@@ -58,6 +58,8 @@ pinrail plugins describe code-review       # one plugin, in full
 - the **payload schema**, and an **example payload** that passes it;
 - the **decision schema**, which describes `decision.data` in the review that comes back.
 
+Some plugins also ship a skill, which says how to build their payload from the work. `pinrail plugins` says which ones, and `pinrail plugins skill <name>` prints it, with `pinrail plugins skill <name> <file>` for a reference it names. An agent you connected in *Settings › Agents* has the same skills in its `pinrail` skill already.
+
 `--payload-schema`, `--example` and `--decision-schema` each print one of these parts alone, as JSON, for a tool or to start a payload with `--example > payload.json`. An agent that reads the decision as markdown does not need the decision schema. One that processes the decision with `--json` does, and the JSON output always includes it.
 
 Like `submit`, `describe` can start a server when none is running, if `PINRAIL_SERVER_CMD` says how (see [Finding the app](#finding-the-app)). For a plugin that is installed but broken, it says what is wrong and how to check it.
