@@ -1,0 +1,818 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Change map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "nodes",
+    "files"
+  ],
+  "properties": {
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The change under review, such as a pull request.",
+      "properties": {
+        "ref": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Its reference on the code host, such as #128 or !42."
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Its page on the code host."
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "The branch with the change."
+        },
+        "target": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "The branch it goes into."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "Its description, in Markdown."
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 20000,
+      "description": "What the change does and why, in Markdown. Shown before anything is selected."
+    },
+    "lanes": {
+      "type": "array",
+      "maxItems": 12,
+      "description": "Groups of related parts, drawn as bands, such as the web app, the API and the database.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 80,
+      "description": "The parts of the system the change touches, and parts it does not touch that help explain it.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "enum": [
+              "ui",
+              "module",
+              "service",
+              "endpoint",
+              "store",
+              "job",
+              "external",
+              "config",
+              "test"
+            ],
+            "description": "What the part is: a screen or component, a module, a service, an endpoint, a store such as a table or a queue, a job, a third-party system, configuration or tests. Sets its icon."
+          },
+          "lane": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "The id of the lane it belongs to."
+          },
+          "status": {
+            "enum": [
+              "added",
+              "changed",
+              "removed",
+              "context"
+            ],
+            "default": "changed",
+            "description": "What the change does to it. context: a part the change does not touch."
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 20000,
+            "description": "What changed in this part and why, in Markdown."
+          },
+          "changes": {
+            "type": "array",
+            "maxItems": 200,
+            "description": "The files that belong to this part, each optionally narrowed to line ranges on the new side.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "file"
+              ],
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500,
+                  "description": "A path in files."
+                },
+                "lines": {
+                  "type": "array",
+                  "maxItems": 50,
+                  "description": "Ranges of lines on the new side, each [first, last].",
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "screens": {
+            "type": "array",
+            "maxItems": 12,
+            "description": "Screenshots of a user interface part: before and after the change, or one of them for a screen that is new or removed.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "anyOf": [
+                {
+                  "required": [
+                    "before"
+                  ]
+                },
+                {
+                  "required": [
+                    "after"
+                  ]
+                }
+              ],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "before": {
+                  "$ref": "#/$defs/attachment"
+                },
+                "after": {
+                  "$ref": "#/$defs/attachment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 200,
+      "description": "How the parts interact.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "from": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "The id of the node it starts from."
+          },
+          "to": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "The id of the node it goes to."
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "kind": {
+            "enum": [
+              "call",
+              "data",
+              "event",
+              "import",
+              "render"
+            ],
+            "description": "A request and its response, a read or a write, a message or a notification, a code dependency, or a component that draws another."
+          },
+          "status": {
+            "enum": [
+              "added",
+              "changed",
+              "removed",
+              "unchanged"
+            ],
+            "default": "changed"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 20000,
+            "description": "What changed in this interaction, in Markdown."
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "The shapes that cross the edge, shown as code.",
+            "properties": {
+              "request": {
+                "type": "string",
+                "maxLength": 20000,
+                "description": ""
+              },
+              "response": {
+                "type": "string",
+                "maxLength": 20000,
+                "description": ""
+              }
+            }
+          },
+          "changes": {
+            "type": "array",
+            "maxItems": 200,
+            "description": "The files that belong to this part, each optionally narrowed to line ranges on the new side.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "file"
+              ],
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500,
+                  "description": "A path in files."
+                },
+                "lines": {
+                  "type": "array",
+                  "maxItems": 50,
+                  "description": "Ranges of lines on the new side, each [first, last].",
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagrams": {
+      "type": "array",
+      "maxItems": 12,
+      "description": "Optional diagrams beside the map, for a change about order or lifecycle more than structure. Add one only when the map alone does not explain the change.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "kind": {
+            "enum": [
+              "sequence",
+              "state"
+            ],
+            "description": "sequence: participants and the messages between them, in order. state: states and the transitions between them."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 20000,
+            "description": "What the diagram shows, in Markdown."
+          },
+          "participants": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "A sequence's participants, from left to right.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "title"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "kind": {
+                  "enum": [
+                    "ui",
+                    "module",
+                    "service",
+                    "endpoint",
+                    "store",
+                    "job",
+                    "external",
+                    "config",
+                    "test"
+                  ],
+                  "description": "What the part is: a screen or component, a module, a service, an endpoint, a store such as a table or a queue, a job, a third-party system, configuration or tests. Sets its icon."
+                },
+                "node": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "description": "The map part it is. Comments, files and the reviewed mark are then the part's."
+                },
+                "status": {
+                  "enum": [
+                    "added",
+                    "changed",
+                    "removed",
+                    "context",
+                    "unchanged"
+                  ],
+                  "default": "changed",
+                  "description": "What the change does to it. context or unchanged: something the change leaves alone."
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 20000,
+                  "description": "What changed in it and why, in Markdown."
+                },
+                "changes": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "description": "The files that belong to this part, each optionally narrowed to line ranges on the new side.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "file"
+                    ],
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500,
+                        "description": "A path in files."
+                      },
+                      "lines": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "description": "Ranges of lines on the new side, each [first, last].",
+                        "items": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "messages": {
+            "type": "array",
+            "maxItems": 200,
+            "description": "A sequence's messages, from top to bottom.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "from",
+                "to"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                },
+                "from": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "description": "The id of the participant that sends it."
+                },
+                "to": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "description": "The id of the participant that receives it."
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "kind": {
+                  "enum": [
+                    "call",
+                    "async",
+                    "reply",
+                    "self"
+                  ],
+                  "default": "call"
+                },
+                "edge": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "description": "The map interaction it is. Comments, files and the reviewed mark are then the interaction's."
+                },
+                "status": {
+                  "enum": [
+                    "added",
+                    "changed",
+                    "removed",
+                    "context",
+                    "unchanged"
+                  ],
+                  "default": "changed",
+                  "description": "What the change does to it. context or unchanged: something the change leaves alone."
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 20000,
+                  "description": "What changed in it and why, in Markdown."
+                },
+                "changes": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "description": "The files that belong to this part, each optionally narrowed to line ranges on the new side.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "file"
+                    ],
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500,
+                        "description": "A path in files."
+                      },
+                      "lines": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "description": "Ranges of lines on the new side, each [first, last].",
+                        "items": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "groups": {
+            "type": "array",
+            "maxItems": 40,
+            "description": "Frames around a run of a sequence's messages.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "kind",
+                "first",
+                "last"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                },
+                "kind": {
+                  "enum": [
+                    "alt",
+                    "opt",
+                    "loop",
+                    "par"
+                  ]
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "first": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "description": "The id of the first message in the frame."
+                },
+                "last": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "description": "The id of the last message in the frame."
+                }
+              }
+            }
+          },
+          "states": {
+            "type": "array",
+            "maxItems": 60,
+            "description": "A state diagram's states.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                },
+                "title": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "kind": {
+                  "enum": [
+                    "state",
+                    "initial",
+                    "final"
+                  ],
+                  "default": "state"
+                },
+                "status": {
+                  "enum": [
+                    "added",
+                    "changed",
+                    "removed",
+                    "context",
+                    "unchanged"
+                  ],
+                  "default": "changed",
+                  "description": "What the change does to it. context or unchanged: something the change leaves alone."
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 20000,
+                  "description": "What changed in it and why, in Markdown."
+                },
+                "changes": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "description": "The files that belong to this part, each optionally narrowed to line ranges on the new side.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "file"
+                    ],
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500,
+                        "description": "A path in files."
+                      },
+                      "lines": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "description": "Ranges of lines on the new side, each [first, last].",
+                        "items": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "transitions": {
+            "type": "array",
+            "maxItems": 200,
+            "description": "A state diagram's transitions.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "from",
+                "to"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                },
+                "from": {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                "to": {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 160,
+                  "description": "Its event, guard and action, as you write them."
+                },
+                "status": {
+                  "enum": [
+                    "added",
+                    "changed",
+                    "removed",
+                    "context",
+                    "unchanged"
+                  ],
+                  "default": "changed",
+                  "description": "What the change does to it. context or unchanged: something the change leaves alone."
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 20000,
+                  "description": "What changed in it and why, in Markdown."
+                },
+                "changes": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "description": "The files that belong to this part, each optionally narrowed to line ranges on the new side.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "file"
+                    ],
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500,
+                        "description": "A path in files."
+                      },
+                      "lines": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "description": "Ranges of lines on the new side, each [first, last].",
+                        "items": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "description": "Every changed file with its unified diff, as git diff prints it.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "diff"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "status": {
+            "enum": [
+              "added",
+              "modified",
+              "deleted",
+              "renamed"
+            ]
+          },
+          "was": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "The old path of a renamed file."
+          },
+          "diff": {
+            "type": "string",
+            "maxLength": 2000000
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "$attachment"
+      ],
+      "properties": {
+        "$attachment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "name": "change-map",
+  "version": "1.0.0",
+  "title": "Change map",
+  "description": "A code change, such as a pull request, drawn as a diagram of the parts it touches and how they interact. Each part opens its files in a diff viewer, and parts of the interface show screenshots before and after. Comment on a part, an interaction or a line, and approve the change or ask for changes.",
+  "use_when": "You made or studied a code change with several moving parts, such as a feature across services, modules and screens, and the person should understand how the parts fit together before reading the diff, then approve it or say what to change.",
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "show_diff": {
+        "type": "boolean",
+        "title": "Show the diff drawer",
+        "description": "Open a review with the diff drawer showing, as you left it last.",
+        "default": false
+      },
+      "screen_mode": {
+        "type": "string",
+        "enum": [
+          "side",
+          "wipe",
+          "after"
+        ],
+        "title": "Screenshot comparison",
+        "description": "How a part's screenshots open when it has a before and an after: side by side, with a slider, or the after alone.",
+        "default": "side"
+      },
+      "panel_width": {
+        "type": "integer",
+        "title": "Side panel width",
+        "description": "The side panel's width in pixels, as you last dragged it.",
+        "minimum": 340,
+        "maximum": 2000,
+        "default": 340
+      }
+    }
+  },
+  "attachments": {
+    "accept": [
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".webp",
+      ".gif",
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "image/gif"
+    ],
+    "max_size": 10485760,
+    "max_count": 32
+  },
+  "shortcuts": [
+    {
+      "keys": "n",
+      "does": "Select the next part",
+      "group": "Diagram"
+    },
+    {
+      "keys": "p",
+      "does": "Select the previous part",
+      "group": "Diagram"
+    },
+    {
+      "keys": "enter",
+      "does": "Open the selected part's first file",
+      "group": "Diagram"
+    },
+    {
+      "keys": "c",
+      "does": "Comment on the selection",
+      "group": "Diagram"
+    },
+    {
+      "keys": "r",
+      "does": "Mark the selection as reviewed",
+      "group": "Diagram"
+    },
+    {
+      "keys": "f",
+      "does": "Fit the diagram to the frame",
+      "group": "Diagram"
+    }
+  ],
+  "summary": {
+    "outcome": {
+      "verdict": {
+        "at": "/verdict",
+        "values": {
+          "approve": {
+            "label": "approved",
+            "tone": "success"
+          },
+          "request_changes": {
+            "label": "changes requested",
+            "tone": "warning"
+          }
+        }
+      },
+      "counts": [
+        {
+          "items": "/comments",
+          "label": "comment",
+          "plural": "comments",
+          "tone": "info"
+        }
+      ]
+    }
+  }
+}

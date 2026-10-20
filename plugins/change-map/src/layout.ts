@@ -1,0 +1,236 @@
+// Where each part goes on the canvas. dagre lays the parts out left to
+// right along their interactions, and keeps the parts of a lane together
+// in a cluster, which the diagram draws as a band behind them.
+import dagre from "@dagrejs/dagre";
+import type { ExtraDiagram, Part, Payload } from "./types";
+
+export const NODE_HEIGHT = 64;
+/** a part with screenshots shows a thumbnail under its title */
+export const SHOT_HEIGHT = 84;
+/** Room inside a lane around its parts: above, for its title and a selected
+ *  part's ring under it, and at the sides and the bottom for the ring. */
+const LANE_PAD = 36;
+const LANE_SIDE = 20;
+
+export type Box = { x: number; y: number; width: number; height: number };
+
+/** A part's width, from its title, so that dagre and the card agree on it without measuring. */
+export function widthOf(part: Part): number {
+  return Math.round(Math.min(280, Math.max(170, part.title.length * 7.4 + 76)));
+}
+
+export function heightOf(part: Part): number {
+  return NODE_HEIGHT + (part.screens?.some((s) => s.after || s.before) ? SHOT_HEIGHT : 0);
+}
+
+/** The longest a label gets on the diagram; the rest of it is in its tooltip. */
+export const LABEL_MAX = 220;
+
+/** A label's width on the diagram, for the layout to leave room for it. */
+export const labelWidth = (label: string) => Math.min(LABEL_MAX, Math.round(label.length * 6.7 + 34));
+
+/** An interaction's line, as dagre routes it clear of the parts, and where its label goes. */
+export type Route = { points: { x: number; y: number }[]; label: { x: number; y: number } };
+
+export function layout(payload: Payload): {
+  nodes: Map<string, Box>;
+  lanes: Map<string, Box>;
+  edges: Map<string, Route>;
+} {
+  const lanes = new Set((payload.lanes ?? []).map((l) => l.id));
+  const g = new dagre.graphlib.Graph({ multigraph: true, compound: true });
+  // the labels take a rank of their own between the parts, so the ranks
+  // themselves sit close
+  g.setGraph({ rankdir: "LR", nodesep: 28, ranksep: 40, edgesep: 16, marginx: 24, marginy: 24 });
+  g.setDefaultEdgeLabel(() => ({}));
+  for (const lane of lanes)
+    g.setNode(`lane:${lane}`, {
+      paddingTop: LANE_PAD,
+      paddingLeft: LANE_SIDE,
+      paddingRight: LANE_SIDE,
+      paddingBottom: LANE_SIDE,
+    });
+  for (const p of payload.nodes) {
+    g.setNode(p.id, { width: widthOf(p), height: heightOf(p) });
+    if (p.lane && lanes.has(p.lane)) g.setParent(p.id, `lane:${p.lane}`);
+  }
+  for (const e of payload.edges ?? []) {
+    if (e.from === e.to || !g.hasNode(e.from) || !g.hasNode(e.to)) continue;
+    // the label's size, so that the gap between the parts has room for it
+    g.setEdge(e.from, e.to, { width: labelWidth(e.label ?? e.kind ?? "call"), height: 24, labelpos: "c" }, e.id);
+  }
+  dagre.layout(g);
+  const box = (name: string): Box => {
+    const n = g.node(name);
+    return { x: n.x - n.width / 2, y: n.y - n.height / 2, width: n.width, height: n.height };
+  };
+  const nodes = new Map<string, Box>();
+  for (const p of payload.nodes) nodes.set(p.id, box(p.id));
+  const bands = new Map<string, Box>();
+  // A lane's band: around its parts, with room for its title above them.
+  // dagre leaves no padding inside a cluster, so the band is drawn from the
+  // parts themselves. A lane without parts has none.
+  for (const lane of lanes) {
+    const parts = payload.nodes.filter((p) => p.lane === lane).map((p) => nodes.get(p.id)!);
+    if (!parts.length) continue;
+    const left = Math.min(...parts.map((b) => b.x)) - LANE_SIDE;
+    const top = Math.min(...parts.map((b) => b.y)) - LANE_PAD;
+    const right = Math.max(...parts.map((b) => b.x + b.width)) + LANE_SIDE;
+    const bottom = Math.max(...parts.map((b) => b.y + b.height)) + LANE_SIDE;
+    bands.set(lane, { x: left, y: top, width: right - left, height: bottom - top });
+  }
+  const edges = new Map<string, Route>();
+  for (const e of payload.edges ?? []) {
+    const d =
+      g.hasNode(e.from) && g.hasNode(e.to) && e.from !== e.to ? g.edge({ v: e.from, w: e.to, name: e.id }) : null;
+    if (d?.points?.length)
+      edges.set(e.id, { points: d.points, label: { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y } });
+  }
+  return { nodes, lanes: bands, edges };
+}
+
+/** A state's size: a dot for the start and the end, a card otherwise. */
+export const DOT = 22;
+export function stateSize(title: string | undefined, kind: string | undefined): { width: number; height: number } {
+  if (kind === "initial" || kind === "final") return { width: DOT, height: DOT };
+  return { width: Math.round(Math.min(240, Math.max(110, (title ?? "").length * 7.4 + 44))), height: 44 };
+}
+
+/** Where each state goes, and the routes of the transitions between
+ *  different states. A transition back to its own state is drawn as a
+ *  loop above it, so it has no route. */
+export function stateLayout(diagram: ExtraDiagram): { nodes: Map<string, Box>; edges: Map<string, Route> } {
+  const g = new dagre.graphlib.Graph({ multigraph: true });
+  g.setGraph({ rankdir: "LR", nodesep: 40, ranksep: 40, edgesep: 16, marginx: 24, marginy: 48 });
+  g.setDefaultEdgeLabel(() => ({}));
+  for (const s of diagram.states ?? []) g.setNode(s.id, stateSize(s.title, s.kind));
+  for (const t of diagram.transitions ?? []) {
+    if (t.from === t.to || !g.hasNode(t.from) || !g.hasNode(t.to)) continue;
+    const label = t.label ?? "";
+    g.setEdge(t.from, t.to, { width: label ? labelWidth(label) : 1, height: label ? 24 : 1, labelpos: "c" }, t.id);
+  }
+  dagre.layout(g);
+  const nodes = new Map<string, Box>();
+  for (const s of diagram.states ?? []) {
+    const n = g.node(s.id);
+    nodes.set(s.id, { x: n.x - n.width / 2, y: n.y - n.height / 2, width: n.width, height: n.height });
+  }
+  const edges = new Map<string, Route>();
+  for (const t of diagram.transitions ?? []) {
+    const d =
+      t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to) ? g.edge({ v: t.from, w: t.to, name: t.id }) : null;
+    if (d?.points?.length)
+      edges.set(t.id, { points: d.points, label: { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y } });
+  }
+  return { nodes, edges };
+}
+
+// A sequence diagram: a column per participant, from left to right, and a
+// row per message, from top to bottom. Frames around runs of messages take
+// room above their first row for their label, and a little below their last.
+export const HEAD_HEIGHT = 44;
+const ROW = 50;
+const SELF_ROW = 64;
+const FRAME_LABEL = 26;
+const FRAME_END = 12;
+const FRAME_PAD = 14;
+const COLUMN_GAP = 40;
+
+export type SequenceLayout = {
+  /** each participant's head */
+  heads: Map<string, Box>;
+  /** the x of each participant's lifeline */
+  lines: Map<string, number>;
+  /** each message's row: from the left end to the right end, or the loop to the right of a self message */
+  rows: Map<string, Box & { self: boolean; leftward: boolean }>;
+  /** each frame, inset by how deep it is nested */
+  frames: Map<string, Box>;
+  /** where the lifelines end */
+  bottom: number;
+};
+
+export function sequenceLayout(diagram: ExtraDiagram): SequenceLayout {
+  const people = diagram.participants ?? [];
+  const messages = (diagram.messages ?? []).filter(
+    (m) => people.some((p) => p.id === m.from) && people.some((p) => p.id === m.to),
+  );
+  const order = new Map(messages.map((m, i) => [m.id, i]));
+  // a column's width: its head, and the labels of the messages that start
+  // from it to its right-hand neighbour
+  const heads = new Map<string, Box>();
+  const lines = new Map<string, number>();
+  // the head's icon, padding and border, and about 8 pixels a character of
+  // its bold title, up to the widest a part of the map gets
+  const widths = people.map((p) => Math.round(Math.min(280, Math.max(120, p.title.length * 8 + 62))));
+  const gaps = people.map(() => COLUMN_GAP);
+  for (const m of messages) {
+    const a = people.findIndex((p) => p.id === m.from);
+    const b = people.findIndex((p) => p.id === m.to);
+    const want = labelWidth(m.label ?? "") + 16;
+    if (a === b) gaps[a] = Math.max(gaps[a], want + 40 - widths[a] / 2);
+    else {
+      // the label sits over the span between the two lifelines
+      const lo = Math.min(a, b);
+      const hi = Math.max(a, b);
+      let span = 0;
+      for (let i = lo; i < hi; i++) span += widths[i] / 2 + gaps[i] + widths[i + 1] / 2;
+      if (span < want && hi - lo === 1) gaps[lo] += want - span;
+    }
+  }
+  let x = 24;
+  people.forEach((p, i) => {
+    heads.set(p.id, { x, y: 24, width: widths[i], height: HEAD_HEIGHT });
+    lines.set(p.id, x + widths[i] / 2);
+    x += widths[i] + gaps[i];
+  });
+  // the frames that open and close at each message, outer ones first
+  const groups = (diagram.groups ?? [])
+    .filter((g) => order.has(g.first) && order.has(g.last) && order.get(g.first)! <= order.get(g.last)!)
+    .sort((a, b) => order.get(a.first)! - order.get(b.first)! || order.get(b.last)! - order.get(a.last)!);
+  const depth = new Map<string, number>();
+  for (const g of groups) {
+    const inside = groups.filter(
+      (o) =>
+        o !== g &&
+        depth.has(o.id) &&
+        order.get(o.first)! <= order.get(g.first)! &&
+        order.get(o.last)! >= order.get(g.last)!,
+    );
+    depth.set(g.id, inside.length);
+  }
+  const rows = new Map<string, Box & { self: boolean; leftward: boolean }>();
+  const tops = new Map<string, number>();
+  const ends = new Map<string, number>();
+  let y = 24 + HEAD_HEIGHT + 16;
+  for (const m of messages) {
+    for (const g of groups.filter((g) => g.first === m.id)) {
+      tops.set(g.id, y);
+      y += FRAME_LABEL;
+    }
+    const a = lines.get(m.from)!;
+    const b = lines.get(m.to)!;
+    const self = m.from === m.to || m.kind === "self";
+    const height = self ? SELF_ROW : ROW;
+    if (self)
+      rows.set(m.id, { x: a, y, width: Math.max(60, labelWidth(m.label ?? "") + 40), height, self, leftward: false });
+    else rows.set(m.id, { x: Math.min(a, b), y, width: Math.abs(b - a), height, self, leftward: b < a });
+    y += height;
+    for (const g of groups.filter((g) => g.last === m.id).reverse()) {
+      ends.set(g.id, y);
+      y += FRAME_END;
+    }
+  }
+  const frames = new Map<string, Box>();
+  for (const g of groups) {
+    const inside = messages.slice(order.get(g.first)!, order.get(g.last)! + 1);
+    const xs = inside.flatMap((m) => {
+      const r = rows.get(m.id)!;
+      return [r.x, r.x + r.width];
+    });
+    const inset = depth.get(g.id)! * 8;
+    const left = Math.min(...xs) - FRAME_PAD * 2 + inset;
+    const right = Math.max(...xs) + FRAME_PAD * 2 - inset;
+    frames.set(g.id, { x: left, y: tops.get(g.id)!, width: right - left, height: ends.get(g.id)! - tops.get(g.id)! });
+  }
+  return { heads, lines, rows, frames, bottom: y + 16 };
+}

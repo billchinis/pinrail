@@ -1,0 +1,64 @@
+{#- The decision as an agent reads it back: the verdict, then each comment
+    with what it is on, named as the payload names it, then what the person
+    marked as reviewed. The head (title, origin, who decided, the note) is
+    printed by the app before this. -#}
+{%- set p = review.payload -%}
+{%- macro part(id) -%}
+{%- set n = review.payload.nodes | selectattr("id", "eq", id) | first -%}
+{{ n.title if n else id }}
+{%- endmacro -%}
+{%- macro link(id) -%}
+{%- set e = (review.payload.edges or []) | selectattr("id", "eq", id) | first -%}
+{%- if e %}{{ e.label or "interaction" }} ({{ part(e.from) }} → {{ part(e.to) }}){% else %}{{ id }}{% endif -%}
+{%- endmacro -%}
+{%- macro entity(target) -%}
+{%- set d = (review.payload.diagrams or []) | selectattr("id", "eq", target.diagram) | first -%}
+{%- if not d %}**{{ target.item }}** in *{{ target.diagram }}*{% else -%}
+{%- set m = (d.messages or []) | selectattr("id", "eq", target.item) | first -%}
+{%- set t = (d.transitions or []) | selectattr("id", "eq", target.item) | first -%}
+{%- set s = (d.states or []) | selectattr("id", "eq", target.item) | first -%}
+{%- set a = (d.participants or []) | selectattr("id", "eq", target.item) | first -%}
+{%- if m %}**Message** *{{ m.label or m.id }}*
+{%- elif t %}**Transition** *{{ t.label or (t.from ~ " → " ~ t.to) }}*
+{%- elif s %}**State** *{{ s.title or s.kind or s.id }}*
+{%- elif a %}**Participant** *{{ a.title }}*
+{%- else %}**{{ target.item }}**{% endif %} in the {{ "sequence" if d.kind == "sequence" else "state diagram" }} *{{ d.title }}*
+{%- endif -%}
+{%- endmacro -%}
+**{{ "Approved" if data.verdict == "approve" else "Changes requested" }}**: {{ p.change.title if p.change and p.change.title else review.title }}
+{%- if data.comments %}
+
+## Comments
+{% for c in data.comments %}
+{%- set t = c.target %}
+{{ loop.index }}. {% if t.node is defined -%}
+**Part** *{{ part(t.node) }}*
+{%- elif t.edge is defined -%}
+**Interaction** *{{ link(t.edge) }}*
+{%- elif t.diagram is defined -%}
+{{ entity(t) }}
+{%- elif t.screen is defined -%}
+{%- set n = p.nodes | selectattr("id", "eq", t.screen.node) | first -%}
+{%- set shot = n.screens[t.screen.index] if n and n.screens and n.screens | length > t.screen.index else none -%}
+**Screenshot** *{{ shot.title if shot and shot.title else part(t.screen.node) }}* of *{{ part(t.screen.node) }}*, {{ t.screen.image }}, the area at {{ (t.region.x * 100) | round | int }}% across and {{ (t.region.y * 100) | round | int }}% down, {{ (t.region.width * 100) | round | int }}% × {{ (t.region.height * 100) | round | int }}% of the image
+{%- else -%}
+`{{ t.file }}:{% if t.start_line is defined and t.start_line != t.line %}{{ t.start_line }}–{% endif %}{{ t.line }}`{% if t.side == "old" %} (the old side){% endif %}
+{%- endif %}
+   {{ c.body | indent(3) }}
+{%- endfor %}
+{% endif -%}
+{%- if data.reviewed %}
+Reviewed: {% for id in data.reviewed -%}
+{#- an entity of a diagram is kept as <diagram>:<item> -#}
+{%- set ns = namespace(name=none) -%}
+{%- for d in p.diagrams or [] -%}
+{%- for x in (d.participants or []) + (d.messages or []) + (d.states or []) + (d.transitions or []) -%}
+{%- if ns.name is none and (d.id ~ ":" ~ x.id) == id %}{% set ns.name = entity({"diagram": d.id, "item": x.id}) %}{% endif -%}
+{%- endfor -%}
+{%- endfor -%}
+{%- if ns.name is not none %}{{ ns.name }}
+{%- elif (p.edges or []) | selectattr("id", "eq", id) | first %}{{ link(id) }}
+{%- else %}{{ part(id) }}
+{%- endif %}{% if not loop.last %}; {% endif %}
+{%- endfor %}
+{% endif -%}

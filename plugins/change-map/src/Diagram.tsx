@@ -1,0 +1,451 @@
+// The diagram: a card per part, in bands for the lanes, and a line per
+// interaction between parts. A click on a card or a line selects it.
+import {
+  Background,
+  BackgroundVariant,
+  BaseEdge,
+  EdgeLabelRenderer,
+  Handle,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  getBezierPath,
+  useReactFlow,
+  type Edge,
+  type EdgeProps,
+  type Node,
+  type NodeProps,
+} from "@xyflow/react";
+import {
+  AppWindow,
+  Box as BoxIcon,
+  Check,
+  Clock,
+  Database,
+  FileCode,
+  FlaskConical,
+  Globe,
+  Maximize,
+  MessageCircle,
+  Minus,
+  Plus,
+  Route,
+  Server,
+  Settings2,
+  type LucideIcon,
+} from "lucide-react";
+import { createContext, memo, useContext, useEffect, useMemo, useRef } from "react";
+import { heightOf, layout, widthOf, type Route as LineRoute } from "./layout";
+import { edgeStatus, nodeStatus, type Link, type NodeKind, type Part, type Payload, type Selection } from "./types";
+
+/** What the diagram shows on each part and interaction, by its id. */
+export type Marks = Map<string, { comments: number; reviewed: boolean }>;
+
+export type Shared = {
+  selection: Selection;
+  marks: Marks;
+  /** the address of each screenshot, by attachment name, once resolved */
+  images: Map<string, string>;
+  select(selection: Selection): void;
+};
+
+export const SharedContext = createContext<Shared>(null!);
+
+export const kindIcon: Record<NodeKind, LucideIcon> = {
+  ui: AppWindow,
+  module: BoxIcon,
+  service: Server,
+  endpoint: Route,
+  store: Database,
+  job: Clock,
+  external: Globe,
+  config: Settings2,
+  test: FlaskConical,
+};
+
+export const kindLabel: Record<NodeKind, string> = {
+  ui: "Interface",
+  module: "Module",
+  service: "Service",
+  endpoint: "Endpoint",
+  store: "Store",
+  job: "Job",
+  external: "External",
+  config: "Configuration",
+  test: "Tests",
+};
+
+export const statusLabel: Record<string, string> = {
+  added: "new",
+  changed: "changed",
+  removed: "removed",
+  context: "unchanged",
+  unchanged: "unchanged",
+};
+
+type PartData = { part: Part };
+type PartNodeType = Node<PartData, "part">;
+type LaneData = { title: string };
+type LaneNodeType = Node<LaneData, "lane">;
+/** `route`: the line and the label's place, as the layout routed them clear of the parts */
+type LinkData = { link: Link; route?: LineRoute };
+type LinkEdgeType = Edge<LinkData, "link">;
+
+/** Badges on a part's corner, or beside an interaction's label: its
+ *  comments, and whether it was reviewed. */
+export function Marked({ id, corner }: { id: string; corner?: boolean }) {
+  const { marks } = useContext(SharedContext);
+  const mark = marks.get(id);
+  if (!mark || (!mark.comments && !mark.reviewed)) return null;
+  return (
+    <span className={`cm-marks${corner ? " cm-marks-corner" : ""}`}>
+      {mark.reviewed ? (
+        <span className="cm-mark cm-mark-reviewed" title="Reviewed">
+          <Check />
+        </span>
+      ) : null}
+      {mark.comments ? (
+        <span
+          className="cm-mark cm-mark-comment"
+          title={`${mark.comments} ${mark.comments === 1 ? "comment" : "comments"}`}
+        >
+          <MessageCircle />
+          {mark.comments}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+const PartNode = memo(function PartNode({ data }: NodeProps<PartNodeType>) {
+  const { selection, select, images } = useContext(SharedContext);
+  const { part } = data;
+  const Icon = kindIcon[part.kind ?? "module"];
+  const status = nodeStatus(part);
+  const selected = !!selection && "node" in selection && selection.node === part.id;
+  const shot = part.screens?.find((s) => s.after || s.before);
+  const shotName = shot ? (shot.after ?? shot.before)!.$attachment : null;
+  const files = part.changes?.length ?? 0;
+  return (
+    <button
+      type="button"
+      className={`cm-part cm-${status}${selected ? " cm-selected" : ""}`}
+      style={{ width: widthOf(part), height: heightOf(part) }}
+      onClick={() => select({ node: part.id })}
+      aria-label={`${part.title}, ${kindLabel[part.kind ?? "module"]}, ${statusLabel[status]}`}
+      aria-pressed={selected}
+      data-node={part.id}
+    >
+      <Handle type="target" position={Position.Left} isConnectable={false} />
+      <Marked id={part.id} corner />
+      <span className="cm-part-head">
+        <span className="cm-part-icon">
+          <Icon />
+        </span>
+        <span className="cm-part-title">{part.title}</span>
+      </span>
+      <span className="cm-part-meta">
+        <span className={`cm-status cm-status-${status}`}>{statusLabel[status]}</span>
+        {files ? (
+          <span className="cm-part-files">
+            <FileCode />
+            {files}
+          </span>
+        ) : null}
+      </span>
+      {shotName ? (
+        <span className="cm-part-shot">{images.get(shotName) ? <img src={images.get(shotName)} alt="" /> : null}</span>
+      ) : null}
+      <Handle type="source" position={Position.Right} isConnectable={false} />
+    </button>
+  );
+});
+
+const LaneNode = memo(function LaneNode({ data }: NodeProps<LaneNodeType>) {
+  return (
+    <div className="cm-lane">
+      <span className="cm-lane-title">{data.title}</span>
+    </div>
+  );
+});
+
+const LinkEdge = memo(function LinkEdge(props: EdgeProps<LinkEdgeType>) {
+  const { selection, select } = useContext(SharedContext);
+  const { link, route } = props.data!;
+  const [path, labelX, labelY] = route ? [routePath(route.points), route.label.x, route.label.y] : getBezierPath(props);
+  const status = edgeStatus(link);
+  const selected = !!selection && "edge" in selection && selection.edge === link.id;
+  const kind = link.kind ?? "call";
+  return (
+    <>
+      <BaseEdge
+        id={props.id}
+        path={path}
+        markerEnd={props.markerEnd}
+        className={`cm-link cm-link-${status} cm-link-${kind}${selected ? " cm-selected" : ""}`}
+        interactionWidth={18}
+      />
+      <EdgeLabelRenderer>
+        <button
+          type="button"
+          className={`cm-link-label cm-link-label-${status}${selected ? " cm-selected" : ""}`}
+          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+          onClick={() => select({ edge: link.id })}
+          aria-pressed={selected}
+          aria-label={`${link.label ?? "Interaction"}, ${statusLabel[status]}`}
+          title={link.label ?? kind}
+          data-edge={link.id}
+        >
+          <span className="cm-link-text">{link.label ?? kind}</span>
+          <Marked id={link.id} />
+        </button>
+      </EdgeLabelRenderer>
+    </>
+  );
+});
+
+/** A smooth line through a route's points, as dagre laid it out. */
+export function routePath(points: { x: number; y: number }[]): string {
+  if (points.length < 3)
+    return `M ${points[0].x},${points[0].y} L ${points[points.length - 1].x},${points[points.length - 1].y}`;
+  let d = `M ${points[0].x},${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const p = points[i];
+    const q = points[i + 1];
+    const end = i === points.length - 2 ? q : { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+    d += ` Q ${p.x},${p.y} ${end.x},${end.y}`;
+  }
+  return d;
+}
+
+const nodeTypes = { part: PartNode, lane: LaneNode };
+const edgeTypes = { link: LinkEdge };
+
+/** Fitting the diagram to the part of the frame the drawer leaves in
+ *  view: `inset` is the share of the frame's height the drawer covers. */
+export const fitOptions = (inset: number) => ({
+  padding: {
+    top: "6%" as const,
+    left: "6%" as const,
+    right: "6%" as const,
+    bottom: `${Math.round(inset * 100) + 6}%` as const,
+  },
+  maxZoom: 1.15,
+});
+
+/** Fits the diagram to the part of the frame in view when asked, when the
+ *  frame changes size, and when the drawer opens, closes or is resized.
+ *  With a selection, the drawer's changes leave the view to the Follower,
+ *  which keeps the selection in sight. */
+export function Fitter({
+  fit,
+  frame,
+  inset,
+  hold,
+}: {
+  fit: number;
+  frame: React.RefObject<HTMLDivElement | null>;
+  inset: number;
+  hold: boolean;
+}) {
+  const flow = useReactFlow();
+  const now = useRef({ inset, hold });
+  now.current = { inset, hold };
+  useEffect(() => {
+    if (fit) flow.fitView({ ...fitOptions(now.current.inset), duration: 250 });
+  }, [fit, flow]);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!now.current.hold) flow.fitView(fitOptions(inset));
+  }, [inset, flow]);
+  useEffect(() => {
+    const el = frame.current;
+    if (!el) return;
+    let first = true;
+    const observer = new ResizeObserver(() => {
+      if (first) {
+        first = false;
+        return;
+      }
+      flow.fitView(fitOptions(now.current.inset));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [flow, frame]);
+  return null;
+}
+
+/** While the diff drawer covers the bottom of the diagram, keeps the
+ *  selection centred in the part still in view above it: the middle of the
+ *  nodes `ids` names, such as a part, or the two ends of an interaction. */
+export function Follower({
+  ids,
+  inset,
+  frame,
+}: {
+  ids: string[];
+  inset: number;
+  frame: React.RefObject<HTMLDivElement | null>;
+}) {
+  const flow = useReactFlow();
+  const key = ids.join("\u0000");
+  useEffect(() => {
+    if (!inset || !key || !frame.current) return;
+    const centres = key.split("\u0000").flatMap((id) => {
+      const n = flow.getInternalNode(id);
+      if (!n) return [];
+      const { x, y } = n.internals.positionAbsolute;
+      return [{ x: x + (n.measured.width ?? 0) / 2, y: y + (n.measured.height ?? 0) / 2 }];
+    });
+    if (!centres.length) return;
+    const at = {
+      x: centres.reduce((t, c) => t + c.x, 0) / centres.length,
+      y: centres.reduce((t, c) => t + c.y, 0) / centres.length,
+    };
+    const zoom = flow.getZoom();
+    const hidden = frame.current.clientHeight * inset;
+    flow.setCenter(at.x, at.y + hidden / 2 / zoom, { zoom, duration: 250 });
+  }, [key, inset, flow, frame]);
+  return null;
+}
+
+export function Zoom({ onFit }: { onFit: () => void }) {
+  const flow = useReactFlow();
+  return (
+    <div className="cm-zoom">
+      <button
+        type="button"
+        className="pinrail-btn pinrail-btn-ghost"
+        onClick={() => flow.zoomIn()}
+        title="Zoom in"
+        aria-label="Zoom in"
+      >
+        <Plus />
+      </button>
+      <button
+        type="button"
+        className="pinrail-btn pinrail-btn-ghost"
+        onClick={() => flow.zoomOut()}
+        title="Zoom out"
+        aria-label="Zoom out"
+      >
+        <Minus />
+      </button>
+      <button
+        type="button"
+        className="pinrail-btn pinrail-btn-ghost"
+        onClick={onFit}
+        title="Fit to the frame (F)"
+        aria-label="Fit to the frame"
+      >
+        <Maximize />
+      </button>
+    </div>
+  );
+}
+
+export function Diagram({
+  payload,
+  selection,
+  marks,
+  images,
+  fit,
+  onFit,
+  select,
+  inset,
+}: Shared & {
+  payload: Payload;
+  fit: number;
+  onFit: () => void;
+  /** the share of the map's height the diff drawer covers */
+  inset: number;
+}) {
+  const frame = useRef<HTMLDivElement>(null);
+  const placed = useMemo(() => layout(payload), [payload]);
+  const nodes = useMemo<(PartNodeType | LaneNodeType)[]>(() => {
+    const lanes: LaneNodeType[] = (payload.lanes ?? [])
+      .filter((l) => placed.lanes.has(l.id))
+      .map((l) => {
+        const box = placed.lanes.get(l.id)!;
+        return {
+          id: `lane:${l.id}`,
+          type: "lane",
+          position: { x: box.x, y: box.y },
+          data: { title: l.title },
+          style: { width: box.width, height: box.height },
+          selectable: false,
+          draggable: false,
+          focusable: false,
+          zIndex: -1,
+        };
+      });
+    const parts: PartNodeType[] = payload.nodes.map((p) => {
+      const box = placed.nodes.get(p.id)!;
+      return {
+        id: p.id,
+        type: "part",
+        position: { x: box.x, y: box.y },
+        data: { part: p },
+        draggable: false,
+        selectable: false,
+      };
+    });
+    return [...lanes, ...parts];
+  }, [payload, placed]);
+  const edges = useMemo<LinkEdgeType[]>(() => {
+    const ids = new Set(payload.nodes.map((n) => n.id));
+    const shown = (payload.edges ?? []).filter((e) => ids.has(e.from) && ids.has(e.to));
+    return shown.map((e) => ({
+      id: e.id,
+      source: e.from,
+      target: e.to,
+      type: "link",
+      data: { link: e, route: placed.edges.get(e.id) },
+      markerEnd: { type: "arrowclosed" as const, width: 16, height: 16 },
+      selectable: false,
+    }));
+  }, [payload, placed]);
+  const followed = useMemo(() => {
+    if (!selection) return [];
+    if ("node" in selection) return [selection.node];
+    if ("edge" in selection) {
+      const e = payload.edges?.find((x) => x.id === selection.edge);
+      return e ? [e.from, e.to] : [];
+    }
+    return [];
+  }, [selection, payload]);
+  const shared = useMemo(() => ({ selection, marks, images, select }), [selection, marks, images, select]);
+
+  return (
+    <div className="cm-diagram" ref={frame}>
+      <SharedContext.Provider value={shared}>
+        <ReactFlowProvider>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            nodesConnectable={false}
+            nodesDraggable={false}
+            elementsSelectable={false}
+            minZoom={0.2}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+            fitView
+            fitViewOptions={fitOptions(inset)}
+            onPaneClick={() => select(null)}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={18} size={1} />
+            <Fitter fit={fit} frame={frame} inset={inset} hold={followed.length > 0} />
+            <Follower ids={followed} inset={inset} frame={frame} />
+            <Zoom onFit={onFit} />
+          </ReactFlow>
+        </ReactFlowProvider>
+      </SharedContext.Provider>
+    </div>
+  );
+}

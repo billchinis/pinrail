@@ -13,6 +13,11 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Added
 
+- The change map plugin, `change-map`, among the official plugins. It
+  shows a code change, such as a pull request, as a diagram of the parts
+  it touches and how they interact, with each part's diff, screenshots
+  before and after, and optional sequence and state diagrams. Comments go
+  on any of them. Install it in Settings › Plugins.
 - The history opens a review in a panel beside the list, as the inbox
   does. J and K step through the history from it. *Settings › General ›
   Opening a review* applies to both.

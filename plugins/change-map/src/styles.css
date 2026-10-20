@@ -1,0 +1,1690 @@
+/* The view's own rules. Colours come from the SDK's tokens, so the view
+   follows the app's light and dark theme. */
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+.cm-app {
+  --cm-added: var(--pinrail-success);
+  --cm-changed: var(--pinrail-warning);
+  --cm-removed: var(--pinrail-danger);
+  --cm-context: var(--pinrail-faint);
+  --cm-line: var(--pinrail-border-strong);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--pinrail-text);
+  background: var(--pinrail-bg);
+}
+.cm-app svg.lucide {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.mono {
+  font-family: var(--pinrail-mono);
+}
+
+/* the bar */
+
+.cm-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--pinrail-border);
+  background: var(--pinrail-bg-panel);
+  flex-wrap: wrap;
+}
+.cm-spacer {
+  flex: 1;
+}
+.cm-legend {
+  display: inline-flex;
+  gap: 8px;
+}
+.cm-verdict {
+  display: inline-flex;
+  gap: 4px;
+}
+.cm-verdict .pinrail-btn[aria-checked="true"] {
+  background: var(--pinrail-accent-bg);
+  border-color: var(--pinrail-accent);
+  color: var(--pinrail-text);
+}
+.cm-problems {
+  margin: 8px 10px 0;
+  font-size: 12px;
+}
+
+/* the status chips */
+
+.cm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--pinrail-dim);
+  white-space: nowrap;
+}
+.cm-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cm-color, var(--cm-context));
+}
+.cm-status-added {
+  --cm-color: var(--cm-added);
+}
+.cm-status-changed {
+  --cm-color: var(--cm-changed);
+}
+.cm-status-removed {
+  --cm-color: var(--cm-removed);
+}
+.cm-status-context,
+.cm-status-unchanged {
+  --cm-color: var(--cm-context);
+}
+
+/* the diagram and the panel */
+
+.cm-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.cm-diagram {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.cm-app .react-flow {
+  --xy-background-color: var(--pinrail-bg);
+  --xy-background-pattern-color: var(--pinrail-border);
+  --xy-edge-stroke: var(--cm-line);
+  --xy-node-background-color: transparent;
+  --xy-node-border: none;
+}
+.cm-app .react-flow__node {
+  cursor: default;
+}
+/* React Flow lets clicks through a node it neither selects nor drags; a
+   part is a button of its own */
+.cm-app .react-flow__node-part,
+.cm-app .react-flow__node-state,
+.cm-app .react-flow__node-head,
+.cm-app .react-flow__node-message {
+  /* over the inline style React Flow sets */
+  pointer-events: all !important;
+}
+.cm-app .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+/* the side panel: it scrolls as a whole, and the comment field stays at
+   its bottom over the details, which fade under it */
+.cm-panel {
+  flex: none;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* no elastic bounce at its ends, which would move the field with it */
+  overscroll-behavior: none;
+  border-left: 1px solid var(--pinrail-border);
+  background: var(--pinrail-bg-panel);
+}
+/* the details: at least the panel's height, so the field sits at its
+   bottom when they are short */
+.cm-panel-body {
+  flex: 1 0 auto;
+}
+.cm-panel-foot {
+  position: sticky;
+  bottom: 0;
+  flex: none;
+  padding: 22px 14px 10px;
+  background: linear-gradient(to bottom, transparent, var(--pinrail-bg-panel) 22px);
+  /* the fade lets clicks through to the details under it */
+  pointer-events: none;
+}
+.cm-panel-foot > * {
+  pointer-events: auto;
+}
+.cm-panel-foot:empty {
+  display: none;
+}
+
+/* the side panel's left edge, which drags to resize it: no width of its
+   own, and a grab area over the edge */
+.cm-panel-resize {
+  position: relative;
+  z-index: 6;
+  flex: none;
+  width: 0;
+  cursor: ew-resize;
+}
+.cm-panel-resize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 6px;
+}
+.cm-panel-resize:hover::after,
+body.cm-resizing-panel .cm-panel-resize::after {
+  background: var(--pinrail-border-strong);
+}
+body.cm-resizing-panel,
+body.cm-resizing-panel * {
+  cursor: ew-resize !important;
+  user-select: none;
+}
+
+/* a lane: a band behind its parts */
+
+.cm-lane {
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--pinrail-border-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--pinrail-bg-raised) 55%, transparent);
+}
+.cm-lane-title {
+  position: absolute;
+  top: 7px;
+  left: 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pinrail-faint);
+}
+
+/* a part */
+
+.cm-part {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1.5px solid var(--cm-color, var(--cm-context));
+  border-radius: 9px;
+  background: var(--pinrail-bg-raised);
+  color: var(--pinrail-text);
+  font: 13px var(--pinrail-sans);
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    opacity 0.2s,
+    box-shadow 0.2s;
+}
+.cm-part.cm-added {
+  --cm-color: var(--cm-added);
+}
+.cm-part.cm-changed {
+  --cm-color: var(--cm-changed);
+}
+.cm-part.cm-removed {
+  --cm-color: var(--cm-removed);
+}
+.cm-part.cm-context {
+  border-style: dashed;
+  border-color: var(--pinrail-border-strong);
+  background: var(--pinrail-bg);
+}
+/* hover and selection ring the card, so its border keeps the status colour */
+.cm-part:hover {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pinrail-accent) 45%, transparent);
+}
+.cm-part.cm-selected {
+  box-shadow:
+    0 0 0 2px var(--pinrail-bg),
+    0 0 0 4px var(--pinrail-accent);
+}
+.cm-part-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.cm-part-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--pinrail-bg-hover);
+  color: var(--pinrail-dim);
+  flex: none;
+}
+.cm-part-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-part-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 29px;
+}
+.cm-part-files {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--pinrail-faint);
+}
+.cm-part-files svg.lucide {
+  width: 11px;
+  height: 11px;
+}
+.cm-part-shot {
+  flex: 1;
+  min-height: 0;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--pinrail-bg);
+  border: 1px solid var(--pinrail-border);
+}
+.cm-part-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+}
+.cm-marks {
+  display: inline-flex;
+  gap: 3px;
+}
+/* on a part, the badges sit on its top-right corner */
+.cm-marks-corner {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 1;
+}
+.cm-part {
+  position: relative;
+}
+.cm-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--pinrail-info);
+  color: var(--pinrail-bg);
+  font: 600 10.5px/1 var(--pinrail-sans);
+  box-shadow: 0 0 0 2px var(--pinrail-bg);
+}
+.cm-mark svg.lucide {
+  width: 11px;
+  height: 11px;
+  fill: currentColor;
+  stroke-width: 0;
+}
+.cm-mark-reviewed {
+  padding: 0;
+  width: 18px;
+  background: var(--pinrail-success);
+}
+.cm-mark-reviewed svg.lucide {
+  fill: none;
+  stroke-width: 3;
+}
+
+/* an interaction */
+
+.cm-app .react-flow__edge-path.cm-link {
+  stroke: var(--cm-line);
+  stroke-width: 1.5;
+  transition: opacity 0.2s;
+}
+.cm-app .react-flow__edge-path.cm-link-added {
+  stroke: var(--cm-added);
+}
+.cm-app .react-flow__edge-path.cm-link-changed {
+  stroke: var(--cm-changed);
+}
+.cm-app .react-flow__edge-path.cm-link-removed {
+  stroke: var(--cm-removed);
+  stroke-dasharray: 2 4;
+}
+.cm-app .react-flow__edge-path.cm-link-event {
+  stroke-dasharray: 6 4;
+}
+.cm-app .react-flow__edge-path.cm-link-import {
+  stroke-dasharray: 1 4;
+}
+.cm-app .react-flow__edge-path.cm-selected {
+  stroke-width: 2.5;
+}
+.cm-app .react-flow__edge-path.cm-selected {
+  stroke: var(--pinrail-accent);
+}
+.cm-link-label {
+  position: absolute;
+  pointer-events: all;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border: 1px solid var(--pinrail-border);
+  border-radius: 10px;
+  background: var(--pinrail-bg-panel);
+  color: var(--pinrail-dim);
+  font: 11px var(--pinrail-mono);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cm-link-label:hover,
+.cm-link-label.cm-selected {
+  border-color: var(--pinrail-accent);
+  color: var(--pinrail-text);
+}
+
+/* the zoom buttons */
+
+.cm-zoom {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--pinrail-border);
+  border-radius: 8px;
+  background: var(--pinrail-bg-panel);
+}
+.cm-zoom .pinrail-btn {
+  padding: 4px 6px;
+}
+
+/* the panel's contents */
+
+.cm-detail {
+  padding: 12px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* the head: the name across the whole width, then its kind and status
+   with the reviewed button */
+.cm-detail-head {
+  display: grid;
+  gap: 4px;
+}
+.cm-detail-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.cm-detail-name > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cm-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+.cm-detail-meta .pinrail-faint {
+  white-space: nowrap;
+}
+.cm-detail-meta .pinrail-btn {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.cm-detail .pinrail-eyebrow {
+  margin: 6px 0 0;
+}
+.cm-md > :first-child {
+  margin-top: 0;
+}
+.cm-md > :last-child {
+  margin-bottom: 0;
+}
+.cm-branch {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+}
+.cm-ref {
+  font-weight: 600;
+  color: var(--pinrail-text);
+}
+.cm-open {
+  margin-left: auto;
+}
+.cm-parts,
+.cm-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* a row as wide as the panel, whose path ends in an ellipsis */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+.cm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--pinrail-text);
+  font: 12.5px var(--pinrail-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.cm-row:hover {
+  background: var(--pinrail-bg-hover);
+}
+.cm-row:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.cm-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-file .cm-row-title {
+  direction: rtl;
+  text-align: left;
+  font-size: 12px;
+}
+.cm-file-name {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+.cm-file-name .cm-row-title {
+  display: block;
+}
+.cm-file-lines {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-counts {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.cm-add {
+  color: var(--pinrail-success);
+}
+.cm-del {
+  color: var(--pinrail-danger);
+}
+.cm-ends {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.cm-ends .pinrail-btn {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-code {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--pinrail-border);
+  border-radius: 6px;
+  background: var(--pinrail-bg);
+  font: 11.5px/1.5 var(--pinrail-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cm-screens {
+  display: grid;
+  gap: 4px;
+}
+.cm-screen {
+  margin: 0;
+}
+/* a part's screen in the panel: its title, its comments and the
+   previous and next buttons, above the images */
+.cm-screens-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  font-size: 12px;
+  color: var(--pinrail-dim);
+}
+.cm-screens-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-screens-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.cm-screens-nav .pinrail-btn {
+  padding: 2px 4px;
+}
+.cm-screen-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.cm-screen-pair.cm-single {
+  grid-template-columns: 1fr;
+}
+.cm-screen-pair img {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  border: 1px solid var(--pinrail-border);
+  border-radius: 5px;
+}
+.cm-reviewed-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--pinrail-success);
+}
+.cm-detail-head .pinrail-btn[aria-pressed="true"] {
+  color: var(--pinrail-success);
+  border-color: color-mix(in srgb, var(--pinrail-success) 50%, var(--pinrail-border));
+}
+
+/* comments */
+
+.cm-comments {
+  display: grid;
+  gap: 6px;
+}
+.cm-comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 9px;
+  border-left: 2px solid var(--pinrail-info);
+  border-radius: 0 6px 6px 0;
+  background: var(--pinrail-bg-raised);
+  font-size: 12.5px;
+}
+.cm-comment .cm-md {
+  flex: 1;
+  min-width: 0;
+}
+.cm-comment .pinrail-btn {
+  padding: 2px 4px;
+}
+/* the comment field: a line with the text, the microphone and the
+   add button; wide, the text takes the whole width and the buttons a row
+   under it */
+.cm-compose {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  padding: 3px 4px;
+  border: 1px solid var(--pinrail-border-strong);
+  border-radius: 6px;
+  background: var(--pinrail-bg);
+}
+/* focused, a stronger grey border rather than the accent */
+.cm-compose:focus-within {
+  border-color: var(--pinrail-faint);
+}
+.cm-compose-wide {
+  padding: 4px 4px 3px;
+}
+.cm-compose-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border: 0;
+  background: none;
+  color: var(--pinrail-text);
+  font: 12.5px var(--pinrail-sans);
+  line-height: 18px;
+  resize: none;
+  overflow: hidden;
+}
+.cm-compose-wide .cm-compose-input {
+  flex-basis: 100%;
+}
+.cm-compose-input:focus {
+  outline: none;
+}
+.cm-compose-wide .cm-compose-tools {
+  margin-left: auto;
+}
+/* in the wide field, the keys on the left of the buttons' row */
+.cm-compose-keys {
+  /* no width of its own: it fills what the buttons leave, so it never
+     widens the field */
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  padding-left: 8px;
+  color: var(--pinrail-faint);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-compose-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+/* the SDK puts the microphone in this placeholder; as a flex box it adds
+   no line height, so the microphone lines up with the buttons */
+.cm-compose-tools > [data-pinrail-dictate-for] {
+  display: flex;
+  align-items: center;
+}
+/* the microphone at the size of the field's other buttons; its colours,
+   and its red while it records, are the SDK's */
+.cm-compose-tools .pinrail-dictate {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+}
+/* the cancel and add buttons, drawn as the SDK draws the microphone */
+.cm-compose-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--pinrail-faint);
+  cursor: pointer;
+}
+.cm-compose-icon:hover:not(:disabled) {
+  background: var(--pinrail-bg-hover);
+  color: var(--pinrail-text);
+}
+.cm-compose-icon svg.lucide,
+.cm-compose-tools .pinrail-dictate svg {
+  width: 15px;
+  height: 15px;
+}
+/* the add button: an arrow in a filled circle, in the accent colour once
+   there is text to add */
+.cm-compose-send,
+.cm-compose-send:hover:not(:disabled) {
+  width: 22px;
+  height: 22px;
+  margin: 1px;
+  border-radius: 50%;
+  background: var(--pinrail-accent);
+  color: var(--pinrail-accent-fg, #fff);
+}
+.cm-compose-send:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pinrail-accent) 85%, var(--pinrail-text));
+}
+.cm-compose-send svg.lucide {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.5;
+}
+.cm-compose-send:disabled {
+  background: var(--pinrail-bg-hover);
+  color: var(--pinrail-faint);
+  cursor: default;
+}
+
+/* the map and the diff drawer over its bottom */
+
+.cm-canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* the diff drawer */
+
+.cm-diff {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--pinrail-border-strong);
+  background: var(--pinrail-bg);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
+  outline: none;
+}
+.cm-diff-resize {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: row-resize;
+  z-index: 1;
+}
+.cm-diff-resize:hover {
+  background: linear-gradient(var(--pinrail-accent), var(--pinrail-accent)) center / 100% 2px no-repeat;
+}
+body.cm-resizing,
+body.cm-resizing * {
+  cursor: row-resize !important;
+  user-select: none;
+}
+.cm-diff-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px 5px 12px;
+  border-bottom: 1px solid var(--pinrail-border);
+  background: var(--pinrail-bg-panel);
+}
+.cm-diff-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  font-size: 12px;
+}
+.cm-diff-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.cm-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+/* no cell borders: the SDK's table rule draws them, and a diff reads by its colours */
+.cm-diff-table td {
+  border: 0;
+}
+.cm-hunk td {
+  padding: 4px 10px;
+  color: var(--pinrail-faint);
+  background: var(--pinrail-bg-raised);
+  font-size: 11.5px;
+}
+.cm-num {
+  width: 1%;
+  padding: 0 8px;
+  text-align: right;
+  color: var(--pinrail-faint);
+  user-select: none;
+  white-space: nowrap;
+}
+.cm-gut {
+  width: 1%;
+  /* room for the bar beside the comment button */
+  padding: 0 5px 0 0;
+}
+.cm-code-line {
+  padding: 0 10px 0 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cm-sign {
+  display: inline-block;
+  width: 1.2em;
+  color: var(--pinrail-faint);
+  user-select: none;
+}
+.cm-line-add {
+  background: var(--pinrail-add-bg);
+}
+.cm-line-add .cm-num {
+  background: var(--pinrail-add-gut);
+}
+.cm-line-del {
+  background: var(--pinrail-del-bg);
+}
+.cm-line-del .cm-num {
+  background: var(--pinrail-del-gut);
+}
+/* the selected part's lines: a thin grey bar, apart from the coloured
+   bar of comments and picked lines */
+.cm-in-range .cm-gut {
+  box-shadow: inset 2px 0 0 var(--pinrail-dim);
+}
+.cm-add-comment {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--pinrail-accent);
+  opacity: 0;
+  cursor: pointer;
+}
+.cm-line:hover .cm-add-comment,
+.cm-add-comment:focus-visible {
+  opacity: 1;
+}
+.cm-line-comments td {
+  padding: 6px 10px 8px 4px;
+}
+
+/* the comments on lines, listed in the panel */
+
+.cm-line-list {
+  display: grid;
+  gap: 6px;
+}
+.cm-comment-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.cm-line-ref {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pinrail-dim);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.cm-line-ref:hover .mono {
+  color: var(--pinrail-accent);
+  text-decoration: underline;
+}
+.cm-line-text {
+  display: grid;
+  margin: 0;
+  padding: 3px 6px;
+  border-radius: 0;
+  background: var(--pinrail-bg);
+  color: var(--pinrail-text);
+  font: 11px/1.45 var(--pinrail-mono);
+  overflow-x: auto;
+}
+.cm-line-text code {
+  white-space: pre;
+  font: inherit;
+  background: none;
+  padding: 0;
+}
+.cm-more {
+  font-family: var(--pinrail-sans);
+}
+
+/* the file in the diff drawer, in the panel's lists */
+.cm-file.cm-current {
+  border-radius: 0;
+  background: var(--pinrail-accent-bg);
+  box-shadow: inset 2px 0 0 var(--pinrail-accent);
+}
+.cm-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.cm-stepper .pinrail-btn {
+  padding: 3px 4px;
+}
+.cm-diff-empty {
+  margin: 24px 16px;
+}
+
+/* lines with a comment, and lines being picked for one */
+.cm-commented .cm-code-line {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--pinrail-info) 14%, transparent),
+    color-mix(in srgb, var(--pinrail-info) 14%, transparent)
+  );
+}
+.cm-commented .cm-gut::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 3px;
+  background: var(--pinrail-info);
+}
+/* the lines being picked, and the lines a comment in the panel opened at */
+.cm-picked .cm-code-line,
+.cm-picked .cm-num,
+.cm-at .cm-code-line,
+.cm-at .cm-num {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--pinrail-accent) 22%, transparent),
+    color-mix(in srgb, var(--pinrail-accent) 22%, transparent)
+  );
+}
+/* the picked lines: one continuous bar down the gutter, and the comment
+   button only on the line the drag started from */
+.cm-gut {
+  position: relative;
+}
+.cm-picked .cm-gut::after,
+.cm-at .cm-gut::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 3px;
+  background: var(--pinrail-accent);
+}
+/* over the hover rule, which would show a button on each line passed */
+body.cm-picking .cm-line .cm-add-comment {
+  opacity: 0;
+}
+body.cm-picking .cm-line.cm-anchor .cm-add-comment {
+  opacity: 1;
+}
+body.cm-picking,
+body.cm-picking * {
+  cursor: ns-resize !important;
+  user-select: none;
+}
+
+.cm-toggle[aria-pressed="true"] {
+  background: var(--pinrail-accent-bg);
+  color: var(--pinrail-accent);
+}
+
+/* the panel's link back to what it showed before */
+.cm-back {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--pinrail-border);
+  background: none;
+  color: var(--pinrail-dim);
+  font: 12px var(--pinrail-sans);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cm-back:hover {
+  color: var(--pinrail-text);
+  background: var(--pinrail-bg-hover);
+}
+
+/* a screenshot in the panel opens larger in the drawer */
+.cm-screen {
+  padding: 6px;
+  margin: -6px;
+  border-radius: 0;
+  cursor: zoom-in;
+}
+.cm-screen:hover {
+  background: var(--pinrail-bg-hover);
+}
+.cm-screen.cm-current {
+  background: var(--pinrail-accent-bg);
+  box-shadow: inset 2px 0 0 var(--pinrail-accent);
+}
+
+/* the screens in the drawer */
+.cm-modes {
+  display: inline-flex;
+  gap: 2px;
+}
+.cm-modes .pinrail-btn[aria-checked="true"] {
+  background: var(--pinrail-accent-bg);
+  color: var(--pinrail-accent);
+}
+
+.cm-wipe {
+  position: relative;
+  max-width: min(900px, 100%);
+  margin: 0 auto;
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+}
+.cm-wipe-before {
+  position: absolute;
+  inset: 0;
+}
+.cm-wipe-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--pinrail-accent);
+  outline: none;
+}
+.cm-wipe-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid var(--pinrail-accent);
+  border-radius: 50%;
+  background: var(--pinrail-bg);
+}
+.cm-wipe-handle:focus-visible::after {
+  box-shadow: 0 0 0 3px var(--pinrail-accent-bg);
+}
+.cm-wipe-label {
+  position: absolute;
+  top: 8px;
+  padding: 1px 6px;
+  background: color-mix(in srgb, var(--pinrail-bg) 80%, transparent);
+  color: var(--pinrail-dim);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cm-wipe-label-before {
+  left: 8px;
+}
+.cm-wipe-label-after {
+  right: 8px;
+}
+
+/* code in comments and descriptions */
+.cm-md pre {
+  margin: 6px 0;
+  padding: 7px 9px;
+  border: 1px solid var(--pinrail-border);
+  background: var(--pinrail-bg);
+  font: 11.5px/1.5 var(--pinrail-mono);
+  overflow-x: auto;
+}
+.cm-md :not(pre) > code {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--pinrail-bg-hover);
+  font: 0.92em var(--pinrail-mono);
+}
+
+/* comments: compact, and editable on a click */
+.cm-line-comments td {
+  padding: 0;
+}
+.cm-line-comments .cm-comment {
+  border-radius: 0;
+  padding: 5px 10px;
+  /* the border continues the gutter's bar, which ends where the code starts */
+  margin: 0 0 0 -3px;
+  border-left-width: 3px;
+}
+.cm-line-comments .cm-comment + .cm-comment {
+  border-top: 1px solid var(--pinrail-border);
+}
+/* the field to comment on a line, in the drawer under the line */
+.cm-line-comments .cm-compose {
+  margin: 6px 10px 6px 4px;
+}
+.cm-comment {
+  border-radius: 0;
+  padding: 5px 9px;
+}
+.cm-comment-editable {
+  cursor: text;
+}
+.cm-comment-editable:hover {
+  background: var(--pinrail-bg-hover);
+}
+.cm-comment-editing {
+  display: grid;
+  gap: 4px;
+}
+.cm-comment-delete {
+  opacity: 0;
+}
+.cm-comment:hover .cm-comment-delete,
+.cm-comment-delete:focus-visible {
+  opacity: 1;
+}
+
+/* areas of a screenshot commented on */
+
+.cm-area {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--pinrail-accent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--pinrail-accent) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pinrail-bg) 70%, transparent);
+}
+.cm-area-lit {
+  border-color: var(--pinrail-text);
+  background: color-mix(in srgb, var(--pinrail-accent) 26%, transparent);
+}
+.cm-area-new {
+  border-color: var(--pinrail-text);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--pinrail-accent) 8%, transparent);
+}
+.cm-area-n {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--pinrail-accent);
+  color: var(--pinrail-bg);
+  font: 600 10px/1 var(--pinrail-sans);
+}
+.cm-area > .cm-area-n {
+  position: absolute;
+  top: -20px;
+  left: -2px;
+}
+.cm-area-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--pinrail-dim);
+}
+
+/* fit: each image as tall as the drawer lets it be, seen whole */
+
+/* the dialog beside a marked area, as the image plugin draws it */
+.cm-pop {
+  position: absolute;
+  z-index: 3;
+  width: 380px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: var(--pinrail-bg-raised);
+  box-shadow:
+    0 0 0 1px var(--pinrail-border-strong),
+    0 14px 34px -12px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+.cm-pop-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--pinrail-dim);
+}
+.cm-pop-head b {
+  color: var(--pinrail-text);
+  font-weight: 600;
+}
+.cm-pop-where {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 11px var(--pinrail-mono);
+  color: var(--pinrail-faint);
+}
+.cm-shot-comments {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  max-width: 720px;
+}
+.cm-lit-comment {
+  background: var(--pinrail-bg-hover);
+}
+/* the screen's name, cut at its end rather than its start as a path is */
+.cm-shots-name {
+  direction: ltr;
+}
+/* how to use the stages, in a line under them */
+.cm-shots-hint {
+  flex: none;
+  padding: 0 12px 6px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* zoomed: the images as wide as the zoom says, and the body scrolls */
+
+.cm-zoom-level {
+  min-width: 38px;
+  text-align: center;
+  font: 11.5px var(--pinrail-mono);
+  color: var(--pinrail-dim);
+}
+
+/* the screens in the drawer: stages that hold their image still in size,
+   moved and scaled within them */
+.cm-shots-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  overflow: hidden;
+}
+.cm-stages {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+.cm-stages.cm-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.cm-stages figure {
+  margin: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 5px;
+}
+.cm-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--pinrail-border);
+  background: var(--pinrail-bg-raised);
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.cm-stage-pan,
+body.cm-panning,
+body.cm-panning * {
+  cursor: grab;
+}
+body.cm-panning,
+body.cm-panning * {
+  cursor: grabbing !important;
+}
+.cm-stage-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.18);
+}
+.cm-zoom-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.cm-zoom-bar .pinrail-btn {
+  padding: 3px 6px;
+  font-size: 11.5px;
+}
+.cm-zoom-bar .pinrail-btn[aria-pressed="true"] {
+  background: var(--pinrail-accent-bg);
+  color: var(--pinrail-accent);
+}
+.cm-shot-comments {
+  flex: none;
+  max-height: 30%;
+  overflow: auto;
+}
+.cm-wipe-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* a line comment's line and code, which open the diff there */
+.cm-line-head {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  cursor: pointer;
+}
+.cm-line-head .cm-line-ref {
+  justify-self: start;
+}
+
+/* a long line ends in an ellipsis rather than scrolling: WebKit takes the
+   room of a scrollbar out of the block, which cut the code off */
+.cm-line-text {
+  overflow: hidden;
+}
+.cm-line-text code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the image and its areas, moved together while a pan lasts */
+.cm-stage-layer {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+/* labels over the parts, so a part never hides one; a long one ends in an
+   ellipsis, and its tooltip has the rest */
+.cm-app .react-flow__edgelabel-renderer {
+  z-index: 5;
+}
+.cm-link-label {
+  max-width: 220px;
+  box-sizing: border-box;
+}
+.cm-link-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the tabs above the canvas: the map and the extra diagrams */
+
+.cm-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--pinrail-border);
+  background: var(--pinrail-bg-panel);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: none;
+}
+.cm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--pinrail-dim);
+  font: 12.5px var(--pinrail-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cm-tab svg.lucide {
+  width: 14px;
+  height: 14px;
+}
+.cm-tab:hover {
+  color: var(--pinrail-text);
+}
+.cm-tab[aria-selected="true"] {
+  border-bottom-color: var(--pinrail-accent);
+  color: var(--pinrail-text);
+}
+.cm-tab-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--pinrail-accent);
+  color: var(--pinrail-accent-fg, #fff);
+  font-size: 10.5px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* a state diagram */
+
+.cm-part.cm-state {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  text-align: center;
+}
+.cm-part.cm-state .cm-part-title {
+  flex: 0 1 auto;
+}
+.cm-state-dot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pinrail-text);
+  cursor: pointer;
+}
+.cm-state-dot.cm-state-final {
+  border: 2px solid var(--pinrail-text);
+  background: var(--pinrail-bg);
+  box-shadow: inset 0 0 0 3px var(--pinrail-bg);
+  background-clip: padding-box;
+}
+.cm-state-dot.cm-state-final::after {
+  content: "";
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: auto;
+  border-radius: 50%;
+  background: var(--pinrail-text);
+}
+.cm-state-dot.cm-selected {
+  box-shadow:
+    0 0 0 2px var(--pinrail-bg),
+    0 0 0 4px var(--pinrail-accent);
+}
+.cm-link-label-bare {
+  padding: 2px 4px;
+}
+.cm-link-label-bare:not(:has(.cm-marks)) {
+  display: none;
+}
+
+/* a sequence diagram */
+
+.cm-part.cm-seq-head {
+  justify-content: center;
+}
+.cm-seq-life {
+  width: 2px;
+  height: 100%;
+  background: repeating-linear-gradient(to bottom, var(--cm-line) 0 5px, transparent 5px 10px);
+}
+.cm-seq-frame {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--pinrail-border-strong);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--pinrail-bg-hover) 35%, transparent);
+  box-sizing: border-box;
+}
+.cm-seq-frame-tab {
+  display: inline-flex;
+  gap: 6px;
+  max-width: calc(100% - 8px);
+  padding: 2px 8px;
+  border-right: 1px solid var(--pinrail-border-strong);
+  border-bottom: 1px solid var(--pinrail-border-strong);
+  border-radius: 4px 0 4px 0;
+  background: var(--pinrail-bg-panel);
+  color: var(--pinrail-dim);
+  font: 11px var(--pinrail-sans);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+.cm-seq-frame-tab b {
+  font: 600 10.5px var(--pinrail-mono);
+  text-transform: uppercase;
+  color: var(--pinrail-text);
+}
+.cm-seq-message {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.cm-seq-svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  color: var(--cm-line);
+}
+.cm-seq-svg.cm-seq-added {
+  color: var(--cm-added);
+}
+.cm-seq-svg.cm-seq-changed {
+  color: var(--cm-changed);
+}
+.cm-seq-svg.cm-seq-removed {
+  color: var(--cm-removed);
+}
+.cm-seq-message.cm-selected .cm-seq-svg {
+  color: var(--pinrail-accent);
+}
+.cm-seq-line,
+.cm-seq-tip-open {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.cm-seq-tip {
+  fill: currentColor;
+}
+.cm-seq-reply {
+  stroke-dasharray: 5 4;
+}
+.cm-seq-message:hover .cm-seq-line,
+.cm-seq-message.cm-selected .cm-seq-line {
+  stroke-width: 2.5;
+}
+/* the label over the middle of the arrow, or beside a self message's loop */
+.cm-seq-label {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 220px;
+  padding: 1px 6px;
+  border: 1px solid var(--pinrail-border);
+  border-radius: 10px;
+  background: var(--pinrail-bg-panel);
+  color: var(--pinrail-dim);
+  font: 11px var(--pinrail-mono);
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.cm-seq-self .cm-seq-label {
+  left: 38px;
+  bottom: auto;
+  top: calc(100% - 39px);
+  transform: none;
+}
+.cm-seq-message:hover .cm-seq-label,
+.cm-seq-message.cm-selected .cm-seq-label {
+  border-color: var(--pinrail-accent);
+  color: var(--pinrail-text);
+}
+
+/* the panel's link back to an entity's diagram */
+
+.cm-in-diagram {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pinrail-dim);
+  font: 12px var(--pinrail-sans);
+  cursor: pointer;
+}
+.cm-in-diagram:hover {
+  color: var(--pinrail-text);
+  text-decoration: underline;
+}
+.cm-in-diagram svg.lucide {
+  width: 14px;
+  height: 14px;
+}
+.cm-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}

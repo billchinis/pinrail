@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Change map decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "comments"
+  ],
+  "properties": {
+    "verdict": {
+      "enum": [
+        "approve",
+        "request_changes"
+      ],
+      "description": "approve: go ahead with the change. request_changes: change it as the comments say, then send a new round."
+    },
+    "comments": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "body"
+        ],
+        "properties": {
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "What a comment is on: a node, an edge, a line of a file or lines from start_line to line on the same side, an area of a screenshot, or an entity of an extra diagram.",
+            "oneOf": [
+              {
+                "required": [
+                  "node"
+                ],
+                "properties": {
+                  "node": {
+                    "type": "string",
+                    "maxLength": 80
+                  }
+                }
+              },
+              {
+                "required": [
+                  "edge"
+                ],
+                "properties": {
+                  "edge": {
+                    "type": "string",
+                    "maxLength": 80
+                  }
+                }
+              },
+              {
+                "required": [
+                  "file",
+                  "line"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "line": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "side": {
+                    "enum": [
+                      "old",
+                      "new"
+                    ],
+                    "default": "new"
+                  },
+                  "start_line": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "The first line of a range of lines; line is the last."
+                  }
+                }
+              },
+              {
+                "required": [
+                  "screen",
+                  "region"
+                ],
+                "properties": {
+                  "screen": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "node",
+                      "index",
+                      "image"
+                    ],
+                    "description": "The screenshot: a node's screens[index], its before or its after image.",
+                    "properties": {
+                      "node": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "index": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "image": {
+                        "enum": [
+                          "before",
+                          "after"
+                        ]
+                      }
+                    }
+                  },
+                  "region": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "x",
+                      "y",
+                      "width",
+                      "height"
+                    ],
+                    "description": "The area, as fractions of the image's width and height from its top-left corner.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "width": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "height": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "required": [
+                  "diagram",
+                  "item"
+                ],
+                "properties": {
+                  "diagram": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "item": {
+                    "type": "string",
+                    "maxLength": 80
+                  }
+                }
+              }
+            ],
+            "properties": {
+              "node": {},
+              "edge": {},
+              "file": {},
+              "line": {},
+              "side": {},
+              "start_line": {},
+              "screen": {},
+              "region": {},
+              "diagram": {},
+              "item": {}
+            }
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        }
+      }
+    },
+    "reviewed": {
+      "type": "array",
+      "maxItems": 300,
+      "description": "The nodes, edges and diagram entities (as <diagram>:<item>) the person marked as reviewed.",
+      "items": {
+        "type": "string",
+        "maxLength": 161
+      }
+    }
+  }
+}
