@@ -1101,15 +1101,25 @@ body.cm-picking * {
 
 .cm-wipe {
   position: relative;
-  max-width: min(900px, 100%);
-  margin: 0 auto;
+  line-height: 0;
   cursor: ew-resize;
   user-select: none;
   touch-action: none;
 }
-.cm-wipe-before {
+.cm-wipe img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100cqw;
+  max-height: 100cqh;
+}
+.cm-wipe .cm-wipe-before {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
 }
 .cm-wipe-handle {
   position: absolute;
@@ -1137,6 +1147,7 @@ body.cm-picking * {
 }
 .cm-wipe-label {
   position: absolute;
+  line-height: normal;
   top: 8px;
   padding: 1px 6px;
   background: color-mix(in srgb, var(--pinrail-bg) 80%, transparent);
@@ -1398,10 +1409,17 @@ body.cm-panning * {
   max-height: 30%;
   overflow: auto;
 }
+/* the slider: the images fitted whole into the room the drawer has, and
+   the frame as large as the images, so that the handle's place is the
+   split's */
 .cm-wipe-wrap {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  container-type: size;
 }
 
 /* a line comment's line and code, which open the diff there */

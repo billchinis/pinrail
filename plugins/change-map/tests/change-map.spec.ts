@@ -865,3 +865,23 @@ test("the comment field stays at the bottom of the side panel while its details 
   await expect(f.getByTestId("overview")).toBeVisible();
   await expect(f.locator(".cm-panel-foot")).toBeHidden();
 });
+
+test("the slider fits its images in the drawer, with the handle on the split", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { screen_mode: "wipe" } });
+  const f = plugin.frame;
+  await f.locator('[data-node="ticket-form"]').click();
+  await f.getByRole("button", { name: /Show Save while saving larger/ }).click();
+  const wipe = f.getByTestId("wipe");
+  const after = wipe.getByRole("img", { name: /after/ });
+  await expect(after).toBeVisible();
+  await expect.poll(() => after.evaluate((img: HTMLImageElement) => img.complete)).toBe(true);
+  const body = (await f.locator(".cm-shots-body").boundingBox())!;
+  const image = (await after.boundingBox())!;
+  // the whole image in view, not its corner
+  expect(image.width).toBeLessThanOrEqual(body.width + 1);
+  expect(image.y + image.height).toBeLessThanOrEqual(body.y + body.height + 1);
+  // the handle at the middle of the image, where the before is cut
+  const handle = (await wipe.getByRole("slider").boundingBox())!;
+  expect(Math.abs(handle.x + handle.width / 2 - (image.x + image.width / 2))).toBeLessThan(2);
+});
