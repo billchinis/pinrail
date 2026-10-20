@@ -39,6 +39,15 @@ for (const drawer of [false, true])
     await expect.poll(off).toBeLessThan(4);
   });
 
+test("a card's status line starts at the card's left, under its icon", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const form = f.locator('[data-node="ticket-form"]');
+  const icon = (await form.locator(".cm-part-icon").boundingBox())!;
+  const meta = (await form.locator(".cm-part-meta > *").first().boundingBox())!;
+  expect(Math.abs(meta.x - icon.x)).toBeLessThan(1);
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;
