@@ -59,6 +59,13 @@ async function note(f, id, text) {
   await f.locator(`[data-note-ta="${id}"]`).fill(text);
 }
 
+/** Closes a change map's diff drawer, which a scene before may have left
+ *  open: the plugin keeps it as a setting. */
+async function closeDiff(f) {
+  const hide = f.getByRole("button", { name: "Hide the diff" });
+  if (await hide.count()) await hide.click();
+}
+
 /** A What's new picture is the whole window at this size, the shape of the dialog's picture. */
 const card = (page) => page.setViewportSize({ width: 1180, height: 576 });
 
@@ -403,6 +410,52 @@ export const scenes = [
       await f.getByPlaceholder("Add a comment").fill("Disable the whole form while it saves, not only the button");
       await settle(page, 600);
       await shot("change-map");
+    },
+  },
+  {
+    // a sequence diagram: the second save, its conflict reply selected
+    name: "change-map-sequence",
+    async run({ page, app, reviews, shot }) {
+      const f = await openReview(page, app, reviews["27-change-map-dedup"]);
+      await closeDiff(f);
+      await f.locator('[data-tab="second-save"]').click();
+      await f.locator('[data-item="n7"]').click();
+      await settle(page, 600);
+      await shot("change-map-sequence");
+    },
+  },
+  {
+    // a state diagram: the Save button, the transition from a failed save selected
+    name: "change-map-state",
+    async run({ page, app, reviews, shot }) {
+      const f = await openReview(page, app, reviews["27-change-map-dedup"]);
+      await closeDiff(f);
+      await f.locator('[data-tab="save-button"]').click();
+      await f.locator('[data-item="t4"]').click();
+      await settle(page, 600);
+      await shot("change-map-state");
+    },
+  },
+  {
+    // the ticket form's screenshots side by side, a comment on the Save button
+    name: "change-map-screens",
+    async run({ page, app, reviews, shot }) {
+      const f = await openReview(page, app, reviews["27-change-map-dedup"]);
+      await f.locator('[data-node="ticket-form"]').click();
+      await f.getByRole("button", { name: /Show Save while saving larger/ }).click();
+      const viewer = f.getByTestId("screen-viewer");
+      await viewer.getByRole("radio", { name: "Side by side" }).click();
+      await settle(page, 400);
+      const after = await viewer.locator("figure", { hasText: "After" }).locator("img").boundingBox();
+      const at = (x, y) => [after.x + after.width * x, after.y + after.height * y];
+      await page.mouse.move(...at(0.74, 0.8));
+      await page.mouse.down();
+      await page.mouse.move(...at(0.93, 0.95), { steps: 6 });
+      await page.mouse.up();
+      await f.locator("#area-comment").fill("The spinner hides the button's label: keep the word Saving");
+      await f.locator("#area-comment").press("Enter");
+      await settle(page, 600);
+      await shot("change-map-screens");
     },
   },
   {

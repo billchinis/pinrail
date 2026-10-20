@@ -1,6 +1,6 @@
 ---
 title: Change map
-description: "A code change, such as a pull request, shown as a diagram of the parts it touches and how they interact, with each part's diff and screenshots, commented on before the agent goes on."
+description: "A code change, such as a pull request, reviewed as a diagram of the parts it touches and how they interact, with each part's diff, screenshots before and after, and sequence and state diagrams when the change needs them."
 sidebar:
   badge:
     text: Optional
@@ -9,7 +9,9 @@ sidebar:
 
 <div class="pr-badges"><span class="pr-badge optional">Optional</span><span class="pr-badge plain">plugin: change-map</span></div>
 
-The change map plugin shows a code change, such as a pull request or a branch an agent finished, as a diagram of the parts it touches and the interactions between them, rather than as a list of files. You see what the change does to the system first, then open the code of any part. Each comment goes back on a part, an interaction, lines of a file, an area of a screenshot or an entity of a diagram, so the agent knows exactly what it is about.
+The change map plugin turns the review of a code change into a review of its architecture. A pull request, or a branch an agent finished, is shown as a diagram of the parts it touches and the interactions between them, rather than as a list of files. You see what the change does to the system first, and then open the code of any part, its lines highlighted in the diff.
+
+When a diagram of parts is not enough, the agent adds **sequence diagrams** for the order of the calls and **state diagrams** for a lifecycle, so you review how the change behaves as well as what it touches. Parts of the interface carry **screenshots before and after**, so you see what the person using the software will see. Each comment goes back on a part, an interaction, lines of a file, an area of a screenshot or an entity of a diagram, so the agent knows exactly what it is about.
 
 ![The change map plugin: the diagram of a change, with the ticket form selected, its file open in the diff drawer under the diagram with a comment on three lines, and a comment on the part being written in the side panel.](screenshot:change-map "The ticket form selected, its file in the drawer, and a comment on three of its lines.")
 
@@ -17,8 +19,8 @@ The change map plugin shows a code change, such as a pull request or a branch an
 
 - **A pull or merge request** that touches several parts of a system, read as a whole before you read it file by file.
 - **A change an agent made on its own**, reviewed before it opens a pull request or merges.
-- **A change to an interface**, with screenshots of the screens before and after.
-- **A change to a flow or a lifecycle**, such as a retry or a new status, explained with a sequence or a state diagram.
+- **A change to an interface**, with screenshots of each screen before and after.
+- **A change to a flow or a lifecycle**, such as a retry, a handshake or a new status, explained with sequence and state diagrams for a detailed architectural review.
 
 To review the comments an agent wants to post on a pull request, use [Code review](/docs/plugins/code-review/) instead.
 
@@ -32,13 +34,42 @@ pinrail plugins install change-map
 
 ## What you see
 
-- **The map** of the change: a card for each part, such as a component, a module, an endpoint or a table, grouped into lanes, and a line for each interaction between two parts. A part's border and an interaction's line show whether it is new, changed, removed or unchanged.
-- **The side panel** with the change's summary, or the selected part or interaction with its summary, its files, its screenshots and its comments. You can drag the panel's left edge to make it wider.
-- **The diff drawer** under the map, with the selected part's files and the lines that implement it highlighted. The button in the header shows or hides it, and the choice is kept as a setting.
-- **Screenshots** of an interface part, before and after. They open in the drawer side by side, with a slider between them, or the after alone, and you can zoom and pan them.
-- **Sequence and state diagrams**, when the agent sends some, in tabs above the map. A participant or a message that stands for a part or an interaction of the map is the same thing as that part or interaction, so it shares its files and comments.
-- **Comments** on a part, on an interaction, on a line or a range of lines in the drawer, on an area of a screenshot, and on an entity of a diagram. Badges on the map and the tabs count them.
-- **Reviewed marks**, which you set on each part, interaction or entity you have read.
+### The map
+
+- **A card for each part** of the change, such as a component, a module, an endpoint or a table, grouped into lanes such as *Web app*, *API* and *Database*, and **a line for each interaction** between two parts, labelled with what it does. A part's border and an interaction's line show whether it is new, changed, removed or unchanged.
+- **The side panel** with the change's summary, or the selected part or interaction with its summary, its files, its screenshots, the diagrams it appears in and its comments. You can drag the panel's left edge to make it wider.
+- **The diff drawer** under the map, with the selected part's files and the lines that implement it highlighted. Selecting another part of the same file scrolls to its lines. The button in the header shows or hides the drawer, and the choice is kept as a setting.
+
+### Sequence and state diagrams
+
+A change about the order of things or about a lifecycle is hard to read from a map of parts alone. For such a change, the agent adds diagrams of their own, each in a tab above the map. They are optional, and an agent adds one only when the change needs it.
+
+- **A sequence diagram** shows the participants from left to right, with a lifeline under each, and the messages between them from top to bottom: calls, asynchronous messages, replies and messages to the sender itself. Frames mark the alternatives, the optional runs, the loops and the parallel runs.
+
+![A sequence diagram in the change map: a second save with the same dedup key, with a retry frame and the conflict reply selected.](screenshot:change-map-sequence "A retried request answered with the ticket the first one created.")
+
+- **A state diagram** shows the states, with a dot for the start and a ringed dot for the end, and the transitions between them, labelled with their event, guard and action.
+
+![A state diagram in the change map: the Save button's states Ready and Saving, with a failed save's transition selected.](screenshot:change-map-state "The Save button's states, with the transition back from a failed save selected.")
+
+Every participant, message, state and transition has a status, a summary and the files and lines that implement it, which open in the drawer, as a part of the map does. A participant or a message that stands for a part or an interaction of the map is the same thing as that part or interaction, so its files, comments and reviewed mark are shared and nothing is reviewed twice. The tabs show how many comments each diagram has.
+
+### Screenshots of interface changes
+
+A part of the interface, such as a form or a page, can carry screenshots, each with a before and an after. The part's card on the map shows the after as a thumbnail, and the side panel shows each screen in turn. A screenshot opens larger in the drawer:
+
+- **Side by side**, the before and the after at the same zoom and position, so a detail lines up across both.
+- **With a slider** over the two, which you drag to wipe from the before to the after.
+- **The after alone**, at the drawer's full width.
+
+You zoom with the scroll wheel or to the actual pixels, pan with the hand tool or by holding Space, and drag a box over any area to comment on it. The comment goes back with the area's position on the image, and the choice of comparison is kept as a setting.
+
+![The change map's screenshot viewer: the ticket form before and after side by side, with a comment on the area of the Save button in the after.](screenshot:change-map-screens "The ticket form before and after, with a comment on the spinner in the Save button.")
+
+### Comments and reviewed marks
+
+- **Comments** go on a part, on an interaction, on a line or a range of lines in the drawer, on an area of a screenshot, and on an entity of a diagram. The field stays at the bottom of the side panel. Badges on the map, the tabs and the files count the comments.
+- **Reviewed marks** are set on each part, interaction or entity you have read, and go back to the agent.
 
 You choose **Approve** or **Request changes** in the header. Until you choose, comments ask for changes, and a review with none approves. With comments and **Approve**, the hand-over says *Approve with comments*.
 
