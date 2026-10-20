@@ -1,6 +1,6 @@
 ---
 name: change-map
-description: Build a change map of a code change for review with the change-map plugin, the parts it touches, how they interact, their files and lines, screenshots of interface changes, and sequence or state diagrams when the change needs them.
+description: Build a change map of a code change for review with the change-map plugin, the parts it touches, how they interact, and the files and lines that implement each.
 ---
 
 # Change map
@@ -57,36 +57,37 @@ it explains a changed one.
 - `status`: `added`, `changed`, `removed`, or `unchanged`.
 - `changes`: as for parts, the lines that make the call.
 
-## 4. Screenshots of interface changes
-
-For each part of the interface the change alters, capture the screen
-before the change and after it, at the same size, and give them as a
-screen with a `before` and an `after`. Several states of one part, such as
-empty and filled, or light and dark, are several screens.
+A form that now sends a key with each save, to an endpoint that checks it:
 
 ```json
-"screens": [{ "title": "Save while saving",
-              "before": { "$attachment": "form-before.png" },
-              "after": { "$attachment": "form-after.png" } }]
+{
+  "lanes": [{ "id": "web", "title": "Web app" }, { "id": "api", "title": "API" }],
+  "nodes": [
+    { "id": "ticket-form", "title": "Ticket form", "kind": "ui", "lane": "web", "status": "changed",
+      "summary": "Disables **Save** while a save is out, and sends the form's dedup key.",
+      "changes": [{ "file": "web/src/TicketForm.tsx", "lines": [[40, 68]] }] },
+    { "id": "tickets-endpoint", "title": "POST /tickets", "kind": "endpoint", "lane": "api", "status": "changed",
+      "summary": "Answers 409 with the existing ticket for a key it has seen.",
+      "changes": [{ "file": "lib/helpdesk_web/controllers/ticket_controller.ex" }] }
+  ],
+  "edges": [
+    { "id": "post", "from": "ticket-form", "to": "tickets-endpoint", "label": "POST /tickets",
+      "kind": "call", "status": "changed",
+      "changes": [{ "file": "web/src/api.ts", "lines": [[15, 24]] }] }
+  ]
+}
 ```
 
-Send each file with `--attach`.
+## 4. When the map is not enough
 
-## 5. Sequence and state diagrams
+Read these only when the change needs them:
 
-Add one only when the map does not show what the change does:
+- [Screenshots](references/screenshots.md), when the change alters what a
+  person sees on a screen.
+- [Sequence and state diagrams](references/diagrams.md), when the order of
+  calls or the states of something matter more than which parts talk.
 
-- a **sequence** when the order of the calls matters, such as a retry, a
-  handshake, a background job or a race;
-- a **state** diagram when the change adds or changes the states of
-  something, such as a status, a button or a connection.
-
-A participant that is a part of the map names it with `node`, and a message
-that is an interaction names it with `edge`, so they share their files and
-comments. Give the others their own `changes`. Keep a diagram to what the
-change touches.
-
-## 6. Submit
+## 5. Submit
 
 ```sh
 pinrail submit change-map --title "<the change, as its title>" \
@@ -97,7 +98,7 @@ Give `change` (its `title`, `source` and `target` branches, and `url` if
 there is one) and a `summary` of the whole change. Before you submit, check
 that each changed code file is in some part's `changes`.
 
-## 7. The decision
+## 6. The decision
 
 - `approve`: go on. Read any comments as notes.
 - `request_changes`: apply each comment, then submit the next version with

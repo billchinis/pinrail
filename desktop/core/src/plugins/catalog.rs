@@ -333,7 +333,15 @@ mod tests {
             "{}",
             skill.description
         );
-        assert_eq!(skill.files, ["SKILL.md", "scripts/files.mjs"]);
+        assert_eq!(
+            skill.files,
+            [
+                "SKILL.md",
+                "references/diagrams.md",
+                "references/screenshots.md",
+                "scripts/files.mjs"
+            ]
+        );
     }
 
     /// What the app carries is what a plugin's folder holds as a bundle.
