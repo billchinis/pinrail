@@ -185,6 +185,25 @@ pub fn server(info: &Value) -> String {
 }
 
 /// What a `plugins` command other than the listing did.
+/// Where an installed plugin's skill stands, when it ships one.
+fn skill_note(name: &str, plugin: &Value) -> String {
+    if plugin["skill"].is_null() {
+        String::new()
+    } else if plugin["install"]["skill_allowed"] == true {
+        "Its skill reaches your connected agents.\n".to_string()
+    } else {
+        format!(
+            "It ships a skill for your agents, which reaches them once you allow it: \
+             install it again with --allow-skill, or allow it in Settings › Plugins. \
+             Read it first in {}.\n",
+            plugin["path"]
+                .as_str()
+                .map(|p| format!("{p}/skill"))
+                .unwrap_or_else(|| format!("the {name} plugin's folder"))
+        )
+    }
+}
+
 pub fn plugins_result(value: &Value) -> String {
     if let Some(all) = value.as_array() {
         return all.iter().map(plugins_result).collect();
@@ -209,7 +228,11 @@ pub fn plugins_result(value: &Value) -> String {
                 text(&plugin["version"])
             );
         }
-        return format!("Installed {name} {}{from}.\n", text(&plugin["version"]));
+        return format!(
+            "Installed {name} {}{from}.\n{}",
+            text(&plugin["version"]),
+            skill_note(name, plugin)
+        );
     }
     match value["removed"].as_str() {
         Some(name) => format!("Removed {name}.\n"),

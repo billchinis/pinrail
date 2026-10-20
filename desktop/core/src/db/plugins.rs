@@ -67,6 +67,13 @@ impl Db {
     /// keeping when that was first installed.
     pub fn record_install(&self, record: &InstallRecord) -> rusqlite::Result<()> {
         let conn = self.conn();
+        // a skill allowed from one source is not allowed from another
+        conn.execute(
+            "DELETE FROM plugin_skill_grants WHERE name = ?1 AND EXISTS (
+               SELECT 1 FROM plugin_installs
+               WHERE name = ?1 AND (source_kind != ?2 OR source != ?3))",
+            params![record.name, record.kind, record.source],
+        )?;
         conn.execute(
             &format!(
                 "INSERT INTO plugin_installs ({INSTALL_COLUMNS})
@@ -92,5 +99,40 @@ impl Db {
     pub fn remove_install(&self, name: &str) -> rusqlite::Result<bool> {
         let conn = self.conn();
         Ok(conn.execute("DELETE FROM plugin_installs WHERE name = ?1", params![name])? > 0)
+    }
+
+    /// Allows the skill of an installed plugin to reach the agents, or
+    /// stops it; whether the plugin is installed.
+    pub fn allow_skill(&self, name: &str, allowed: bool, at: &str) -> rusqlite::Result<bool> {
+        let conn = self.conn();
+        let installed: bool = conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM plugin_installs WHERE name = ?1)",
+            params![name],
+            |r| r.get(0),
+        )?;
+        if !installed {
+            return Ok(false);
+        }
+        if allowed {
+            conn.execute(
+                "INSERT INTO plugin_skill_grants (name, granted_at) VALUES (?1, ?2)
+                 ON CONFLICT(name) DO NOTHING",
+                params![name, at],
+            )?;
+        } else {
+            conn.execute(
+                "DELETE FROM plugin_skill_grants WHERE name = ?1",
+                params![name],
+            )?;
+        }
+        Ok(true)
+    }
+
+    /// The installed plugins whose skill the person allowed.
+    pub fn skill_grants(&self) -> rusqlite::Result<std::collections::HashSet<String>> {
+        let conn = self.conn();
+        conn.prepare("SELECT name FROM plugin_skill_grants")?
+            .query_map([], |r| r.get(0))?
+            .collect()
     }
 }

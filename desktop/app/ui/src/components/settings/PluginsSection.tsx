@@ -118,6 +118,8 @@ export function PluginsSection({ focus, onOpenReview }: { focus: string | null; 
             open={focus === p.name}
             fresh={fresh === p.name}
             onReveal={() => reveal(p.install?.link ? p.install.source : p.path)}
+            onRevealSkill={() => reveal(`${p.install?.link ? p.install.source : p.path}/skill/SKILL.md`)}
+            onReload={() => load().catch(() => {})}
             onNotify={(on) => setNotify(p.name, on)}
             links={allowedOrigins(p)}
             onForgetLink={(origin) => forgetLink(p, origin)}
@@ -163,6 +165,8 @@ function PluginEntry({
   open: openAtStart,
   fresh,
   onReveal,
+  onRevealSkill,
+  onReload,
   onNotify,
   links,
   onForgetLink,
@@ -180,6 +184,10 @@ function PluginEntry({
   /** just installed: marked, and scrolled to */
   fresh: boolean;
   onReveal: () => void;
+  /** shows the plugin's SKILL.md in the file manager */
+  onRevealSkill: () => void;
+  /** reads the installed plugins again */
+  onReload: () => void;
   onNotify: (on: boolean) => void;
   links: string[];
   onForgetLink: (origin: string) => void;
@@ -228,6 +236,17 @@ function PluginEntry({
       );
     }
   };
+
+  // a copied plugin's skill, allowed to reach the agents or stopped
+  const allowSkill = async (allowed: boolean) => {
+    try {
+      await api.allowSkill(p.name, allowed);
+      onReload();
+    } catch (e) {
+      onMessage(e instanceof ApiError ? e.message : `The ${p.title || p.name} skill could not be changed`, "danger");
+    }
+  };
+  const skillAlways = p.install?.source_kind === "index" || p.install?.link === true;
 
   // an official plugin, to the newer version the app carries
   const [updating, setUpdating] = useState(false);
@@ -428,6 +447,41 @@ function PluginEntry({
               <>
                 <dt>Clipboard</dt>
                 <dd data-testid="plugin-clipboard">Can copy text and images from its reviews</dd>
+              </>
+            ) : null}
+            {p.skill ? (
+              <>
+                <dt>Skill</dt>
+                <dd className="settings-plugin-skill" data-testid="plugin-skill">
+                  {skillAlways ? (
+                    <span>Reaches your connected agents</span>
+                  ) : (
+                    <>
+                      <Toggle
+                        label={`Let the ${p.name} skill reach your agents`}
+                        checked={p.install?.skill_allowed === true}
+                        onChange={allowSkill}
+                      />
+                      <span>
+                        {p.install?.skill_allowed
+                          ? "Reaches your connected agents"
+                          : "Waits until you allow it. It becomes instructions your agents follow, so read it first."}
+                      </span>
+                      {native ? (
+                        <button type="button" className="chrome-button" onClick={() => onRevealSkill()}>
+                          Show its files
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </dd>
+              </>
+            ) : p.skill_error ? (
+              <>
+                <dt>Skill</dt>
+                <dd className="danger" data-testid="plugin-skill">
+                  Not used: {p.skill_error}
+                </dd>
               </>
             ) : null}
             {links.length ? (

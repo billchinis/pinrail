@@ -517,7 +517,7 @@ Before you submit a change map, work out the parts of the change…
 
 When an agent is connected in *Settings › Agents*, Pinrail writes its `pinrail` skill with a list of the installed plugins at the end, each with its `use_when`. For a plugin that ships a skill, the list tells the agent to read it before it submits, and Pinrail writes the skill under `plugins/<name>/` in the `pinrail` skill's folder. Installing, updating or removing a plugin rewrites the connected agents' skills, and so does an edit to the skill of a plugin linked with `--link`, within a second or so.
 
-A skill reaches the agents from the official plugins and from plugins you link from a folder. `pinrail plugins check` reports a skill it cannot use: one without `SKILL.md` or a description, one with links, or one with more than 200 files or 2 MB. The plugin still works without it.
+A skill reaches the agents from the official plugins and from plugins you link from a folder. The skill of a plugin copied from a folder or a zip waits until the person allows it, because it becomes instructions their agents follow. See [Plugins with a skill](/docs/using/installing-plugins/#plugins-with-a-skill). `pinrail plugins check` reports a skill it cannot use: one without `SKILL.md` or a description, one with links, or one with more than 200 files or 2 MB. The plugin still works without it.
 
 ## Summing up a review
 

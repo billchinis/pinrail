@@ -259,6 +259,19 @@ impl Client {
         self.post("/api/v1/plugins/install", Some(&body))
     }
 
+    /// Allows the skill of a plugin copied from a folder or a zip to reach
+    /// the agents, or stops it: the plugin's row.
+    pub fn plugins_allow_skill(&self, name: &str, allowed: bool) -> Result<Value> {
+        let url = format!("{}/api/v1/plugins/{}/skill", self.base, segment(name));
+        let mut resp = self
+            .agent
+            .patch(&url)
+            .header(CLIENT_HEADER, "cli")
+            .send_json(serde_json::json!({ "allowed": allowed }))
+            .map_err(|e| self.failed(e))?;
+        Self::body(resp.status().as_u16(), &mut resp)
+    }
+
     pub fn plugins_remove(&self, name: &str) -> Result<Value> {
         self.delete(&format!("/api/v1/plugins/{}", segment(name)))
     }

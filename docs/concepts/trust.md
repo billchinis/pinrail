@@ -49,6 +49,8 @@ If you build a plugin yourself, for example with `npm ci && npm run build`, that
 
 After installation, a plugin consists only of static files, and its view runs in the same sandbox as any other.
 
+A plugin can also ship a skill: instructions for your agents, and sometimes scripts they run. Pinrail runs none of it itself, but your agents follow those instructions, and run those scripts, as you. So the skill of a plugin copied from a folder or a zip reaches your agents only after you allow it, and Pinrail writes its scripts without permission to run them directly. Read a plugin's `skill/SKILL.md` before you allow it. See [Plugins with a skill](/docs/using/installing-plugins/#plugins-with-a-skill).
+
 ## What the agent can do
 
 Pinrail does not run your agents or limit what they do. It gives them a way to ask, and it reports your answer faithfully. Whether an agent asks, and whether it respects the answer, is up to its instructions and its harness. Write instructions that name the moments to ask, and prefer tools that enforce them. See [Instructing an agent](/docs/agents/instructing/).

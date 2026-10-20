@@ -134,6 +134,10 @@ export type Plugin = {
   sample_errors?: string[];
   /** how the payload schema's file fields disagree with the manifest's attachments */
   attachment_errors?: string[];
+  /** what it tells the agents that ask with it, from its `skill/` folder */
+  skill?: { name?: string | null; description: string; files: string[] } | null;
+  /** why a skill it has could not be used */
+  skill_error?: string | null;
   /** how it got here; null for a bundle loaded for a review */
   install: PluginInstall | null;
   /** the newer version an official plugin can be updated to, if any */
@@ -173,6 +177,8 @@ export type PluginInstall = {
   modified: boolean;
   /** a linked folder changed since it was stored; the next use stores it */
   folder_changed: boolean;
+  /** its skill may reach the agents: an official or linked plugin's always, another's once allowed */
+  skill_allowed?: boolean;
   installed_at: string;
   updated_at: string;
 };

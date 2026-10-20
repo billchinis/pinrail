@@ -176,9 +176,10 @@ fn home() -> Result<PathBuf, String> {
 }
 
 /// The installed plugins as the agents' skill names them: each usable one,
-/// with its skill when that goes to the agents. An official plugin's skill,
-/// installed from a catalog, is read from its bundle, and a linked plugin's from its
-/// folder as it is now, so an edit reaches the agents without a reinstall.
+/// with its skill when that may reach the agents: an official plugin's, a
+/// linked one's, or another's the person allowed. A linked plugin's skill is
+/// read from its folder as it is now, so an edit reaches the agents without
+/// a reinstall, and the others' from the bundle installed.
 fn installed_plugins(state: &Pinrail) -> Vec<agent_skills::InstalledPlugin> {
     let listing = state.plugins().listing(&serde_json::json!({}));
     let text = |v: &serde_json::Value| v.as_str().unwrap_or_default().to_string();
@@ -189,21 +190,21 @@ fn installed_plugins(state: &Pinrail) -> Vec<agent_skills::InstalledPlugin> {
         .filter(|p| p["usable"] == true)
         .map(|p| {
             let install = &p["install"];
-            let skill = if install["link"] == true {
+            let skill = if install["skill_allowed"] != true {
+                None
+            } else if install["link"] == true {
                 let folder = PathBuf::from(text(&install["source"]));
                 pinrail_core::skill::load(&folder)
                     .ok()
                     .flatten()
                     .map(|s| (folder.join(pinrail_core::skill::FOLDER), s.files))
-            } else if install["source_kind"] == "index" {
+            } else {
                 p["skill"]["files"].as_array().map(|files| {
                     (
                         PathBuf::from(text(&p["path"])).join(pinrail_core::skill::FOLDER),
                         files.iter().map(text).collect(),
                     )
                 })
-            } else {
-                None
             };
             agent_skills::InstalledPlugin {
                 name: text(&p["name"]),
@@ -868,7 +869,7 @@ mod tests {
     }
 
     #[test]
-    fn a_linked_plugins_skill_reaches_the_agents_and_a_copied_ones_does_not() {
+    fn a_linked_plugins_skill_reaches_the_agents_and_a_copied_ones_once_allowed() {
         let root = tempfile::tempdir().unwrap();
         let app =
             pinrail_core::Pinrail::open(pinrail_core::Config::new(root.path().join("data"), 0))
@@ -897,6 +898,16 @@ mod tests {
             copied.skill.is_none(),
             "a copied plugin's skill waits to be allowed"
         );
+        app.plugins().allow_skill("copied", true).unwrap();
+        let plugins = super::installed_plugins(&app);
+        let copied = plugins.iter().find(|p| p.name == "copied").unwrap();
+        let (folder, _) = copied.skill.clone().expect("allowed, from its bundle");
+        assert!(
+            !folder.starts_with(root.path().join("copied")),
+            "{}",
+            folder.display()
+        );
+        assert!(folder.join("SKILL.md").is_file());
 
         // an edit in the linked folder is read as it is now
         std::fs::write(root.path().join("linked/skill/notes.md"), "# Notes").unwrap();

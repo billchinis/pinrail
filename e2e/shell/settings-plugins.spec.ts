@@ -285,3 +285,42 @@ test("a plugin that takes files but names none in its payload says so on its row
     await page.request.delete(`${core}/api/v1/plugins/fileless`);
   }
 });
+
+test("a copied plugin's skill waits for the switch in its details, and a linked one's reaches the agents", async ({
+  page,
+}) => {
+  const withSkill = (name: string) => {
+    const dir = pluginCopy("hello", name, "1.0.0");
+    fs.mkdirSync(path.join(dir, "skill"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "skill", "SKILL.md"), "---\ndescription: Say hello well\n---\n");
+    return dir;
+  };
+  const copied = await page.request.post(`${core}/api/v1/plugins/install`, {
+    data: { source: withSkill("skilled") },
+  });
+  expect(copied.status(), await copied.text()).toBe(200);
+  await linkPlugin(page.request, withSkill("linkskill"), "linkskill");
+  try {
+    await page.goto("/#/plugins");
+    await page.getByRole("button", { name: "Details of skilled" }).click();
+    const skill = page.getByTestId("plugin-details").getByTestId("plugin-skill");
+    await expect(skill).toContainText("Waits until you allow it");
+    const toggle = skill.getByRole("switch", { name: "Let the skilled skill reach your agents" });
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await toggle.click();
+    await expect(skill).toContainText("Reaches your connected agents");
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    const { plugins } = await (await page.request.get(`${core}/api/v1/plugins`)).json();
+    expect(plugins.find((p: { name: string }) => p.name === "skilled").install.skill_allowed).toBe(true);
+
+    // a linked plugin's skill always reaches them: no switch
+    await page.getByRole("button", { name: "Details of skilled" }).click();
+    await page.getByRole("button", { name: "Details of linkskill" }).click();
+    const linked = page.getByTestId("plugin-details").getByTestId("plugin-skill");
+    await expect(linked).toHaveText("Reaches your connected agents");
+    await expect(linked.getByRole("switch")).toHaveCount(0);
+  } finally {
+    await page.request.delete(`${core}/api/v1/plugins/skilled`);
+    await page.request.delete(`${core}/api/v1/plugins/linkskill`);
+  }
+});

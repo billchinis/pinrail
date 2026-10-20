@@ -6,7 +6,7 @@ use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, patch, post};
 use axum::{Json, Router};
 use serde_json::{Value, json};
 
@@ -27,6 +27,7 @@ pub fn routes() -> Router<ApiState> {
         .route("/api/v1/plugins/{name}", delete(remove))
         .route("/api/v1/plugins/{name}/describe", get(describe))
         .route("/api/v1/plugins/{name}/sample", post(sample))
+        .route("/api/v1/plugins/{name}/skill", patch(allow_skill))
 }
 
 async fn index(State(state): State<Arc<Pinrail>>) -> Json<Value> {
@@ -55,6 +56,20 @@ async fn sample(
 /// registry's compiled index.
 async fn catalog(State(state): State<Arc<Pinrail>>) -> Json<Value> {
     Json(state.plugins().catalog())
+}
+
+/// Allows the skill of a plugin copied from a folder or a zip to reach the
+/// agents, or stops it: `{"allowed": true}` or `false`. The plugin's row.
+async fn allow_skill(
+    State(state): State<Arc<Pinrail>>,
+    Path(name): Path<String>,
+    body: Bytes,
+) -> Result<Json<Value>, ApiError> {
+    let body = parse_body(&body)?;
+    let Some(allowed) = body.get("allowed").and_then(Value::as_bool) else {
+        return Err(Error::invalid("/allowed", "is required, true or false").into());
+    };
+    Ok(Json(state.plugins().allow_skill(&name, allowed)?))
 }
 
 async fn describe_all(State(state): State<Arc<Pinrail>>) -> Result<Json<Value>, ApiError> {

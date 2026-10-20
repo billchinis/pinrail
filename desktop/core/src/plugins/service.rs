@@ -164,6 +164,22 @@ impl PluginService {
         Ok(answer)
     }
 
+    /// Allows the skill of an installed plugin to reach the agents, or stops
+    /// it, and announces the change so that the agents' skills follow. An
+    /// official or linked plugin's skill reaches them whatever this says.
+    pub fn allow_skill(&self, name: &str, allowed: bool) -> Result<Value, Error> {
+        let now = crate::reviews::iso(chrono::Utc::now());
+        if !self.db.allow_skill(name, allowed, &now)? {
+            return Err(Error::NotFound(format!("plugin {name}")));
+        }
+        self.registry.reload()?;
+        self.announce()?;
+        self.registry
+            .get(name)
+            .map(|p| p.to_json())
+            .ok_or_else(|| Error::NotFound(format!("plugin {name}")))
+    }
+
     /// Notices each linked folder that changed since it was stored, and
     /// announces it, storing nothing; whether any did. The server asks
     /// every second, so an open review of the plugin can offer to reload.

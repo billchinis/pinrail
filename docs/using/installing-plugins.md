@@ -34,6 +34,18 @@ pinrail plugins install <name, folder or zip>
 
 To install a plugin that is published on a website, download its zip first, then install the zip.
 
+## Plugins with a skill
+
+A plugin can ship a skill: instructions for the agents that ask with it, such as how to build its payload from the work. Pinrail adds the skill to the `pinrail` skill of each agent you connected in *Settings › Agents*. The skills of the official plugins, and of plugins you link from your own folder, reach your agents as soon as they are installed.
+
+A skill becomes instructions your agents follow, so the skill of a plugin copied from a folder or a zip waits until you allow it. Read its `skill/SKILL.md` first, then turn on *Skill* in the plugin's details in *Settings › Plugins*, or install it with `--allow-skill`:
+
+```sh
+pinrail plugins install ~/Downloads/triage-1.2.0.zip --allow-skill
+```
+
+An upgrade from the same folder or zip keeps your choice. Installing the plugin from another source, or removing it, takes it back.
+
 ## What an install does
 
 ```mermaid title="From a source to the store"

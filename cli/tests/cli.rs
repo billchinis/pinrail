@@ -2281,6 +2281,69 @@ fn installing_an_older_version_says_so() {
 }
 
 #[test]
+fn installing_a_plugin_with_a_skill_says_whether_it_reaches_the_agents() {
+    // a copy: its skill waits to be allowed, and the install says how
+    let server = MockServer::start(Box::new(|method, path, _| {
+        match (method, path) {
+        ("POST", "/api/v1/plugins/install") => (
+            200,
+            r#"{"name":"mapper","version":"1.0.0","path":"/data/bundles/ab12","skill":{"description":"x","files":["SKILL.md"]},"install":{"source_kind":"archive","source":"/dl/mapper.zip","skill_allowed":false}}"#.into(),
+        ),
+        other => panic!("unexpected {other:?}"),
+    }
+    }));
+    let (code, stdout, stderr) = run(
+        &server,
+        &["plugins", "install", "/dl/mapper.zip", "--markdown"],
+    );
+    assert_eq!(code, 0, "{stderr}");
+    assert_eq!(
+        stdout,
+        "Installed mapper 1.0.0 from /dl/mapper.zip.\n\
+         It ships a skill for your agents, which reaches them once you allow it: \
+         install it again with --allow-skill, or allow it in Settings › Plugins. \
+         Read it first in /data/bundles/ab12/skill.\n"
+    );
+
+    // --allow-skill allows it after the install
+    let allowed = Arc::new(Mutex::new(String::new()));
+    let seen = allowed.clone();
+    let server = MockServer::start(Box::new(move |method, path, body| {
+        match (method, path) {
+        ("POST", "/api/v1/plugins/install") => (
+            200,
+            r#"{"name":"mapper","version":"1.0.0","skill":{"files":["SKILL.md"]},"install":{"source_kind":"archive","source":"/dl/mapper.zip","skill_allowed":false}}"#.into(),
+        ),
+        ("PATCH", "/api/v1/plugins/mapper/skill") => {
+            *seen.lock().unwrap() = body.to_string();
+            (
+                200,
+                r#"{"name":"mapper","install":{"source_kind":"archive","source":"/dl/mapper.zip","skill_allowed":true}}"#.into(),
+            )
+        }
+        other => panic!("unexpected {other:?}"),
+    }
+    }));
+    let (code, stdout, stderr) = run(
+        &server,
+        &[
+            "plugins",
+            "install",
+            "/dl/mapper.zip",
+            "--allow-skill",
+            "--markdown",
+        ],
+    );
+    assert_eq!(code, 0, "{stderr}");
+    let sent: serde_json::Value = serde_json::from_str(&allowed.lock().unwrap()).unwrap();
+    assert_eq!(sent, serde_json::json!({"allowed": true}));
+    assert_eq!(
+        stdout,
+        "Installed mapper 1.0.0 from /dl/mapper.zip.\nIts skill reaches your connected agents.\n"
+    );
+}
+
+#[test]
 fn plugins_install_installs_an_official_plugin_by_name_unless_a_folder_has_it() {
     let dir = tempdir();
     std::fs::create_dir_all(dir.join("work/review")).unwrap();

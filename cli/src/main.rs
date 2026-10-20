@@ -498,6 +498,11 @@ enum PluginsCommand {
         /// the plugin
         #[arg(long)]
         link: bool,
+        /// Let the plugin's skill reach your connected agents. The skills of
+        /// official and linked plugins always do; a copied plugin's waits
+        /// for this, or for Settings › Plugins in the app
+        #[arg(long)]
+        allow_skill: bool,
     },
     /// Remove an installed plugin. The versions that existing reviews render
     /// with are kept
@@ -1163,10 +1168,14 @@ fn run(cli: Cli) -> Result<u8> {
                     return Ok(0);
                 }
                 None => client.plugins()?,
-                Some(PluginsCommand::Install { source, link }) => {
+                Some(PluginsCommand::Install {
+                    source,
+                    link,
+                    allow_skill,
+                }) => {
                     // a folder or a zip that exists is sent as its full
                     // path, `..` resolved, the way the app records and shows it
-                    match std::fs::canonicalize(&source) {
+                    let mut installed = match std::fs::canonicalize(&source) {
                         Ok(p) if p.is_dir() || p.is_file() => {
                             client.plugins_install(&InstallRequest {
                                 source: &p.to_string_lossy(),
@@ -1180,7 +1189,12 @@ fn run(cli: Cli) -> Result<u8> {
                             source: &source,
                             link,
                         })?,
+                    };
+                    if allow_skill && let Some(name) = installed["name"].as_str() {
+                        let row = client.plugins_allow_skill(name, true)?;
+                        installed["install"] = row["install"].clone();
                     }
+                    installed
                 }
                 Some(PluginsCommand::Remove { name }) => client.plugins_remove(&name)?,
                 Some(

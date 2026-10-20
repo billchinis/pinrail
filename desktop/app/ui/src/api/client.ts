@@ -86,6 +86,9 @@ export const api = {
   /** a plugin's sample, sent as a new review: what `pinrail submit <plugin> --sample` does */
   sendSample: (plugin: string, body: { title?: string; sample?: string } = {}) =>
     request<Review>("POST", `/api/v1/plugins/${seg(plugin)}/sample`, body),
+  /** lets a copied plugin's skill reach the connected agents, or stops it */
+  allowSkill: (plugin: string, allowed: boolean) =>
+    request<Plugin>("PATCH", `/api/v1/plugins/${seg(plugin)}/skill`, { allowed }),
   getReview: (id: string) => request<Review>("GET", `/api/v1/reviews/${seg(id)}`),
   rounds: (id: string) => request<Review[]>("GET", `/api/v1/reviews/${seg(id)}/rounds`),
   /** the decision on the version the view showed: a review that moved to another since is a conflict */

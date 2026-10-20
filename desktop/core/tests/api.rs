@@ -2700,6 +2700,84 @@ async fn view_url(app: &App, review: &Value) -> String {
 }
 
 #[tokio::test]
+async fn a_copied_plugins_skill_reaches_the_agents_once_allowed_and_from_its_source_only() {
+    let app = app();
+    let scratch = tempfile::tempdir().unwrap();
+    let hello = plugin_copy(scratch.path(), "hello", "1.0.0");
+    std::fs::create_dir_all(hello.join("skill")).unwrap();
+    std::fs::write(
+        hello.join("skill/SKILL.md"),
+        "---\ndescription: Say hello\n---\n",
+    )
+    .unwrap();
+    let allow = |allowed: Value| {
+        let app = &app;
+        async move {
+            call(
+                app,
+                "PATCH",
+                "/api/v1/plugins/hello/skill",
+                Some(json!({ "allowed": allowed })),
+            )
+            .await
+        }
+    };
+
+    let (_, row) = install(&app, &hello, json!({})).await;
+    assert_eq!(row["skill"]["description"], "Say hello");
+    assert_eq!(
+        row["install"]["skill_allowed"], false,
+        "a copy waits to be allowed"
+    );
+    let (status, row) = allow(json!(true)).await;
+    assert_eq!(status, StatusCode::OK, "{row}");
+    assert_eq!(row["install"]["skill_allowed"], true);
+    // an update from the same folder keeps it
+    let (_, row) = install(&app, &hello, json!({})).await;
+    assert_eq!(row["install"]["skill_allowed"], true);
+    // a copy from another folder does not
+    let elsewhere = tempfile::tempdir().unwrap();
+    let other = plugin_copy(elsewhere.path(), "hello", "1.0.1");
+    let (_, row) = install(&app, &other, json!({})).await;
+    assert_eq!(row["install"]["skill_allowed"], false);
+    // and removing the plugin takes the grant with it
+    allow(json!(true)).await;
+    call(&app, "DELETE", "/api/v1/plugins/hello", None).await;
+    let (_, row) = install(&app, &other, json!({})).await;
+    assert_eq!(row["install"]["skill_allowed"], false);
+    let (status, refused) = allow(json!(false)).await;
+    assert_eq!(status, StatusCode::OK, "{refused}");
+    let (status, refused) = call(
+        &app,
+        "PATCH",
+        "/api/v1/plugins/hello/skill",
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    let (status, _) = call(
+        &app,
+        "PATCH",
+        "/api/v1/plugins/nope/skill",
+        Some(json!({"allowed": true})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    // a linked plugin's and an official plugin's always do
+    let (_, row) = install(&app, &hello, json!({"link": true})).await;
+    assert_eq!(row["install"]["skill_allowed"], true);
+    let (_, row) = call(
+        &app,
+        "POST",
+        "/api/v1/plugins/install",
+        Some(json!({"id": "forgeplane/list"})),
+    )
+    .await;
+    assert_eq!(row["install"]["skill_allowed"], true);
+}
+
+#[tokio::test]
 async fn installing_from_a_folder_stores_a_bundle_new_reviews_use() {
     let app = app();
     let scratch = tempfile::tempdir().unwrap();
@@ -2745,6 +2823,7 @@ async fn installing_from_a_folder_stores_a_bundle_new_reviews_use() {
             "installed_at",
             "link",
             "modified",
+            "skill_allowed",
             "source",
             "source_kind",
             "updated_at"

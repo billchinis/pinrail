@@ -99,6 +99,9 @@ pub struct Install {
     /// a linked folder changed since it was last stored: the next use of
     /// the plugin stores it
     pub folder_changed: bool,
+    /// the plugin's skill may reach the agents: an official plugin's or a
+    /// linked one's always, another's when the person allowed it
+    pub skill_allowed: bool,
     pub installed_at: String,
     pub updated_at: String,
 }
@@ -112,6 +115,7 @@ impl Install {
             "bundle": self.bundle,
             "modified": self.modified,
             "folder_changed": self.folder_changed,
+            "skill_allowed": self.skill_allowed,
             "installed_at": self.installed_at,
             "updated_at": self.updated_at,
         })
