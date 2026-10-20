@@ -66,6 +66,8 @@ export type PanelProps = {
   reviewed: Set<string>;
   images: Map<string, string>;
   select(selection: Selection): void;
+  /** selects a part and zooms the map in on it */
+  zoomTo(node: string): void;
   /** each part's and interaction's comments and reviewed mark, as the map shows them */
   marks: Marks;
   /** the view the panel showed before, to go back to */
@@ -122,7 +124,7 @@ function View(props: PanelProps) {
 }
 
 function Overview(props: PanelProps) {
-  const { payload, select, openFile, openLink, comments } = props;
+  const { payload, zoomTo, openFile, openLink, comments } = props;
   const change = payload.change;
   const claimed = new Set([
     ...payload.nodes.flatMap((n) => (n.changes ?? []).map((c) => c.file)),
@@ -168,7 +170,7 @@ function Overview(props: PanelProps) {
           const status = nodeStatus(n);
           return (
             <li key={n.id}>
-              <button type="button" className="cm-row" onClick={() => select({ node: n.id })}>
+              <button type="button" className="cm-row" onClick={() => zoomTo(n.id)}>
                 <Icon />
                 <span className="cm-row-title">{n.title}</span>
                 {counted(n.id) ? (

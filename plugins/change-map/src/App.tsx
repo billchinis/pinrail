@@ -74,6 +74,8 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
   const [selection, setSelection] = useState<Selection>(null);
   // the diagram on the canvas: the map, or one of the extra diagrams by its id
   const [tab, setTab] = useState<string | null>(null);
+  // a part to zoom the map in on, counted so that the same part again zooms again
+  const [zoom, setZoom] = useState<{ node: string; n: number } | null>(null);
   const diagram = payload.diagrams?.find((d) => d.id === tab) ?? null;
   // the file in the diff drawer; null path: the selection has no files to show
   // it opens as the person left it, which the show_diff setting keeps
@@ -466,7 +468,7 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
           ) : diagram?.kind === "state" ? (
             <StateDiagram key={diagram.id} diagram={diagram} {...canvas} />
           ) : (
-            <Diagram {...canvas} />
+            <Diagram {...canvas} zoom={zoom} />
           )}
           {file?.screen !== undefined && selectedPart?.screens?.[file.screen] ? (
             <ScreenViewer
@@ -523,6 +525,11 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               reviewed={reviewed}
               images={images}
               select={select}
+              zoomTo={(node) => {
+                select({ node });
+                setTab(null);
+                setZoom((z) => ({ node, n: (z?.n ?? 0) + 1 }));
+              }}
               back={
                 history.length
                   ? {

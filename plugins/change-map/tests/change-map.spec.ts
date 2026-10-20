@@ -7,6 +7,38 @@ import { fixture, mountPlugin } from "pinrail-sdk/testing";
 const dir = path.resolve(__dirname, "..");
 const dedup = () => fixture(path.join(dir, "samples", "dedup-tickets.json"));
 
+for (const drawer of [false, true])
+  test(`a part chosen in the overview's list is zoomed into on the map, ${drawer ? "with" : "without"} the drawer`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 860 });
+    const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { show_diff: drawer } });
+    const f = plugin.frame;
+    await f.locator(".cm-part").first().waitFor();
+    const scale = () =>
+      f.locator(".react-flow__viewport").evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+    const fitted = await scale();
+    await f
+      .getByTestId("overview")
+      .getByRole("button", { name: /^Tickets/ })
+      .click();
+    // the map zooms in, as close as a fit goes, with the part in the middle of what is in view
+    await expect.poll(scale).toBeCloseTo(1.15, 2);
+    expect(fitted).toBeLessThan(1.15);
+    const map = (await f.locator(".cm-diagram").boundingBox())!;
+    // above the drawer, when the selection opened it
+    await expect(f.getByTestId("diff")).toHaveCount(drawer ? 1 : 0);
+    const bottom = drawer ? (await f.getByTestId("diff").boundingBox())!.y : map.y + map.height;
+    const off = async () => {
+      const part = (await f.locator('[data-node="tickets-context"]').boundingBox())!;
+      return Math.max(
+        Math.abs(part.x + part.width / 2 - (map.x + map.width / 2)),
+        Math.abs(part.y + part.height / 2 - (map.y + bottom) / 2),
+      );
+    };
+    await expect.poll(off).toBeLessThan(4);
+  });
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

@@ -279,37 +279,83 @@ export function Fitter({
   return null;
 }
 
+/** Centres the view on the nodes `ids` names, at `zoom`, in the part of
+ *  the frame the diff drawer leaves in view: the middle of a part, or of the
+ *  two ends of an interaction. */
+function centreOn(
+  flow: ReturnType<typeof useReactFlow>,
+  frame: HTMLDivElement,
+  ids: string[],
+  inset: number,
+  zoom: number,
+  duration: number,
+) {
+  const centres = ids.flatMap((id) => {
+    const n = flow.getInternalNode(id);
+    if (!n) return [];
+    const { x, y } = n.internals.positionAbsolute;
+    return [{ x: x + (n.measured.width ?? 0) / 2, y: y + (n.measured.height ?? 0) / 2 }];
+  });
+  if (!centres.length) return;
+  const at = {
+    x: centres.reduce((t, c) => t + c.x, 0) / centres.length,
+    y: centres.reduce((t, c) => t + c.y, 0) / centres.length,
+  };
+  // the drawer's height is a share of the canvas, which holds the diagram's
+  // tabs as well as the diagram
+  const hidden = (frame.parentElement ?? frame).clientHeight * inset;
+  flow.setCenter(at.x, at.y + hidden / 2 / zoom, { zoom, duration });
+}
+
 /** While the diff drawer covers the bottom of the diagram, keeps the
- *  selection centred in the part still in view above it: the middle of the
- *  nodes `ids` names, such as a part, or the two ends of an interaction. */
+ *  selection centred in the part still in view above it, at the zoom a zoom
+ *  in on a part is on its way to, or else at the zoom there is. */
 export function Follower({
   ids,
   inset,
   frame,
+  aim,
 }: {
   ids: string[];
   inset: number;
   frame: React.RefObject<HTMLDivElement | null>;
+  /** the zoom a zoom in on a part is on its way to, while it lasts */
+  aim?: React.RefObject<number | null>;
 }) {
   const flow = useReactFlow();
   const key = ids.join("\u0000");
   useEffect(() => {
     if (!inset || !key || !frame.current) return;
-    const centres = key.split("\u0000").flatMap((id) => {
-      const n = flow.getInternalNode(id);
-      if (!n) return [];
-      const { x, y } = n.internals.positionAbsolute;
-      return [{ x: x + (n.measured.width ?? 0) / 2, y: y + (n.measured.height ?? 0) / 2 }];
-    });
-    if (!centres.length) return;
-    const at = {
-      x: centres.reduce((t, c) => t + c.x, 0) / centres.length,
-      y: centres.reduce((t, c) => t + c.y, 0) / centres.length,
-    };
-    const zoom = flow.getZoom();
-    const hidden = frame.current.clientHeight * inset;
-    flow.setCenter(at.x, at.y + hidden / 2 / zoom, { zoom, duration: 250 });
-  }, [key, inset, flow, frame]);
+    centreOn(flow, frame.current, key.split("\u0000"), inset, aim?.current ?? flow.getZoom(), 250);
+  }, [key, inset, flow, frame, aim]);
+  return null;
+}
+
+/** Zooms in on a part when asked, as close as a fit of the whole diagram
+ *  goes, centred in the part of the frame the drawer leaves in view. While
+ *  the zoom lasts, `aim` holds where it is going, so that the Follower
+ *  centres the part at that zoom when the selection opens the drawer. */
+export function Zoomer({
+  zoom,
+  inset,
+  frame,
+  aim,
+}: {
+  zoom: { node: string; n: number } | null;
+  inset: number;
+  frame: React.RefObject<HTMLDivElement | null>;
+  aim: React.RefObject<number | null>;
+}) {
+  const flow = useReactFlow();
+  const now = useRef(inset);
+  now.current = inset;
+  useEffect(() => {
+    if (!zoom || !frame.current) return;
+    aim.current = fitOptions(0).maxZoom;
+    centreOn(flow, frame.current, [zoom.node], now.current, aim.current, 300);
+    const done = setTimeout(() => (aim.current = null), 400);
+    return () => clearTimeout(done);
+  }, [zoom, flow, frame, aim]);
   return null;
 }
 
@@ -359,14 +405,18 @@ export function Diagram({
   onFit,
   select,
   inset,
+  zoom = null,
 }: Shared & {
   payload: Payload;
   fit: number;
   onFit: () => void;
   /** the share of the map's height the diff drawer covers */
   inset: number;
+  /** a part to zoom in on */
+  zoom?: { node: string; n: number } | null;
 }) {
   const frame = useRef<HTMLDivElement>(null);
+  const aim = useRef<number | null>(null);
   const placed = useMemo(() => layout(payload), [payload]);
   const nodes = useMemo<(PartNodeType | LaneNodeType)[]>(() => {
     const lanes: LaneNodeType[] = (payload.lanes ?? [])
@@ -443,7 +493,8 @@ export function Diagram({
           >
             <Background variant={BackgroundVariant.Dots} gap={18} size={1} />
             <Fitter fit={fit} frame={frame} inset={inset} hold={followed.length > 0} />
-            <Follower ids={followed} inset={inset} frame={frame} />
+            <Follower ids={followed} inset={inset} frame={frame} aim={aim} />
+            <Zoomer zoom={zoom} inset={inset} frame={frame} aim={aim} />
             <Zoom onFit={onFit} />
           </ReactFlow>
         </ReactFlowProvider>
