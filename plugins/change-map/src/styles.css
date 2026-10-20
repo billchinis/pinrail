@@ -945,6 +945,17 @@ body.cm-resizing * {
   border-bottom: 1px solid var(--pinrail-border);
   background: var(--pinrail-bg-panel);
 }
+.cm-diff-owner {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.cm-diff-owner.mono {
+  font-size: 12px;
+}
 .cm-diff-path {
   flex: 1;
   min-width: 0;

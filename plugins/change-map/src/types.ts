@@ -182,6 +182,15 @@ export function changesOf(payload: Payload, selection: Selection): FileChange[] 
   return (owner?.changes ?? []).filter((c) => payload.files.some((f) => f.path === c.file));
 }
 
+/** Whether a selection is an interaction, a message or a transition, whose
+ *  label reads as code and shows in monospace, as on the diagrams. */
+export function namedAsCode(payload: Payload, selection: Selection): boolean {
+  if (!selection || "node" in selection) return false;
+  if ("edge" in selection) return true;
+  const kind = findItem(payload, selection)?.kind;
+  return kind === "message" || kind === "transition";
+}
+
 /** The title of a selection, to name it. */
 export function titleOf(payload: Payload, selection: Selection): string {
   if (!selection) return "";

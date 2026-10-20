@@ -308,6 +308,30 @@ test("a map whose interactions have no files shows no file counts on them", asyn
   await expect(f.locator(".cm-link-files")).toHaveCount(0);
 });
 
+test("the drawer names an interaction without files in monospace, as its label reads", async ({ page }) => {
+  const map = fixture(path.join(dir, "tests", "maps", "change-map-itself.json"));
+  const plugin = await mountPlugin(page, dir, { review: map, settings: { show_diff: true } });
+  const f = plugin.frame;
+  await f.locator('.cm-link-label[data-edge="app-types"]').click();
+  const name = f.getByTestId("diff").locator(".cm-diff-owner");
+  // the brackets at its end stay at its end
+  await expect(name).toHaveText("narrowest() · diagramComments()");
+  expect(await name.evaluate((el) => getComputedStyle(el).direction)).toBe("ltr");
+  const mono = await name.evaluate((el) => getComputedStyle(el).getPropertyValue("--pinrail-mono").trim());
+  expect(await name.evaluate((el) => getComputedStyle(el).fontFamily)).toBe(mono);
+});
+
+test("the drawer names a state without files in the text's font", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { show_diff: true } });
+  const f = plugin.frame;
+  await f.locator('[data-tab="save-button"]').click();
+  await f.locator('[data-item="start"]').click();
+  const name = f.getByTestId("diff").locator(".cm-diff-owner");
+  await expect(name).toHaveText("Start");
+  const mono = await name.evaluate((el) => getComputedStyle(el).getPropertyValue("--pinrail-mono").trim());
+  expect(await name.evaluate((el) => getComputedStyle(el).fontFamily)).not.toBe(mono);
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

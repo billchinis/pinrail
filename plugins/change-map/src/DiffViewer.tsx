@@ -116,6 +116,7 @@ export function DiffViewer({
   path,
   siblings,
   owner,
+  ownerAsCode = false,
   step,
   change,
   at,
@@ -135,6 +136,8 @@ export function DiffViewer({
   siblings: FileChange[];
   /** the selection's title */
   owner: string;
+  /** the title is an interaction's, a message's or a transition's label, in monospace */
+  ownerAsCode?: boolean;
   step(change: FileChange): void;
   change?: FileChange;
   /** a line to show first, such as a comment's */
@@ -272,9 +275,16 @@ export function DiffViewer({
             </button>
           </span>
         ) : null}
-        <span className={`cm-diff-path${path ? " mono" : ""}`} title={path ?? undefined}>
-          {path ?? owner}
-        </span>
+        {path ? (
+          <span className="cm-diff-path mono" title={path}>
+            {path}
+          </span>
+        ) : (
+          // left to right, unlike a path, so a label's closing brackets stay at its end
+          <span className={`cm-diff-owner${ownerAsCode ? " mono" : ""}`} title={owner}>
+            {owner}
+          </span>
+        )}
         {path ? (
           <span className="cm-counts mono">
             <span className="cm-add">+{counts.added}</span> <span className="cm-del">−{counts.removed}</span>

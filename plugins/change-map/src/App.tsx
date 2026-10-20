@@ -18,6 +18,7 @@ import {
   isItem,
   isScreen,
   changesOf,
+  namedAsCode,
   diagramComments,
   markOf,
   narrowest,
@@ -515,6 +516,7 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               path={file.path}
               siblings={siblings}
               owner={titleOf(payload, selection)}
+              ownerAsCode={namedAsCode(payload, selection)}
               step={(c) => setFile({ path: c.file, change: c })}
               change={file.change}
               at={file.at}
