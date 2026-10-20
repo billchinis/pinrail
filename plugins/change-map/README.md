@@ -25,6 +25,12 @@ with `--attach` and named as `{"$attachment": "form-after.png"}`.
 `schemas/payload.schema.json` describes it, and `samples/` holds a whole
 example.
 
+The plugin ships a skill for agents, in `skill/`: how to work out the parts
+and interactions from a change, choose line ranges, add screenshots and
+decide when a sequence or state diagram helps. Pinrail adds it to each
+connected agent's `pinrail` skill. `skill/scripts/files.mjs` prints the
+payload's `files` from git.
+
 ## Building
 
 The view's source is in `src/`, in TypeScript with React, and Vite builds

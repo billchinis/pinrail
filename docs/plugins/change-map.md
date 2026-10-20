@@ -79,17 +79,16 @@ To see it before any agent asks with it, send its sample: `pinrail submit change
 
 ## Asking from your agent
 
+The plugin ships a skill that tells an agent how to build a map from a change: how to work out the parts and their interactions, choose the line ranges, add screenshots and decide when a diagram helps, with a script that lists the change's files from git. An agent you connected in *Settings › Agents* has it in its `pinrail` skill, and any other agent can read it with `pinrail plugins skill change-map`. Your instructions only need to say when to ask:
+
 ```md title="AGENTS.md"
 ## Before opening a pull request
 
 When you finish a change, submit a map of it to Pinrail with the
 `change-map` plugin and wait for my decision:
 
-1. Describe the parts the change touches as `nodes`, the interactions
-   between them as `edges`, and each part's files and line ranges in its
-   `changes`. Put the diff of each changed file in `files`. Add a
-   sequence or state diagram in `diagrams` only when the order of calls
-   or a lifecycle matters.
+1. Build the map as the change-map skill says, with screenshots of any
+   screen the change alters.
 2. Run: `pinrail submit change-map --title "<the change>" --data map.json --wait`,
    with `--attach` for each screenshot the payload names.
 3. If the verdict is `approve`, open the pull request.

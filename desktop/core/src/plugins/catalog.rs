@@ -289,6 +289,31 @@ mod tests {
         }
     }
 
+    /// The change map carries a skill for agents, which loads whole.
+    #[test]
+    fn the_change_map_carries_its_skill() {
+        let (_, files) = carried()
+            .into_iter()
+            .find(|(f, _)| f == "change-map")
+            .unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        for (path, bytes) in &files {
+            let to = dir.path().join(path);
+            std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+            std::fs::write(to, bytes).unwrap();
+        }
+        let plugin = crate::plugins::Plugin::load(dir.path());
+        assert!(plugin.usable(), "{:?}", plugin.error);
+        assert_eq!(plugin.skill_error, None);
+        let skill = plugin.skill.unwrap();
+        assert!(
+            skill.description.starts_with("Build a change map"),
+            "{}",
+            skill.description
+        );
+        assert_eq!(skill.files, ["SKILL.md", "scripts/files.mjs"]);
+    }
+
     /// What the app carries is what a plugin's folder holds as a bundle.
     #[test]
     fn a_carried_plugin_ships_its_bundle_and_nothing_else() {
