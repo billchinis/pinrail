@@ -452,7 +452,9 @@ export function ScreenViewer({
             </div>
             <Compose
               id="area-comment"
-              autoFocus
+              // once the dialog is placed: hidden while it measures, the
+              // field cannot take the focus, and typing would go nowhere
+              autoFocus={!!place}
               placeholder="What should change here?"
               value={text}
               onChange={setText}

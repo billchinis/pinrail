@@ -109,6 +109,25 @@ test("selecting another part of the same file scrolls the drawer to its lines", 
   await expect.poll(inView).toBe(true);
 });
 
+test("typing right after marking an area of a screenshot writes the comment", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 860 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await f.locator('[data-node="ticket-form"]').click();
+  await f.getByRole("button", { name: /Show Save while saving larger/ }).click();
+  const after = f.getByTestId("screen-viewer").locator("figure", { hasText: "After" }).locator("img");
+  const box = (await after.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.72);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.88, { steps: 5 });
+  await page.mouse.up();
+  // no click in the field first: the keys go straight into it
+  await page.keyboard.type("The spinner hides the label.");
+  await expect(
+    f.getByRole("dialog", { name: "Comment on an area of the after image" }).getByRole("textbox"),
+  ).toHaveValue("The spinner hides the label.");
+});
+
 test("a drag over a screenshot comments on that area, marked on the image and listed in the sidebar", async ({
   page,
 }) => {
