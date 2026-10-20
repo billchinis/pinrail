@@ -130,6 +130,25 @@ export const scenes = [
     },
   },
 
+  // What's new in 0.4.0
+  {
+    // the change map of a pull request, with a part selected
+    name: "plugin-change-map",
+    async run({ page, app, reviews, shot }) {
+      await card(page);
+      const f = await openReview(page, app, reviews["27-change-map-dedup"]);
+      // the app's sidebar hidden, to give the diagram the window's width;
+      // the app keeps the choice, so the scene shows it again after
+      const hide = page.getByRole("button", { name: "Hide sidebar" });
+      if (await hide.count()) await hide.click();
+      await f.locator(".cm-part").first().waitFor();
+      await settle(page, 400);
+      await f.locator('[data-node="ticket-form"]').click();
+      await settle(page, 600);
+      await shot("plugin-change-map");
+      await page.getByRole("button", { name: "Show sidebar" }).click();
+    },
+  },
   {
     name: "inbox",
     async run({ page, app, shot }) {

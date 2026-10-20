@@ -1,0 +1,15 @@
+{
+  "version": "0.4.0",
+  "cards": [
+    {
+      "title": "See a code change as a map",
+      "text": "The new change map plugin shows a pull request as a diagram of the parts it touches and how they interact. Open any part's diff and screenshots, and comment on parts, lines or areas of a screen.",
+      "image": "plugin-change-map",
+      "alt": "A change map review: the diagram of a pull request with the ticket form selected, and its screenshots before and after in the side panel",
+      "action": {
+        "label": "Open Plugins",
+        "settings": "plugins"
+      }
+    }
+  ]
+}
