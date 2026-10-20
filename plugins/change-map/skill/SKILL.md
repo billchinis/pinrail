@@ -39,7 +39,8 @@ span several files, and a file several parts.
 - `changes`: the files and the line ranges, on the new side, that
   implement this part, such as `{"file": "lib/tickets.ex", "lines": [[90, 93]]}`.
   Take the ranges from the hunks, and narrow them to the part's own lines.
-  Leave `lines` out when the whole file is the part.
+  Leave `lines` out when the whole file is the part, and `changes` out only
+  for a part no file of the change implements, such as an abstract layer.
 - `lane`: group the parts by layer, such as `web`, `api`, `jobs` and
   `database`, declared in `lanes`.
 
@@ -56,7 +57,10 @@ it explains a changed one.
 - `label`: what passes, such as `POST /tickets` or `create(params, key)`.
 - `kind`: `call`, `data`, `event`, `import` or `render`.
 - `status`: `added`, `changed`, `removed`, or `unchanged`.
-- `changes`: as for parts, the lines that make the call.
+- `changes`: as for parts, the lines that make the call, so that the
+  person can open them. Leave them out only when no lines of the change
+  make it, such as a flow that spans several parts, or a call in code the
+  change does not touch.
 
 A form that now sends a key with each save, to an endpoint that checks it:
 
@@ -96,8 +100,16 @@ pinrail submit change-map --title "<the change, as its title>" \
 ```
 
 Give `change` (its `title`, `source` and `target` branches, and `url` if
-there is one) and a `summary` of the whole change. Before you submit, check
-that each changed code file is in some part's `changes`.
+there is one) and a `summary` of the whole change.
+
+It helps to run `node scripts/check.mjs map.json` before you submit. It
+lists the changed files that nothing on the map names, leaving out
+changelogs and lock files, the new or changed parts and interactions
+without lines, and lines in files the change does not touch. Use common
+sense with what it lists: a changed code file usually belongs to a part,
+while an abstract part or an interaction in untouched code can stay
+without lines. Without the script, `pinrail plugins skill change-map
+scripts/check.mjs` prints it.
 
 ## 6. The decision
 

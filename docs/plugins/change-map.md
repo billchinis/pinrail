@@ -79,7 +79,7 @@ To see it before any agent asks with it, send its sample: `pinrail submit change
 
 ## Asking from your agent
 
-The plugin ships a skill that tells an agent how to build a map from a change: how to work out the parts and their interactions, choose the line ranges, add screenshots and decide when a diagram helps, with a script that lists the change's files from git. An agent you connected in *Settings › Agents* has it in its `pinrail` skill, and any other agent can read it with `pinrail plugins skill change-map`. Your instructions only need to say when to use it:
+The plugin ships a skill that tells an agent how to build a map from a change: how to work out the parts and their interactions, choose the line ranges, add screenshots and decide when a diagram helps, with a script that lists the change's files from git and one that notes what a map leaves out before it is submitted. An agent you connected in *Settings › Agents* has it in its `pinrail` skill, and any other agent can read it with `pinrail plugins skill change-map`. Your instructions only need to say when to use it:
 
 ```md title="AGENTS.md"
 When a change is complex, submit it for review with the `change-map` Pinrail plugin.

@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { fixture, mountPlugin } from "pinrail-sdk/testing";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import { layout, routePath } from "../src/layout";
 
 // The view alone, under the harness: no app, no CLI. `mountPlugin` serves
@@ -350,6 +352,33 @@ test("a selection without files shows an icon and a light line above what is mis
   await expect(empty).toContainText("No files of Fitter · Follower · Marked");
   await f.locator('.cm-link-label[data-edge="app-types"]').dispatchEvent("click");
   await expect(empty.locator(".cm-empty-quip")).toHaveText(quip);
+});
+
+test("the skill's check notes what a map leaves out, and passes a map that leaves out nothing", () => {
+  const check = (payload: unknown) => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cm-check-")), "map.json");
+    fs.writeFileSync(file, JSON.stringify(payload));
+    return execFileSync("node", [path.join(dir, "skill", "scripts", "check.mjs"), file], { encoding: "utf8" });
+  };
+  const sample = JSON.parse(fs.readFileSync(path.join(dir, "samples", "dedup-tickets.json"), "utf8")).payload;
+  // the sample leaves only its changelog off the map, which belongs there
+  expect(check(sample)).toBe("Nothing is left out.\n");
+  // a lock file is not noted either, while a code file is
+  const files = structuredClone(sample);
+  files.files.push({ path: "package-lock.json", status: "modified", diff: "" });
+  files.files.push({ path: "lib/helpdesk/forgotten.ex", status: "modified", diff: "" });
+  expect(check(files)).toBe(
+    ["Changed files no part, interaction or diagram names:", "  lib/helpdesk/forgotten.ex", ""].join("\n"),
+  );
+  // a changed part without lines, an interaction without lines, and lines
+  // in a file the change does not touch
+  const gaps = structuredClone(sample);
+  delete gaps.nodes.find((n: { id: string }) => n.id === "api-client").changes;
+  delete gaps.edges.find((e: { id: string }) => e.id === "post").changes;
+  gaps.nodes.find((n: { id: string }) => n.id === "tickets-table").changes.push({ file: "lib/elsewhere.ex" });
+  const out = check(gaps);
+  expect(out).toContain("New or changed parts and interactions without lines:\n  part api-client\n  interaction post");
+  expect(out).toContain("Lines in files the change does not touch:\n  part tickets-table: lib/elsewhere.ex");
 });
 
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
