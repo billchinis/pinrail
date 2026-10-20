@@ -951,7 +951,7 @@ test("the slider fits its images in the drawer, with the handle on the split", a
   expect(Math.abs(handle.x + handle.width / 2 - (image.x + image.width / 2))).toBeLessThan(2);
 });
 
-test("the zoom buttons stay above the diff drawer", async ({ page }) => {
+test("the zoom buttons sit in the map's top-left corner, above the diff drawer", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 760 });
   const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { show_diff: true } });
   const f = plugin.frame;
@@ -960,5 +960,9 @@ test("the zoom buttons stay above the diff drawer", async ({ page }) => {
   const drawer = (await f.locator(".cm-diff").boundingBox())!;
   const button = (await fit.boundingBox())!;
   expect(button.y + button.height).toBeLessThanOrEqual(drawer.y);
+  const map = (await f.locator(".cm-diagram").boundingBox())!;
+  const bar = (await f.locator(".cm-zoom").boundingBox())!;
+  expect(bar.x - map.x).toBeLessThan(20);
+  expect(bar.y - map.y).toBeLessThan(20);
   await fit.click({ timeout: 2000 });
 });

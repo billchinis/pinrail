@@ -405,12 +405,10 @@ body.cm-resizing-panel * {
   color: var(--pinrail-text);
 }
 
-/* the zoom buttons */
-
-/* the zoom buttons, at the top, where the diff drawer never covers them */
+/* the zoom buttons, at the top left, where the diff drawer never covers them */
 .cm-zoom {
   position: absolute;
-  right: 10px;
+  left: 10px;
   top: 10px;
   z-index: 5;
   display: flex;
