@@ -243,14 +243,16 @@ body.cm-resizing-panel * {
   border-color: var(--pinrail-border-strong);
   background: var(--pinrail-bg);
 }
-/* hover and selection ring the card, so its border keeps the status colour */
+/* hover rings the card, so its border keeps the status colour */
 .cm-part:hover {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--pinrail-accent) 45%, transparent);
 }
+/* the selected card's border is twice as thick, in its status colour, and
+   the padding gives back what the border takes, so nothing inside moves */
 .cm-part.cm-selected {
-  box-shadow:
-    0 0 0 2px var(--pinrail-bg),
-    0 0 0 4px var(--pinrail-accent);
+  border-width: 3px;
+  padding: 7.5px 9.5px;
+  box-shadow: none;
 }
 .cm-part-head {
   display: flex;
