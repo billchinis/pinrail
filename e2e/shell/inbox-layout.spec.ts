@@ -78,3 +78,45 @@ test("a row's details stay on one line beside the panel, and only the project sh
   expect(await project.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   await expect(meta).toContainText("outreach");
 });
+
+test("a row beside the panel keeps its details clear of the plugin, at any width of the list", async ({ page }) => {
+  await clearInbox(page.request);
+  await createReview(page.request, {
+    title: "Posts announcing the release on every channel we use",
+    origin: { repo: "forgeplane/pinrail", workflow: "outreach", ref: "main" },
+  });
+  await page.setViewportSize({ width: 1500, height: 700 });
+  await page.goto("/#/");
+  await page.getByRole("radio", { name: "One list" }).click();
+  const row = page.getByTestId("review-row");
+  await row.click();
+  const panel = page.getByTestId("review-panel");
+  await expect(panel).toBeVisible();
+  const resizer = page.getByRole("separator", { name: "Resize the review panel" });
+  const list = page.locator(".inbox-side");
+  // the list from narrow to wide, by the panel's edge
+  for (const width of [380, 480, 600, 700, 820]) {
+    const edge = (await resizer.boundingBox())!;
+    const side = (await list.boundingBox())!;
+    const to = edge.x + (side.x + width - (side.x + side.width));
+    await page.mouse.move(edge.x + 2, edge.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(to, edge.y + 100, { steps: 4 });
+    await page.mouse.up();
+    const at = `with the list ${Math.round((await list.boundingBox())!.width)} pixels wide`;
+    // the details under the title end before the plugin's name, when it shows
+    const plugin = row.locator(".review-row-plugin");
+    if (await plugin.isVisible()) {
+      const meta = await row
+        .locator(".review-row-meta > *")
+        .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
+      expect(meta, at).toBeLessThanOrEqual((await plugin.boundingBox())!.x);
+    }
+    // the title keeps at least half the row
+    const title = (await row.locator(".review-row-main").boundingBox())!;
+    expect(title.width, at).toBeGreaterThan((await row.boundingBox())!.width / 2);
+    // the sort's label stays on one line
+    const sort = page.locator(".list-sort");
+    if (await sort.isVisible()) expect((await sort.boundingBox())!.height, at).toBeLessThan(20);
+  }
+});

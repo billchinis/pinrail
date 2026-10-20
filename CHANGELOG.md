@@ -43,6 +43,12 @@ The `pinrail` command ships inside the app and carries the app's version.
   `clipboard` capability can copy the text or images of a review, and the
   app shows a notice for each copy.
 
+### Fixed
+
+- The inbox beside the side panel fits its width. A narrow list hides
+  each review's plugin and the sort order, and a review's details no
+  longer run into its plugin's name.
+
 ## [0.3.0]
 
 ### Added
