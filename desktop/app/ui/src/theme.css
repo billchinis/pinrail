@@ -1536,8 +1536,11 @@ body.is-resizing iframe {
   align-items: center;
   padding: 3px 7px;
 }
-.inbox-list {
+/* the rows a little apart, so that two highlighted rows never touch */
+.inbox-list,
+.inbox-repo[open] {
   display: grid;
+  gap: 2px;
 }
 .plugin-icon {
   display: inline-block;
@@ -1600,8 +1603,10 @@ body.is-resizing iframe {
 .review-row.is-focused {
   background: var(--bg-hover);
 }
+/* inside the row, off the row beside it */
 .review-row.is-focused {
   outline: 1px solid var(--border-strong);
+  outline-offset: -1px;
 }
 .review-row-marker {
   width: 8px;

@@ -120,3 +120,31 @@ test("a row beside the panel keeps its details clear of the plugin, at any width
     if (await sort.isVisible()) expect((await sort.boundingBox())!.height, at).toBeLessThan(20);
   }
 });
+
+test("the row under the pointer keeps its outline off the open row beside it", async ({ page }) => {
+  await clearInbox(page.request);
+  await createReview(page.request, { title: "Row one", origin: { repo: "acme/api" } });
+  await createReview(page.request, { title: "Row two", origin: { repo: "acme/api" } });
+  await page.setViewportSize({ width: 1400, height: 700 });
+  await page.goto("/#/");
+  const rows = page.getByTestId("review-row");
+  for (const layout of ["One list", "Grouped by project"]) {
+    await page.getByRole("radio", { name: layout }).click();
+    await rows.nth(1).click();
+    await expect(page.getByTestId("review-panel")).toBeVisible();
+    // the pointer moving onto a row puts the focus on it, once it has moved
+    // since the review opened
+    const box = (await rows.nth(0).boundingBox())!;
+    await page.mouse.move(box.x + 20, box.y - 40, { steps: 3 });
+    await page.mouse.move(box.x + 20, box.y + box.height / 2, { steps: 3 });
+    await expect(rows.nth(0)).toHaveClass(/is-focused/);
+    // how far the focused row's outline reaches past its box
+    const reach = await rows.nth(0).evaluate((el) => {
+      const s = getComputedStyle(el);
+      return s.outlineStyle === "none" ? 0 : parseFloat(s.outlineWidth) + parseFloat(s.outlineOffset);
+    });
+    const focused = (await rows.nth(0).boundingBox())!;
+    const open = (await rows.nth(1).boundingBox())!;
+    expect(focused.y + focused.height + reach, layout).toBeLessThanOrEqual(open.y);
+  }
+});
