@@ -37,7 +37,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { createContext, memo, useContext, useEffect, useMemo, useRef } from "react";
-import { heightOf, layout, widthOf, type CardStyle, type Route as LineRoute } from "./layout";
+import { heightOf, layout, routePath, widthOf, type CardStyle, type Route as LineRoute } from "./layout";
 import { lineCount, type LineCount } from "./lines";
 import { edgeStatus, nodeStatus, type Link, type NodeKind, type Part, type Payload, type Selection } from "./types";
 
@@ -245,20 +245,6 @@ const LinkEdge = memo(function LinkEdge(props: EdgeProps<LinkEdgeType>) {
     </>
   );
 });
-
-/** A smooth line through a route's points, as dagre laid it out. */
-export function routePath(points: { x: number; y: number }[]): string {
-  if (points.length < 3)
-    return `M ${points[0].x},${points[0].y} L ${points[points.length - 1].x},${points[points.length - 1].y}`;
-  let d = `M ${points[0].x},${points[0].y}`;
-  for (let i = 1; i < points.length - 1; i++) {
-    const p = points[i];
-    const q = points[i + 1];
-    const end = i === points.length - 2 ? q : { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
-    d += ` Q ${p.x},${p.y} ${end.x},${end.y}`;
-  }
-  return d;
-}
 
 const nodeTypes = { part: PartNode, lane: LaneNode };
 const edgeTypes = { link: LinkEdge };

@@ -34,6 +34,8 @@ export function heightOf(part: Part, style: CardStyle = "compact"): number {
   );
 }
 
+/** A label's height on the diagram. */
+export const LABEL_HEIGHT = 22;
 /** The longest a label gets on the diagram; the rest of it is in its tooltip. */
 export const LABEL_MAX = 220;
 
@@ -94,11 +96,17 @@ export function layout(
     bands.set(lane, { x: left, y: top, width: right - left, height: bottom - top });
   }
   const edges = new Map<string, Route>();
+  // what a label must clear: the parts, and the labels placed before it
+  const taken: Box[] = [...nodes.values()];
   for (const e of payload.edges ?? []) {
     const d =
       g.hasNode(e.from) && g.hasNode(e.to) && e.from !== e.to ? g.edge({ v: e.from, w: e.to, name: e.id }) : null;
-    if (d?.points?.length)
-      edges.set(e.id, { points: d.points, label: { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y } });
+    if (!d?.points?.length) continue;
+    const size = { width: labelWidth(e.label ?? e.kind ?? "call"), height: LABEL_HEIGHT };
+    // on the line as drawn, which cuts the corners dagre's point may sit in
+    const label = onLine(d.points, { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y }, size, taken);
+    taken.push({ x: label.x - size.width / 2, y: label.y - size.height / 2, ...size });
+    edges.set(e.id, { points: d.points, label });
   }
   return { nodes, lanes: bands, edges };
 }
@@ -134,7 +142,11 @@ export function stateLayout(diagram: ExtraDiagram): { nodes: Map<string, Box>; e
     const d =
       t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to) ? g.edge({ v: t.from, w: t.to, name: t.id }) : null;
     if (d?.points?.length)
-      edges.set(t.id, { points: d.points, label: { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y } });
+      edges.set(t.id, {
+        points: d.points,
+        // on the line as drawn, which cuts the corners dagre's point may sit in
+        label: onLine(d.points, { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y }),
+      });
   }
   return { nodes, edges };
 }
@@ -247,4 +259,63 @@ export function sequenceLayout(diagram: ExtraDiagram): SequenceLayout {
     frames.set(g.id, { x: left, y: tops.get(g.id)!, width: right - left, height: ends.get(g.id)! - tops.get(g.id)! });
   }
   return { heads, lines, rows, frames, bottom: y + 16 };
+}
+
+type Point = { x: number; y: number };
+
+/** The curves of a route's line, as routePath draws them: each bends
+ *  toward a point and turns halfway to the next, so the line keeps within
+ *  the corners of its points and never swings past a turn. A curve is its
+ *  start, its control point and its end. */
+function curves(points: Point[]): [Point, Point, Point][] {
+  const n = points.length;
+  if (n < 3) return [[points[0], points[0], points[n - 1]]];
+  const out: [Point, Point, Point][] = [];
+  let from = points[0];
+  for (let i = 1; i < n - 1; i++) {
+    const p = points[i];
+    const q = points[i + 1];
+    const end = i === n - 2 ? q : { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+    out.push([from, p, end]);
+    from = end;
+  }
+  return out;
+}
+
+/** A smooth line through a route's points, as dagre laid it out. */
+export function routePath(points: Point[]): string {
+  if (points.length < 3)
+    return `M ${points[0].x},${points[0].y} L ${points[points.length - 1].x},${points[points.length - 1].y}`;
+  let d = `M ${points[0].x},${points[0].y}`;
+  for (const [, c, end] of curves(points)) d += ` Q ${c.x},${c.y} ${end.x},${end.y}`;
+  return d;
+}
+
+/** Where a label goes on a route's drawn line: the point nearest `at`,
+ *  where dagre put it, at which a label of `size` clears every box in
+ *  `boxes`, the parts and the other labels. The line cuts the corners of the route, so dagre's
+ *  point can lie beside the line, and the line's nearest point can lie
+ *  close to a part. Without such a point, the nearest one. */
+export function onLine(points: Point[], at: Point, size?: { width: number; height: number }, boxes: Box[] = []): Point {
+  const along: Point[] = [];
+  for (const [a, c, b] of curves(points))
+    for (let i = 0; i <= 32; i++) {
+      const t = i / 32;
+      const u = 1 - t;
+      along.push({ x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y });
+    }
+  const near = (p: Point) => Math.hypot(p.x - at.x, p.y - at.y);
+  along.sort((p, q) => near(p) - near(q));
+  // a few pixels between a label and a part
+  const GAP = 4;
+  const clear = (p: Point) =>
+    !size ||
+    boxes.every(
+      (b) =>
+        p.x + size.width / 2 + GAP <= b.x ||
+        p.x - size.width / 2 - GAP >= b.x + b.width ||
+        p.y + size.height / 2 + GAP <= b.y ||
+        p.y - size.height / 2 - GAP >= b.y + b.height,
+    );
+  return along.find(clear) ?? along[0];
 }

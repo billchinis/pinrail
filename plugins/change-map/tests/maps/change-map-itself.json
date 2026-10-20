@@ -1,0 +1,501 @@
+{
+  "title": "Change map: extra diagrams and fixes",
+  "payload": {
+    "change": {
+      "title": "Change map: extra diagrams and fixes",
+      "source": "change-map",
+      "target": "main",
+      "ref": "0022a96..HEAD"
+    },
+    "lanes": [
+      {
+        "id": "view",
+        "title": "View"
+      },
+      {
+        "id": "diagrams",
+        "title": "Diagrams"
+      },
+      {
+        "id": "data",
+        "title": "Data and checks"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "app",
+        "title": "App",
+        "kind": "ui",
+        "lane": "view",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/App.tsx",
+            "lines": [
+              [71, 73],
+              [206, 250],
+              [395, 425]
+            ]
+          }
+        ],
+        "screens": [
+          {
+            "title": "Light theme",
+            "after": {
+              "$attachment": "tabs-after-light.png"
+            },
+            "before": {
+              "$attachment": "tabs-before-light.png"
+            }
+          },
+          {
+            "title": "Dark theme",
+            "after": {
+              "$attachment": "tabs-after-dark.png"
+            },
+            "before": {
+              "$attachment": "tabs-before-dark.png"
+            }
+          }
+        ]
+      },
+      {
+        "id": "diagram",
+        "title": "Diagram",
+        "kind": "ui",
+        "lane": "view",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/Diagram.tsx",
+            "lines": [[236, 289]]
+          }
+        ],
+        "screens": [
+          {
+            "title": "Light theme",
+            "after": {
+              "$attachment": "drawer-after-light.png"
+            },
+            "before": {
+              "$attachment": "drawer-before-light.png"
+            }
+          },
+          {
+            "title": "Dark theme",
+            "after": {
+              "$attachment": "drawer-after-dark.png"
+            },
+            "before": {
+              "$attachment": "drawer-before-dark.png"
+            }
+          }
+        ]
+      },
+      {
+        "id": "sequence",
+        "title": "SequenceDiagram",
+        "kind": "ui",
+        "lane": "diagrams",
+        "status": "added",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/SequenceDiagram.tsx"
+          }
+        ],
+        "screens": [
+          {
+            "title": "Light theme",
+            "after": {
+              "$attachment": "sequence-after-light.png"
+            }
+          },
+          {
+            "title": "Dark theme",
+            "after": {
+              "$attachment": "sequence-after-dark.png"
+            }
+          }
+        ]
+      },
+      {
+        "id": "state",
+        "title": "StateDiagram",
+        "kind": "ui",
+        "lane": "diagrams",
+        "status": "added",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/StateDiagram.tsx"
+          }
+        ],
+        "screens": [
+          {
+            "title": "Light theme",
+            "after": {
+              "$attachment": "state-after-light.png"
+            }
+          },
+          {
+            "title": "Dark theme",
+            "after": {
+              "$attachment": "state-after-dark.png"
+            }
+          }
+        ]
+      },
+      {
+        "id": "layout",
+        "title": "layout",
+        "kind": "module",
+        "lane": "diagrams",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/layout.ts",
+            "lines": [
+              [102, 125],
+              [152, 233]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "panel",
+        "title": "Panel",
+        "kind": "ui",
+        "lane": "view",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/Panel.tsx",
+            "lines": [
+              [214, 269],
+              [760, 841]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "viewer",
+        "title": "ScreenViewer",
+        "kind": "ui",
+        "lane": "view",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/ScreenViewer.tsx",
+            "lines": [
+              [96, 96],
+              [390, 397]
+            ]
+          }
+        ],
+        "screens": [
+          {
+            "title": "Light theme",
+            "after": {
+              "$attachment": "viewer-after-light.png"
+            },
+            "before": {
+              "$attachment": "viewer-before-light.png"
+            }
+          },
+          {
+            "title": "Dark theme",
+            "after": {
+              "$attachment": "viewer-after-dark.png"
+            },
+            "before": {
+              "$attachment": "viewer-before-dark.png"
+            }
+          }
+        ]
+      },
+      {
+        "id": "diff",
+        "title": "DiffViewer",
+        "kind": "ui",
+        "lane": "view",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/DiffViewer.tsx",
+            "lines": [[42, 42]]
+          }
+        ],
+        "screens": [
+          {
+            "title": "Light theme",
+            "after": {
+              "$attachment": "header-after-light.png"
+            },
+            "before": {
+              "$attachment": "header-before-light.png"
+            }
+          },
+          {
+            "title": "Dark theme",
+            "after": {
+              "$attachment": "header-after-dark.png"
+            },
+            "before": {
+              "$attachment": "header-before-dark.png"
+            }
+          }
+        ]
+      },
+      {
+        "id": "types",
+        "title": "types",
+        "kind": "module",
+        "lane": "data",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/types.ts",
+            "lines": [
+              [67, 77],
+              [155, 160],
+              [245, 253],
+              [372, 390],
+              [398, 424]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "contract",
+        "title": "Manifest, schemas and spec",
+        "kind": "config",
+        "lane": "data",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/schemas/payload.schema.json"
+          },
+          {
+            "file": "plugins/change-map/schemas/decision.schema.json"
+          },
+          {
+            "file": "plugins/change-map/manifest.json"
+          },
+          {
+            "file": "plugins/change-map/SPEC.md"
+          }
+        ]
+      },
+      {
+        "id": "sample",
+        "title": "Sample: dedup tickets",
+        "kind": "test",
+        "lane": "data",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/samples/dedup-tickets.json"
+          }
+        ]
+      },
+      {
+        "id": "tests",
+        "title": "Tests",
+        "kind": "test",
+        "lane": "data",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/tests/change-map.spec.ts"
+          }
+        ]
+      },
+      {
+        "id": "styles",
+        "title": "styles.css",
+        "kind": "config",
+        "lane": "view",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "plugins/change-map/src/styles.css",
+            "lines": [[1302, 1341]]
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "app-seq",
+        "from": "app",
+        "to": "sequence",
+        "label": "a sequence tab",
+        "kind": "render",
+        "status": "added"
+      },
+      {
+        "id": "app-state",
+        "from": "app",
+        "to": "state",
+        "label": "a state tab",
+        "kind": "render",
+        "status": "added"
+      },
+      {
+        "id": "seq-diagram",
+        "from": "sequence",
+        "to": "diagram",
+        "label": "Fitter · Follower · Marked",
+        "kind": "import",
+        "status": "added"
+      },
+      {
+        "id": "state-diagram",
+        "from": "state",
+        "to": "diagram",
+        "label": "Fitter · Follower · Marked",
+        "kind": "import",
+        "status": "added"
+      },
+      {
+        "id": "seq-layout",
+        "from": "sequence",
+        "to": "layout",
+        "label": "sequenceLayout()",
+        "status": "added"
+      },
+      {
+        "id": "state-layout",
+        "from": "state",
+        "to": "layout",
+        "label": "stateLayout()",
+        "status": "added"
+      },
+      {
+        "id": "app-panel",
+        "from": "app",
+        "to": "panel",
+        "label": "openDiagram",
+        "kind": "render",
+        "status": "changed"
+      },
+      {
+        "id": "app-viewer",
+        "from": "app",
+        "to": "viewer",
+        "label": "mode · setMode",
+        "kind": "render",
+        "status": "added"
+      },
+      {
+        "id": "app-types",
+        "from": "app",
+        "to": "types",
+        "label": "narrowest() · diagramComments()",
+        "status": "added"
+      },
+      {
+        "id": "seq-types",
+        "from": "sequence",
+        "to": "types",
+        "label": "selectionOf()",
+        "status": "added"
+      },
+      {
+        "id": "diff-types",
+        "from": "diff",
+        "to": "types",
+        "label": "hunkLines()",
+        "status": "added"
+      },
+      {
+        "id": "tests-app",
+        "from": "tests",
+        "to": "app",
+        "label": "mountPlugin",
+        "status": "changed"
+      }
+    ],
+    "files": [
+      {
+        "path": "plugins/change-map/SPEC.md",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/manifest.json",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/samples/dedup-tickets.json",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/schemas/decision.schema.json",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/schemas/payload.schema.json",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/App.tsx",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/Diagram.tsx",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/DiffViewer.tsx",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/Panel.tsx",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/ScreenViewer.tsx",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/SequenceDiagram.tsx",
+        "status": "added",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/StateDiagram.tsx",
+        "status": "added",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/layout.ts",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/styles.css",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/src/types.ts",
+        "status": "modified",
+        "diff": ""
+      },
+      {
+        "path": "plugins/change-map/tests/change-map.spec.ts",
+        "status": "modified",
+        "diff": ""
+      }
+    ]
+  }
+}

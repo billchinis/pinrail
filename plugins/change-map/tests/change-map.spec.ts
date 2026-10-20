@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { fixture, mountPlugin } from "pinrail-sdk/testing";
+import fs from "node:fs";
+import { layout, routePath } from "../src/layout";
 
 // The view alone, under the harness: no app, no CLI. `mountPlugin` serves
 // this folder as the app would and plays the app's side of the protocol.
@@ -122,6 +124,96 @@ test("a compact card's status line starts at the card's left, under its icon", a
   const meta = (await form.locator(".cm-part-meta > *").first().boundingBox())!;
   expect(Math.abs(meta.x - icon.x)).toBeLessThan(1);
 });
+
+test("each interaction's label sits on its line", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await f.locator(".cm-part").first().waitFor();
+  // how far each label's middle is from the nearest point of its drawn line
+  const off = await f.locator("body").evaluate(() =>
+    [...document.querySelectorAll(".react-flow__edge")].map((g) => {
+      const line = g.querySelector<SVGPathElement>("path.cm-link")!;
+      const id = g.getAttribute("data-id");
+      const label = document.querySelector(`.cm-link-label[data-edge="${id}"]`)!.getBoundingClientRect();
+      const m = line.getScreenCTM()!;
+      const length = line.getTotalLength();
+      let nearest = Infinity;
+      for (let i = 0; i <= 400; i++) {
+        const p = line.getPointAtLength((length * i) / 400);
+        nearest = Math.min(
+          nearest,
+          Math.hypot(p.x * m.a + m.e - (label.x + label.width / 2), p.y * m.d + m.f - (label.y + label.height / 2)),
+        );
+      }
+      return { id, nearest: Math.round(nearest * 10) / 10 };
+    }),
+  );
+  expect(off.length).toBeGreaterThan(3);
+  for (const { id, nearest } of off) expect(nearest, `the label of ${id}`).toBeLessThan(1.5);
+});
+
+test("each interaction's line passes through its label and stays within the corners of its route", async ({ page }) => {
+  const payload = JSON.parse(fs.readFileSync(path.join(dir, "samples", "dedup-tickets.json"), "utf8")).payload;
+  const routes = [...layout(payload, "detailed").edges.values()];
+  expect(routes.length).toBeGreaterThan(3);
+  await page.setContent("<svg width='2000' height='2000'><path id='line' fill='none' stroke='black'/></svg>");
+  for (const route of routes) {
+    const d = routePath(route.points);
+    const { box, nearest } = await page.locator("#line").evaluate(
+      (el: SVGPathElement, [d, label]) => {
+        el.setAttribute("d", d as string);
+        const { x, y } = label as { x: number; y: number };
+        const length = el.getTotalLength();
+        let nearest = Infinity;
+        for (let i = 0; i <= 400; i++) {
+          const p = el.getPointAtLength((length * i) / 400);
+          nearest = Math.min(nearest, Math.hypot(p.x - x, p.y - y));
+        }
+        const b = el.getBBox();
+        return { box: { left: b.x, top: b.y, right: b.x + b.width, bottom: b.y + b.height }, nearest };
+      },
+      [d, route.label] as const,
+    );
+    const xs = route.points.map((p) => p.x);
+    const ys = route.points.map((p) => p.y);
+    expect(nearest, d).toBeLessThan(0.5);
+    expect(box.left, d).toBeGreaterThanOrEqual(Math.min(...xs) - 0.5);
+    expect(box.right, d).toBeLessThanOrEqual(Math.max(...xs) + 0.5);
+    expect(box.top, d).toBeGreaterThanOrEqual(Math.min(...ys) - 0.5);
+    expect(box.bottom, d).toBeLessThanOrEqual(Math.max(...ys) + 0.5);
+  }
+});
+
+for (const style of ["detailed", "compact"])
+  test(`no interaction's label covers a part or another label, with ${style} cards`, async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    // the map of a change to this plugin, where a label once sat on a card
+    const map = fixture(path.join(dir, "tests", "maps", "change-map-itself.json"));
+    const plugin = await mountPlugin(page, dir, { review: map, settings: { card_style: style } });
+    const f = plugin.frame;
+    await f.locator(".cm-part").first().waitFor();
+    const covered = await f.locator("body").evaluate(() => {
+      const cards = [...document.querySelectorAll(".cm-part")].map((c) => ({
+        id: c.getAttribute("data-node"),
+        box: c.getBoundingClientRect(),
+      }));
+      const labels = [...document.querySelectorAll(".cm-link-label")].map((l) => ({
+        id: l.getAttribute("data-edge"),
+        box: l.getBoundingClientRect(),
+      }));
+      const meet = (r: DOMRect, c: DOMRect) =>
+        r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top;
+      return labels.flatMap(({ id, box }, i) => [
+        ...cards.filter((c) => meet(box, c.box)).map((c) => `${id} covers ${c.id}`),
+        ...labels
+          .slice(i + 1)
+          .filter((l) => meet(box, l.box))
+          .map((l) => `${id} covers ${l.id}`),
+      ]);
+    });
+    expect(covered).toEqual([]);
+  });
 
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });

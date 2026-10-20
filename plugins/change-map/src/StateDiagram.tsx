@@ -19,18 +19,8 @@ import {
 } from "@xyflow/react";
 import { FileCode } from "lucide-react";
 import { memo, useContext, useMemo, useRef } from "react";
-import {
-  fitOptions,
-  Fitter,
-  Follower,
-  Marked,
-  SharedContext,
-  Zoom,
-  routePath,
-  statusLabel,
-  type Shared,
-} from "./Diagram";
-import { stateLayout, type Route } from "./layout";
+import { fitOptions, Fitter, Follower, Marked, SharedContext, Zoom, statusLabel, type Shared } from "./Diagram";
+import { routePath, stateLayout, type Route } from "./layout";
 import {
   markOf,
   sameSelection,
