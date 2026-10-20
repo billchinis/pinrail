@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Init, Plugin, Settings } from "../pinrail-plugin";
 import { Diagram, type Marks } from "./Diagram";
 import { DiffViewer, savedHeight } from "./DiffViewer";
+import type { CardStyle } from "./layout";
 import { ScreenViewer, type ScreenMode } from "./ScreenViewer";
 import { Panel } from "./Panel";
 import { SequenceDiagram } from "./SequenceDiagram";
@@ -130,9 +131,17 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
     setScreenModeState(m);
     plugin.setSetting("screen_mode", m).catch(() => undefined);
   };
+  // how the map draws its parts, detailed unless the setting says compact
+  const cardsOf = (settings?: Settings): CardStyle => (settings?.card_style === "compact" ? "compact" : "detailed");
+  const [cards, setCardsState] = useState<CardStyle>(() => cardsOf(init.settings));
+  const setCards = (style: CardStyle) => {
+    setCardsState(style);
+    plugin.setSetting("card_style", style).catch(() => undefined);
+  };
   // a change in the app's settings opens or closes the drawer, and sets the comparison
   view.settings = (settings) => {
     setScreenModeState(modeOf(settings));
+    setCardsState(cardsOf(settings));
     setPanelWidth(widthOf(settings));
     const want = settings.show_diff === true;
     kept.current = want;
@@ -468,7 +477,7 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
           ) : diagram?.kind === "state" ? (
             <StateDiagram key={diagram.id} diagram={diagram} {...canvas} />
           ) : (
-            <Diagram {...canvas} zoom={zoom} />
+            <Diagram {...canvas} zoom={zoom} cards={cards} setCards={setCards} />
           )}
           {file?.screen !== undefined && selectedPart?.screens?.[file.screen] ? (
             <ScreenViewer

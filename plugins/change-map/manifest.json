@@ -13,6 +13,22 @@
         "description": "Open a review with the diff drawer showing, as you left it last.",
         "default": false
       },
+      "card_style": {
+        "type": "string",
+        "title": "Cards",
+        "description": "How the map draws each part: with its kind and status in a header and the lines it changes, or as a compact card.",
+        "oneOf": [
+          {
+            "const": "detailed",
+            "title": "Detailed"
+          },
+          {
+            "const": "compact",
+            "title": "Compact"
+          }
+        ],
+        "default": "detailed"
+      },
       "screen_mode": {
         "type": "string",
         "title": "Screenshot comparison",

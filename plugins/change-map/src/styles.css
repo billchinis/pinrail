@@ -300,6 +300,98 @@ body.cm-resizing-panel * {
   width: 11px;
   height: 11px;
 }
+/* a detailed card: the kind and the status in a header tinted with the
+   status colour, then the title, a bar of the lines added and removed, and
+   their counts */
+.cm-part.cm-part-detailed {
+  gap: 0;
+  padding: 0;
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--cm-color, var(--cm-context)) 55%, var(--pinrail-border));
+  background: var(--pinrail-bg);
+}
+.cm-part.cm-part-detailed.cm-context {
+  border-color: var(--pinrail-border-strong);
+}
+.cm-part.cm-part-detailed.cm-selected {
+  padding: 0;
+  border-width: 2.5px;
+  border-color: var(--cm-color, var(--pinrail-border-strong));
+}
+.cm-part-band {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px 8px 0 0;
+  background: color-mix(in srgb, var(--cm-color, var(--cm-context)) 14%, var(--pinrail-bg));
+  color: var(--cm-color, var(--pinrail-dim));
+  font-size: 11px;
+  font-weight: 600;
+}
+.cm-context .cm-part-band {
+  background: var(--pinrail-bg-raised);
+  color: var(--pinrail-dim);
+}
+.cm-part-band svg.lucide {
+  width: 13px;
+  height: 13px;
+}
+.cm-part-state {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cm-part-body {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px 9px;
+  min-width: 0;
+}
+.cm-removed .cm-part-body .cm-part-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--cm-removed);
+}
+.cm-part-bar {
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--pinrail-border);
+}
+.cm-bar-added {
+  background: var(--cm-added);
+}
+.cm-bar-removed {
+  background: var(--cm-removed);
+}
+.cm-part-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--pinrail-dim);
+}
+.cm-part-lines {
+  display: inline-flex;
+  gap: 6px;
+  font: 500 11px var(--pinrail-mono);
+}
+.cm-lines-added {
+  color: var(--cm-added);
+}
+.cm-lines-removed {
+  color: var(--cm-removed);
+}
+/* the badges sit higher, above the header, so its status stays readable */
+.cm-part-detailed > .cm-marks-corner {
+  top: -14px;
+}
+.cm-part-detailed .cm-part-shot {
+  width: calc(100% - 20px);
+  margin: 0 10px 10px;
+}
 .cm-part-shot {
   flex: 1;
   min-height: 0;
@@ -425,6 +517,15 @@ body.cm-resizing-panel * {
 }
 .cm-zoom .pinrail-btn {
   padding: 4px 6px;
+}
+/* the button that switches the cards' style, before the zoom, with a line
+   between them */
+.cm-zoom-cards {
+  display: inline-flex;
+  gap: 2px;
+  padding-right: 2px;
+  margin-right: 2px;
+  border-right: 1px solid var(--pinrail-border);
 }
 
 /* the panel's contents */

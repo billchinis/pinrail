@@ -5,6 +5,12 @@ import dagre from "@dagrejs/dagre";
 import type { ExtraDiagram, Part, Payload } from "./types";
 
 export const NODE_HEIGHT = 64;
+/** a detailed card has a header with the part's kind and status, and a
+ *  footer with the lines it changes */
+export const DETAILED_HEIGHT = 96;
+
+/** How the map draws a part: with a header and its line counts, or compact. */
+export type CardStyle = "detailed" | "compact";
 /** a part with screenshots shows a thumbnail under its title */
 export const SHOT_HEIGHT = 84;
 /** Room inside a lane around its parts: above, for its title and a selected
@@ -15,12 +21,17 @@ const LANE_SIDE = 20;
 export type Box = { x: number; y: number; width: number; height: number };
 
 /** A part's width, from its title, so that dagre and the card agree on it without measuring. */
-export function widthOf(part: Part): number {
-  return Math.round(Math.min(280, Math.max(170, part.title.length * 7.4 + 76)));
+export function widthOf(part: Part, style: CardStyle = "compact"): number {
+  // a detailed card's title has the card's width, without the icon beside it
+  const room = style === "detailed" ? 48 : 76;
+  return Math.round(Math.min(280, Math.max(style === "detailed" ? 190 : 170, part.title.length * 7.4 + room)));
 }
 
-export function heightOf(part: Part): number {
-  return NODE_HEIGHT + (part.screens?.some((s) => s.after || s.before) ? SHOT_HEIGHT : 0);
+export function heightOf(part: Part, style: CardStyle = "compact"): number {
+  return (
+    (style === "detailed" ? DETAILED_HEIGHT : NODE_HEIGHT) +
+    (part.screens?.some((s) => s.after || s.before) ? SHOT_HEIGHT : 0)
+  );
 }
 
 /** The longest a label gets on the diagram; the rest of it is in its tooltip. */
@@ -32,7 +43,10 @@ export const labelWidth = (label: string) => Math.min(LABEL_MAX, Math.round(labe
 /** An interaction's line, as dagre routes it clear of the parts, and where its label goes. */
 export type Route = { points: { x: number; y: number }[]; label: { x: number; y: number } };
 
-export function layout(payload: Payload): {
+export function layout(
+  payload: Payload,
+  style: CardStyle = "compact",
+): {
   nodes: Map<string, Box>;
   lanes: Map<string, Box>;
   edges: Map<string, Route>;
@@ -51,7 +65,7 @@ export function layout(payload: Payload): {
       paddingBottom: LANE_SIDE,
     });
   for (const p of payload.nodes) {
-    g.setNode(p.id, { width: widthOf(p), height: heightOf(p) });
+    g.setNode(p.id, { width: widthOf(p, style), height: heightOf(p, style) });
     if (p.lane && lanes.has(p.lane)) g.setParent(p.id, `lane:${p.lane}`);
   }
   for (const e of payload.edges ?? []) {

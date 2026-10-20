@@ -39,8 +39,64 @@ for (const drawer of [false, true])
     await expect.poll(off).toBeLessThan(4);
   });
 
-test("a card's status line starts at the card's left, under its icon", async ({ page }) => {
+test("detailed cards, the default, head each part with its kind and status and count its lines", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const form = f.locator('[data-node="ticket-form"]');
+  await expect(form.locator(".cm-part-band")).toHaveText(/Interface\s*changed/);
+  // the header and the body take the card's whole width, in WebKit too,
+  // where a button's content does not stretch by itself
+  const card = (await form.boundingBox())!;
+  for (const part of [".cm-part-band", ".cm-part-body"])
+    expect((await form.locator(part).boundingBox())!.width).toBeGreaterThan(card.width - 4);
+  // and the screenshot stays inside it, in both styles
+  for (const style of ["detailed", "compact"]) {
+    await plugin.settings({ card_style: style });
+    const box = (await form.boundingBox())!;
+    const shot = (await form.locator(".cm-part-shot").boundingBox())!;
+    expect(shot.x, style).toBeGreaterThan(box.x);
+    expect(shot.x + shot.width, style).toBeLessThan(box.x + box.width);
+    expect(shot.y + shot.height, style).toBeLessThan(box.y + box.height);
+  }
+  await plugin.settings({ card_style: "detailed" });
+  // the lines its range 40-68 of TicketForm.tsx adds and removes
+  await expect(form.locator(".cm-part-lines")).toHaveText("+15−3");
+  // a part that is a whole file counts the file
+  await expect(f.locator('[data-node="api-client"] .cm-part-lines')).toHaveText("+9−3");
+  // a part shown for context has no lines of its own
+  await expect(f.locator('[data-node="mailer"] .cm-part-band')).toContainText("unchanged");
+  await expect(f.locator('[data-node="mailer"] .cm-part-lines')).toHaveCount(0);
+  // a comment's badge stays on the card's top-right corner
+  await form.click();
+  await f.getByPlaceholder("Add a comment").fill("Keep the key after a failed save.");
+  await f.getByPlaceholder("Add a comment").press("Enter");
+  const badge = (await form.locator(".cm-marks-corner").boundingBox())!;
+  expect(badge.y).toBeLessThan(card.y);
+  expect(badge.x + badge.width).toBeGreaterThan(card.x + card.width);
+});
+
+test("the cards button on the map switches to the other style, and the choice is a setting", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await expect(f.locator(".cm-part-band").first()).toBeVisible();
+  // the button says what a click does, and is never shown pressed
+  await f.getByRole("button", { name: "Show compact cards" }).click();
+  await expect(f.locator(".cm-part-band")).toHaveCount(0);
+  await expect(f.locator('[data-node="ticket-form"] .cm-status')).toHaveText("changed");
+  const back = f.getByRole("button", { name: "Show detailed cards" });
+  await expect(back).not.toHaveAttribute("aria-pressed");
+  await expect.poll(() => plugin.lastSettingsSet()).toMatchObject({ card_style: "compact" });
+  await back.click();
+  await expect(f.locator('[data-node="ticket-form"] .cm-part-band')).toBeVisible();
+  await expect.poll(() => plugin.lastSettingsSet()).toMatchObject({ card_style: "detailed" });
+  // the app's settings set it too
+  await plugin.settings({ card_style: "compact" });
+  await expect(f.locator(".cm-part-band")).toHaveCount(0);
+  await expect(back).toBeVisible();
+});
+
+test("a compact card's status line starts at the card's left, under its icon", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { card_style: "compact" } });
   const f = plugin.frame;
   const form = f.locator('[data-node="ticket-form"]');
   const icon = (await form.locator(".cm-part-icon").boundingBox())!;

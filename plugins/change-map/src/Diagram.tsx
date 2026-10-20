@@ -28,14 +28,17 @@ import {
   Maximize,
   MessageCircle,
   Minus,
+  PanelTop,
   Plus,
+  RectangleHorizontal,
   Route,
   Server,
   Settings2,
   type LucideIcon,
 } from "lucide-react";
 import { createContext, memo, useContext, useEffect, useMemo, useRef } from "react";
-import { heightOf, layout, widthOf, type Route as LineRoute } from "./layout";
+import { heightOf, layout, widthOf, type CardStyle, type Route as LineRoute } from "./layout";
+import { lineCount, type LineCount } from "./lines";
 import { edgeStatus, nodeStatus, type Link, type NodeKind, type Part, type Payload, type Selection } from "./types";
 
 /** What the diagram shows on each part and interaction, by its id. */
@@ -83,7 +86,8 @@ export const statusLabel: Record<string, string> = {
   unchanged: "unchanged",
 };
 
-type PartData = { part: Part };
+/** `lines`: what the part adds and removes, for a detailed card */
+type PartData = { part: Part; style: CardStyle; lines: LineCount | null };
 type PartNodeType = Node<PartData, "part">;
 type LaneData = { title: string };
 type LaneNodeType = Node<LaneData, "lane">;
@@ -119,7 +123,7 @@ export function Marked({ id, corner }: { id: string; corner?: boolean }) {
 
 const PartNode = memo(function PartNode({ data }: NodeProps<PartNodeType>) {
   const { selection, select, images } = useContext(SharedContext);
-  const { part } = data;
+  const { part, style, lines } = data;
   const Icon = kindIcon[part.kind ?? "module"];
   const status = nodeStatus(part);
   const selected = !!selection && "node" in selection && selection.node === part.id;
@@ -129,8 +133,8 @@ const PartNode = memo(function PartNode({ data }: NodeProps<PartNodeType>) {
   return (
     <button
       type="button"
-      className={`cm-part cm-${status}${selected ? " cm-selected" : ""}`}
-      style={{ width: widthOf(part), height: heightOf(part) }}
+      className={`cm-part cm-part-${style} cm-${status}${selected ? " cm-selected" : ""}`}
+      style={{ width: widthOf(part, style), height: heightOf(part, style) }}
       onClick={() => select({ node: part.id })}
       aria-label={`${part.title}, ${kindLabel[part.kind ?? "module"]}, ${statusLabel[status]}`}
       aria-pressed={selected}
@@ -138,21 +142,59 @@ const PartNode = memo(function PartNode({ data }: NodeProps<PartNodeType>) {
     >
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <Marked id={part.id} corner />
-      <span className="cm-part-head">
-        <span className="cm-part-icon">
-          <Icon />
-        </span>
-        <span className="cm-part-title">{part.title}</span>
-      </span>
-      <span className="cm-part-meta">
-        <span className={`cm-status cm-status-${status}`}>{statusLabel[status]}</span>
-        {files ? (
-          <span className="cm-part-files">
-            <FileCode />
-            {files}
+      {style === "detailed" ? (
+        <>
+          <span className="cm-part-band">
+            <Icon />
+            {kindLabel[part.kind ?? "module"]}
+            <span className="cm-part-state">{statusLabel[status]}</span>
           </span>
-        ) : null}
-      </span>
+          <span className="cm-part-body">
+            <span className="cm-part-title">{part.title}</span>
+            {lines && lines.added + lines.removed ? (
+              <span className="cm-part-bar" aria-hidden="true">
+                <span className="cm-bar-added" style={{ flexGrow: lines.added }} />
+                <span className="cm-bar-removed" style={{ flexGrow: lines.removed }} />
+              </span>
+            ) : (
+              <span className="cm-part-bar cm-part-bar-none" aria-hidden="true" />
+            )}
+            <span className="cm-part-foot">
+              {lines ? (
+                <span className="cm-part-lines">
+                  <span className="cm-lines-added">+{lines.added}</span>
+                  <span className="cm-lines-removed">−{lines.removed}</span>
+                </span>
+              ) : null}
+              {files ? (
+                <span className="cm-part-files">
+                  {files} {files === 1 ? "file" : "files"}
+                </span>
+              ) : (
+                <span className="cm-part-files">context</span>
+              )}
+            </span>
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="cm-part-head">
+            <span className="cm-part-icon">
+              <Icon />
+            </span>
+            <span className="cm-part-title">{part.title}</span>
+          </span>
+          <span className="cm-part-meta">
+            <span className={`cm-status cm-status-${status}`}>{statusLabel[status]}</span>
+            {files ? (
+              <span className="cm-part-files">
+                <FileCode />
+                {files}
+              </span>
+            ) : null}
+          </span>
+        </>
+      )}
       {shotName ? (
         <span className="cm-part-shot">{images.get(shotName) ? <img src={images.get(shotName)} alt="" /> : null}</span>
       ) : null}
@@ -361,10 +403,43 @@ export function Zoomer({
 
 /** The zoom buttons, in the diagram's top-left corner, which the diff drawer
  *  never covers. */
-export function Zoom({ onFit }: { onFit: () => void }) {
+export function Zoom({
+  onFit,
+  cards,
+}: {
+  onFit: () => void;
+  /** the map's card style and how to change it, for the switch beside the zoom */
+  cards?: { style: CardStyle; set(style: CardStyle): void };
+}) {
   const flow = useReactFlow();
   return (
     <div className="cm-zoom">
+      {cards ? (
+        <span className="cm-zoom-cards">
+          {/* an action, not a state: it shows the style a click switches to */}
+          {cards.style === "detailed" ? (
+            <button
+              type="button"
+              className="pinrail-btn pinrail-btn-ghost"
+              onClick={() => cards.set("compact")}
+              title="Show compact cards"
+              aria-label="Show compact cards"
+            >
+              <RectangleHorizontal />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pinrail-btn pinrail-btn-ghost"
+              onClick={() => cards.set("detailed")}
+              title="Show detailed cards"
+              aria-label="Show detailed cards"
+            >
+              <PanelTop />
+            </button>
+          )}
+        </span>
+      ) : null}
       <button
         type="button"
         className="pinrail-btn pinrail-btn-ghost"
@@ -406,6 +481,8 @@ export function Diagram({
   select,
   inset,
   zoom = null,
+  cards = "compact",
+  setCards,
 }: Shared & {
   payload: Payload;
   fit: number;
@@ -414,10 +491,13 @@ export function Diagram({
   inset: number;
   /** a part to zoom in on */
   zoom?: { node: string; n: number } | null;
+  /** how the parts are drawn, and how to change it from the map */
+  cards?: CardStyle;
+  setCards?: (style: CardStyle) => void;
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const aim = useRef<number | null>(null);
-  const placed = useMemo(() => layout(payload), [payload]);
+  const placed = useMemo(() => layout(payload, cards), [payload, cards]);
   const nodes = useMemo<(PartNodeType | LaneNodeType)[]>(() => {
     const lanes: LaneNodeType[] = (payload.lanes ?? [])
       .filter((l) => placed.lanes.has(l.id))
@@ -441,13 +521,13 @@ export function Diagram({
         id: p.id,
         type: "part",
         position: { x: box.x, y: box.y },
-        data: { part: p },
+        data: { part: p, style: cards, lines: cards === "detailed" ? lineCount(payload, p) : null },
         draggable: false,
         selectable: false,
       };
     });
     return [...lanes, ...parts];
-  }, [payload, placed]);
+  }, [payload, placed, cards]);
   const edges = useMemo<LinkEdgeType[]>(() => {
     const ids = new Set(payload.nodes.map((n) => n.id));
     const shown = (payload.edges ?? []).filter((e) => ids.has(e.from) && ids.has(e.to));
@@ -495,7 +575,7 @@ export function Diagram({
             <Fitter fit={fit} frame={frame} inset={inset} hold={followed.length > 0} />
             <Follower ids={followed} inset={inset} frame={frame} aim={aim} />
             <Zoomer zoom={zoom} inset={inset} frame={frame} aim={aim} />
-            <Zoom onFit={onFit} />
+            <Zoom onFit={onFit} cards={setCards ? { style: cards, set: setCards } : undefined} />
           </ReactFlow>
         </ReactFlowProvider>
       </SharedContext.Provider>
