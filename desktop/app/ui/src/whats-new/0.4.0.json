@@ -10,6 +10,16 @@
         "label": "Open Plugins",
         "settings": "plugins"
       }
+    },
+    {
+      "title": "Plugins teach your agents",
+      "text": "Your agents' pinrail skill now lists the plugins you installed and when to use each. A plugin can add a skill of its own, such as the change map's guide to mapping a change. A plugin copied from elsewhere adds its skill only after you allow it.",
+      "image": "plugin-skills",
+      "alt": "Settings, Plugins: the change map's details, with its skill reaching the connected agents",
+      "action": {
+        "label": "Open Plugins",
+        "settings": "plugins"
+      }
     }
   ]
 }

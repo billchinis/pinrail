@@ -157,6 +157,22 @@ export const scenes = [
     },
   },
   {
+    // the change map's details in Settings › Plugins: its skill reaches the agents
+    name: "plugin-skills",
+    async run({ page, app, shot }) {
+      await card(page);
+      await page.goto(`${app.ui}/#/`);
+      await page.getByTestId("inbox-group").first().waitFor();
+      await page.keyboard.press("Meta+,");
+      await settingsSection(page, "Plugins").click();
+      await page.getByRole("button", { name: "Details of change-map" }).click();
+      await page.getByTestId("plugin-skill").scrollIntoViewIfNeeded();
+      await page.waitForLoadState("networkidle");
+      await settle(page, 500);
+      await shot("plugin-skills");
+    },
+  },
+  {
     name: "inbox",
     async run({ page, app, shot }) {
       await page.goto(`${app.ui}/#/`);
