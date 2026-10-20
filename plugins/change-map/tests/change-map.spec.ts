@@ -332,6 +332,26 @@ test("the drawer names a state without files in the text's font", async ({ page 
   expect(await name.evaluate((el) => getComputedStyle(el).fontFamily)).not.toBe(mono);
 });
 
+test("a selection without files shows an icon and a light line above what is missing, the same each time", async ({
+  page,
+}) => {
+  const map = fixture(path.join(dir, "tests", "maps", "change-map-itself.json"));
+  const plugin = await mountPlugin(page, dir, { review: map, settings: { show_diff: true } });
+  const f = plugin.frame;
+  const empty = f.getByTestId("no-files");
+  await f.locator('.cm-link-label[data-edge="app-types"]').click();
+  await expect(empty.locator("svg")).toBeVisible();
+  const quip = (await empty.locator(".cm-empty-quip").textContent())!;
+  expect(quip.length).toBeGreaterThan(10);
+  await expect(empty).toContainText("No files of narrowest() · diagramComments() are in this change.");
+  // another interaction, then this one again: the same line. The drawer
+  // may cover their labels, so they are clicked without the pointer.
+  await f.locator('.cm-link-label[data-edge="seq-diagram"]').dispatchEvent("click");
+  await expect(empty).toContainText("No files of Fitter · Follower · Marked");
+  await f.locator('.cm-link-label[data-edge="app-types"]').dispatchEvent("click");
+  await expect(empty.locator(".cm-empty-quip")).toHaveText(quip);
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

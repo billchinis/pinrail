@@ -4,7 +4,21 @@
 // a line's comment button comments on that line, and a drag from it on the
 // lines it passes over. Dragging the top edge resizes the drawer, and Esc or
 // the close button closes it.
-import { ChevronLeft, ChevronRight, MessageSquarePlus, X } from "lucide-react";
+import {
+  Bird,
+  Cat,
+  ChevronLeft,
+  ChevronRight,
+  Coffee,
+  Ghost,
+  Leaf,
+  MessageSquarePlus,
+  Moon,
+  Telescope,
+  Wind,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   countLines,
@@ -107,6 +121,44 @@ const rowOf = (l: Line): { side: "old" | "new"; line: number } =>
 /** Whether a row is the last line of a target, under which its comments go. */
 const endsAt = (t: Target, path: string, l: Line) =>
   isLine(t) && t.file === path && (t.side ?? "new") === rowOf(l).side && t.line === rowOf(l).line;
+/** The icons and lines an empty drawer picks from, to make an empty drawer
+ *  less of a dead end. */
+const EMPTY_ICONS: LucideIcon[] = [Ghost, Telescope, Coffee, Cat, Bird, Wind, Leaf, Moon];
+const EMPTY_LINES = [
+  "Ask your agent to be more thorough next time.",
+  "The agent left this one to your imagination.",
+  "Not a single line of code behind this one.",
+  "Nothing to read here. Enjoy the quiet.",
+  "This one came without its code.",
+  "The diff for this one went for a walk.",
+  "Some things are better left unwritten. This was not one of them.",
+  "The agent drew the arrow and forgot the code.",
+  "Plenty of room here for the lines that should have been.",
+];
+
+/** A number from a name, so that the same selection always picks the same
+ *  icon and line. */
+function pick(name: string, size: number): number {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return h % size;
+}
+
+/** The drawer for a selection with no files in the change: an icon, a light
+ *  line, and what is missing. */
+function NoFiles({ owner, ownerAsCode }: { owner: string; ownerAsCode: boolean }) {
+  const Icon = EMPTY_ICONS[pick(owner, EMPTY_ICONS.length)];
+  return (
+    <div className="cm-diff-empty" data-testid="no-files">
+      <Icon className="cm-empty-icon" aria-hidden="true" />
+      <p className="cm-empty-quip">{EMPTY_LINES[pick(`${owner}.`, EMPTY_LINES.length)]}</p>
+      <p className="pinrail-faint">
+        No files of {ownerAsCode ? <span className="mono">{owner}</span> : owner} are in this change.
+      </p>
+    </div>
+  );
+}
+
 /** Whether a target takes in a row. */
 const holds = (t: Target | null | undefined, path: string, l: Line) =>
   !!t && isLine(t) && t.file === path && takesIn(t, rowOf(l).side, rowOf(l).line);
@@ -300,12 +352,8 @@ export function DiffViewer({
           <X />
         </button>
       </div>
-      {path ? null : (
-        <p className="pinrail-empty cm-diff-empty" data-testid="no-files">
-          No files of {owner} are in this change.
-        </p>
-      )}
-      <div className="cm-diff-body">
+      {path ? null : <NoFiles owner={owner} ownerAsCode={ownerAsCode} />}
+      <div className="cm-diff-body" hidden={!path}>
         <table className="cm-diff-table">
           <tbody>
             {lines.map((l, i) => {

@@ -1129,8 +1129,32 @@ body.cm-resizing * {
 .cm-stepper .pinrail-btn {
   padding: 3px 4px;
 }
+/* a selection without files: an icon, a light line and what is missing,
+   in the middle of the drawer */
 .cm-diff-empty {
-  margin: 24px 16px;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 16px;
+  text-align: center;
+}
+.cm-diff-empty p {
+  margin: 0;
+}
+.cm-app svg.lucide.cm-empty-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 6px;
+  color: var(--pinrail-faint);
+  stroke-width: 1.5;
+}
+.cm-empty-quip {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--pinrail-text);
 }
 
 /* lines with a comment, and lines being picked for one */
