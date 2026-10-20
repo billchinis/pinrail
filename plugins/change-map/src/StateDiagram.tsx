@@ -17,10 +17,10 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import { FileCode } from "lucide-react";
+import { FileCode, GitCommitHorizontal, GitCommitVertical } from "lucide-react";
 import { memo, useContext, useMemo, useRef } from "react";
 import { fitOptions, Fitter, Follower, Marked, SharedContext, Zoom, statusLabel, type Shared } from "./Diagram";
-import { routePath, stateLayout, type Route } from "./layout";
+import { routePath, stateLayout, type Direction, type Loop, type Route } from "./layout";
 import {
   markOf,
   sameSelection,
@@ -31,9 +31,12 @@ import {
   type Transition,
 } from "./types";
 
-type StateData = { diagram: string; state: State; payload: Payload };
+/** `across`: the diagram runs left to right, so transitions leave a state
+ *  on its right and arrive on its left, rather than below and above */
+type StateData = { diagram: string; state: State; payload: Payload; across: boolean };
 type StateNodeType = Node<StateData, "state">;
-type TransitionData = { diagram: string; transition: Transition; payload: Payload; route?: Route; loop?: boolean };
+/** `loop`: a transition back to its own state, drawn where the layout put it */
+type TransitionData = { diagram: string; transition: Transition; payload: Payload; route?: Route; loop?: Loop };
 type TransitionEdgeType = Edge<TransitionData, "transition">;
 
 /** A state's status as the map's cards name them. */
@@ -43,7 +46,7 @@ const lineStatus = (s?: string) => (s === "context" ? "unchanged" : (s ?? "chang
 
 const StateNode = memo(function StateNode({ data }: NodeProps<StateNodeType>) {
   const { selection, select } = useContext(SharedContext);
-  const { state, diagram, payload } = data;
+  const { state, diagram, payload, across } = data;
   const mine = selectionOf(payload, diagram, state);
   const selected = sameSelection(mine, selection);
   const status = cardStatus(state.status);
@@ -64,7 +67,7 @@ const StateNode = memo(function StateNode({ data }: NodeProps<StateNodeType>) {
       title={dot ? name : undefined}
       data-item={state.id}
     >
-      <Handle type="target" position={Position.Left} isConnectable={false} />
+      <Handle type="target" position={across ? Position.Left : Position.Top} isConnectable={false} />
       {dot ? (
         <Marked id={markOf(mine!)} corner />
       ) : (
@@ -79,15 +82,10 @@ const StateNode = memo(function StateNode({ data }: NodeProps<StateNodeType>) {
           ) : null}
         </>
       )}
-      <Handle type="source" position={Position.Right} isConnectable={false} />
+      <Handle type="source" position={across ? Position.Right : Position.Bottom} isConnectable={false} />
     </button>
   );
 });
-
-/** A loop above a state, for a transition back to the same state. */
-function loopPath(x: number, y: number): [string, number, number] {
-  return [`M ${x - 14},${y} C ${x - 30},${y - 46} ${x + 30},${y - 46} ${x + 14},${y}`, x, y - 44];
-}
 
 const TransitionEdge = memo(function TransitionEdge(props: EdgeProps<TransitionEdgeType>) {
   const { selection, select } = useContext(SharedContext);
@@ -96,7 +94,7 @@ const TransitionEdge = memo(function TransitionEdge(props: EdgeProps<TransitionE
   const selected = sameSelection(mine, selection);
   const status = lineStatus(transition.status);
   const [path, labelX, labelY] = loop
-    ? loopPath((props.sourceX + props.targetX) / 2, Math.min(props.sourceY, props.targetY) - 22)
+    ? [loop.path, loop.label.x, loop.label.y]
     : route
       ? [routePath(route.points), route.label.x, route.label.y]
       : getBezierPath(props);
@@ -141,9 +139,20 @@ export function StateDiagram({
   onFit,
   select,
   inset,
-}: Shared & { payload: Payload; diagram: ExtraDiagram; fit: number; onFit: () => void; inset: number }) {
+  direction = "LR",
+  setDirection,
+}: Shared & {
+  payload: Payload;
+  diagram: ExtraDiagram;
+  fit: number;
+  onFit: () => void;
+  inset: number;
+  /** which way the diagram runs, and how to change it from the diagram */
+  direction?: Direction;
+  setDirection?: (direction: Direction) => void;
+}) {
   const frame = useRef<HTMLDivElement>(null);
-  const placed = useMemo(() => stateLayout(diagram), [diagram]);
+  const placed = useMemo(() => stateLayout(diagram, direction), [diagram, direction]);
   const nodes = useMemo<StateNodeType[]>(
     () =>
       (diagram.states ?? []).map((s) => {
@@ -152,13 +161,13 @@ export function StateDiagram({
           id: s.id,
           type: "state",
           position: { x: box.x, y: box.y },
-          data: { diagram: diagram.id, state: s, payload },
+          data: { diagram: diagram.id, state: s, payload, across: direction === "LR" },
           style: { width: box.width, height: box.height },
           draggable: false,
           selectable: false,
         };
       }),
-    [diagram, placed, payload],
+    [diagram, placed, payload, direction],
   );
   const edges = useMemo<TransitionEdgeType[]>(() => {
     const ids = new Set((diagram.states ?? []).map((s) => s.id));
@@ -169,7 +178,13 @@ export function StateDiagram({
         source: t.from,
         target: t.to,
         type: "transition",
-        data: { diagram: diagram.id, transition: t, payload, route: placed.edges.get(t.id), loop: t.from === t.to },
+        data: {
+          diagram: diagram.id,
+          transition: t,
+          payload,
+          route: placed.edges.get(t.id),
+          loop: placed.loops.get(t.id),
+        },
         markerEnd: { type: "arrowclosed" as const, width: 16, height: 16 },
         selectable: false,
       }));
@@ -205,7 +220,30 @@ export function StateDiagram({
             <Background variant={BackgroundVariant.Dots} gap={18} size={1} />
             <Fitter fit={fit} frame={frame} inset={inset} hold={followed.length > 0} />
             <Follower ids={followed} inset={inset} frame={frame} />
-            <Zoom onFit={onFit} />
+            <Zoom onFit={onFit}>
+              {/* an action, not a state: it shows the direction a click switches to */}
+              {!setDirection ? null : direction === "LR" ? (
+                <button
+                  type="button"
+                  className="pinrail-btn pinrail-btn-ghost"
+                  onClick={() => setDirection("TB")}
+                  title="Lay out top to bottom"
+                  aria-label="Lay out top to bottom"
+                >
+                  <GitCommitVertical />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pinrail-btn pinrail-btn-ghost"
+                  onClick={() => setDirection("LR")}
+                  title="Lay out left to right"
+                  aria-label="Lay out left to right"
+                >
+                  <GitCommitHorizontal />
+                </button>
+              )}
+            </Zoom>
           </ReactFlow>
         </ReactFlowProvider>
       </SharedContext.Provider>

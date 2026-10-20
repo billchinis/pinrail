@@ -526,9 +526,9 @@ body.cm-resizing-panel * {
 .cm-zoom .pinrail-btn {
   padding: 4px 6px;
 }
-/* the button that switches the cards' style, before the zoom, with a line
-   between them */
-.cm-zoom-cards {
+/* a diagram's own buttons, such as the one that switches the cards' style,
+   before the zoom, with a line between them */
+.cm-zoom-own {
   display: inline-flex;
   gap: 2px;
   padding-right: 2px;

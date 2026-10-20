@@ -48,7 +48,7 @@ A change about the order of things or about a lifecycle is hard to read from a m
 
 ![A sequence diagram in the change map: a second save with the same dedup key, with a retry frame and the conflict reply selected.](screenshot:change-map-sequence "A retried request answered with the ticket the first one created.")
 
-- **A state diagram** shows the states, with a dot for the start and a ringed dot for the end, and the transitions between them, labelled with their event, guard and action.
+- **A state diagram** shows the states, with a dot for the start and a ringed dot for the end, and the transitions between them, labelled with their event, guard and action. It runs from left to right, and the button beside its zoom buttons lays it out from top to bottom instead, which is kept as a setting.
 
 ![A state diagram in the change map: the Save button's states Ready and Saving, with a failed save's transition selected.](screenshot:change-map-state "The Save button's states, with the transition back from a failed save selected.")
 

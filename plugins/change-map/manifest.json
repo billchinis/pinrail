@@ -29,6 +29,22 @@
         ],
         "default": "detailed"
       },
+      "state_direction": {
+        "type": "string",
+        "title": "State diagrams",
+        "description": "Which way a state diagram runs from its first state.",
+        "oneOf": [
+          {
+            "const": "LR",
+            "title": "Left to right"
+          },
+          {
+            "const": "TB",
+            "title": "Top to bottom"
+          }
+        ],
+        "default": "LR"
+      },
       "screen_mode": {
         "type": "string",
         "title": "Screenshot comparison",

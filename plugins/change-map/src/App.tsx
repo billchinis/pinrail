@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Init, Plugin, Settings } from "../pinrail-plugin";
 import { Diagram, type Marks } from "./Diagram";
 import { DiffViewer, savedHeight } from "./DiffViewer";
-import type { CardStyle } from "./layout";
+import type { CardStyle, Direction } from "./layout";
 import { ScreenViewer, type ScreenMode } from "./ScreenViewer";
 import { Panel } from "./Panel";
 import { SequenceDiagram } from "./SequenceDiagram";
@@ -138,10 +138,18 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
     setCardsState(style);
     plugin.setSetting("card_style", style).catch(() => undefined);
   };
+  // which way the state diagrams run, left to right unless the setting says otherwise
+  const directionOf = (settings?: Settings): Direction => (settings?.state_direction === "TB" ? "TB" : "LR");
+  const [direction, setDirectionState] = useState<Direction>(() => directionOf(init.settings));
+  const setDirection = (d: Direction) => {
+    setDirectionState(d);
+    plugin.setSetting("state_direction", d).catch(() => undefined);
+  };
   // a change in the app's settings opens or closes the drawer, and sets the comparison
   view.settings = (settings) => {
     setScreenModeState(modeOf(settings));
     setCardsState(cardsOf(settings));
+    setDirectionState(directionOf(settings));
     setPanelWidth(widthOf(settings));
     const want = settings.show_diff === true;
     kept.current = want;
@@ -475,7 +483,13 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
           {diagram?.kind === "sequence" ? (
             <SequenceDiagram key={diagram.id} diagram={diagram} {...canvas} />
           ) : diagram?.kind === "state" ? (
-            <StateDiagram key={diagram.id} diagram={diagram} {...canvas} />
+            <StateDiagram
+              key={diagram.id}
+              diagram={diagram}
+              {...canvas}
+              direction={direction}
+              setDirection={setDirection}
+            />
           ) : (
             <Diagram {...canvas} zoom={zoom} cards={cards} setCards={setCards} />
           )}

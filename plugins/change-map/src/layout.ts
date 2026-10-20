@@ -124,18 +124,62 @@ export function stateSize(
   return { width: Math.round(Math.min(280, Math.max(110, (title ?? "").length * 7.8 + room))), height: 44 };
 }
 
-/** Where each state goes, and the routes of the transitions between
- *  different states. A transition back to its own state is drawn as a
- *  loop above it, so it has no route. */
-export function stateLayout(diagram: ExtraDiagram): { nodes: Map<string, Box>; edges: Map<string, Route> } {
+/** Which way a state diagram runs: left to right, or top to bottom. */
+export type Direction = "LR" | "TB";
+
+/** A transition back to its own state: a loop above the state when the
+ *  diagram runs left to right, and beside it when it runs top to bottom,
+ *  out of the way of the transitions in and out. `label` is the label's
+ *  middle, beyond the loop. */
+export type Loop = { path: string; label: Point };
+function loopOf(box: Box, direction: Direction, label: { width: number; height: number }): Loop {
+  if (direction === "LR") {
+    const x = box.x + box.width / 2;
+    const y = box.y;
+    return {
+      path: `M ${x - 14},${y} C ${x - 30},${y - 46} ${x + 30},${y - 46} ${x + 14},${y}`,
+      label: { x, y: y - 36 - label.height / 2 },
+    };
+  }
+  const x = box.x + box.width;
+  const y = box.y + box.height / 2;
+  return {
+    path: `M ${x},${y - 12} C ${x + 46},${y - 30} ${x + 46},${y + 30} ${x},${y + 12}`,
+    label: { x: x + 40 + label.width / 2, y },
+  };
+}
+
+/** Where each state goes, the routes of the transitions between different
+ *  states, and the loops of the transitions back to the same state. Each
+ *  label sits on its line, clear of the states and of the labels placed
+ *  before it. */
+export function stateLayout(
+  diagram: ExtraDiagram,
+  direction: Direction = "LR",
+): { nodes: Map<string, Box>; edges: Map<string, Route>; loops: Map<string, Loop> } {
   const g = new dagre.graphlib.Graph({ multigraph: true });
-  g.setGraph({ rankdir: "LR", nodesep: 40, ranksep: 40, edgesep: 16, marginx: 24, marginy: 48 });
+  // top to bottom, labels sit across the lines, and two lines between the
+  // same states bow toward each other, so their labels need the room to
+  // sit one above the other
+  g.setGraph({
+    rankdir: direction,
+    nodesep: 40,
+    ranksep: direction === "TB" ? 96 : 40,
+    edgesep: 16,
+    marginx: direction === "TB" ? 120 : 24,
+    marginy: 48,
+  });
   g.setDefaultEdgeLabel(() => ({}));
   for (const s of diagram.states ?? []) g.setNode(s.id, stateSize(s.title, s.kind, s.changes?.length ?? 0));
   for (const t of diagram.transitions ?? []) {
     if (t.from === t.to || !g.hasNode(t.from) || !g.hasNode(t.to)) continue;
     const label = t.label ?? "";
-    g.setEdge(t.from, t.to, { width: label ? labelWidth(label) : 1, height: label ? 24 : 1, labelpos: "c" }, t.id);
+    g.setEdge(
+      t.from,
+      t.to,
+      { width: label ? labelWidth(label) : 1, height: label ? LABEL_HEIGHT : 1, labelpos: "c" },
+      t.id,
+    );
   }
   dagre.layout(g);
   const nodes = new Map<string, Box>();
@@ -144,17 +188,30 @@ export function stateLayout(diagram: ExtraDiagram): { nodes: Map<string, Box>; e
     nodes.set(s.id, { x: n.x - n.width / 2, y: n.y - n.height / 2, width: n.width, height: n.height });
   }
   const edges = new Map<string, Route>();
+  const loops = new Map<string, Loop>();
+  const taken: Box[] = [...nodes.values()];
+  const take = (at: Point, size: { width: number; height: number }) =>
+    taken.push({ x: at.x - size.width / 2, y: at.y - size.height / 2, ...size });
+  // the loops first: their place is fixed, and the other labels make room for them
+  for (const t of diagram.transitions ?? []) {
+    const box = t.from === t.to ? nodes.get(t.from) : undefined;
+    if (!box) continue;
+    const size = { width: t.label ? labelWidth(t.label) : 0, height: t.label ? LABEL_HEIGHT : 0 };
+    const loop = loopOf(box, direction, size);
+    loops.set(t.id, loop);
+    if (t.label) take(loop.label, size);
+  }
   for (const t of diagram.transitions ?? []) {
     const d =
       t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to) ? g.edge({ v: t.from, w: t.to, name: t.id }) : null;
-    if (d?.points?.length)
-      edges.set(t.id, {
-        points: d.points,
-        // on the line as drawn, which cuts the corners dagre's point may sit in
-        label: onLine(d.points, { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y }),
-      });
+    if (!d?.points?.length) continue;
+    const size = { width: t.label ? labelWidth(t.label) : 1, height: t.label ? LABEL_HEIGHT : 1 };
+    // on the line as drawn, which cuts the corners dagre's point may sit in
+    const label = onLine(d.points, { x: d.x ?? d.points[0].x, y: d.y ?? d.points[0].y }, size, taken);
+    if (t.label) take(label, size);
+    edges.set(t.id, { points: d.points, label });
   }
-  return { nodes, edges };
+  return { nodes, edges, loops };
 }
 
 // A sequence diagram: a column per participant, from left to right, and a
@@ -301,7 +358,8 @@ export function routePath(points: Point[]): string {
  *  where dagre put it, at which a label of `size` clears every box in
  *  `boxes`, the parts and the other labels. The line cuts the corners of the route, so dagre's
  *  point can lie beside the line, and the line's nearest point can lie
- *  close to a part. Without such a point, the nearest one. */
+ *  close to a part. Without such a point, dagre's own, which it kept clear
+ *  of the parts, if no label took it since; else the nearest. */
 export function onLine(points: Point[], at: Point, size?: { width: number; height: number }, boxes: Box[] = []): Point {
   const along: Point[] = [];
   for (const [a, c, b] of curves(points))
@@ -323,5 +381,5 @@ export function onLine(points: Point[], at: Point, size?: { width: number; heigh
         p.y + size.height / 2 + GAP <= b.y ||
         p.y - size.height / 2 - GAP >= b.y + b.height,
     );
-  return along.find(clear) ?? along[0];
+  return along.find(clear) ?? (clear(at) ? at : along[0]);
 }

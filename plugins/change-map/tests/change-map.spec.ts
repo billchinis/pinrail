@@ -215,6 +215,64 @@ for (const style of ["detailed", "compact"])
     expect(covered).toEqual([]);
   });
 
+test("a state diagram lays out left to right or top to bottom, and the choice is a setting", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await f.locator('[data-tab="save-button"]').click();
+  const centre = async (id: string) => {
+    const b = (await f.locator(`[data-item="${id}"]`).boundingBox())!;
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  // left to right at first: Ready follows the start to its right
+  let [start, ready] = [await centre("start"), await centre("ready")];
+  expect(ready.x - start.x).toBeGreaterThan(Math.abs(ready.y - start.y));
+  // the button says what a click does
+  await f.getByRole("button", { name: "Lay out top to bottom" }).click();
+  await expect
+    .poll(async () => {
+      [start, ready] = [await centre("start"), await centre("ready")];
+      return ready.y - start.y > Math.abs(ready.x - start.x);
+    })
+    .toBe(true);
+  await expect.poll(() => plugin.lastSettingsSet()).toMatchObject({ state_direction: "TB" });
+  await f.getByRole("button", { name: "Lay out left to right" }).click();
+  await expect.poll(() => plugin.lastSettingsSet()).toMatchObject({ state_direction: "LR" });
+  // the app's settings set it too
+  await plugin.settings({ state_direction: "TB" });
+  await expect(f.getByRole("button", { name: "Lay out left to right" })).toBeVisible();
+});
+
+for (const direction of ["LR", "TB"])
+  test(`no label covers a state or another label, with the state diagram ${direction === "LR" ? "left to right" : "top to bottom"}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { state_direction: direction } });
+    const f = plugin.frame;
+    await f.locator('[data-tab="save-button"]').click();
+    await f.locator('[data-item="ready"]').waitFor();
+    const covered = await f.locator(".cm-diagram").evaluate((root) => {
+      const states = [...root.querySelectorAll("[data-item]")]
+        .filter((el) => el.matches(".cm-part, .cm-state-dot"))
+        .map((el) => ({ id: el.getAttribute("data-item"), box: el.getBoundingClientRect() }));
+      const labels = [...root.querySelectorAll(".cm-link-label")].map((el) => ({
+        id: el.textContent,
+        box: el.getBoundingClientRect(),
+      }));
+      const meet = (r: DOMRect, c: DOMRect) =>
+        r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top;
+      return labels.flatMap(({ id, box }, i) => [
+        ...states.filter((s) => meet(box, s.box)).map((s) => `${id} covers ${s.id}`),
+        ...labels
+          .slice(i + 1)
+          .filter((l) => meet(box, l.box))
+          .map((l) => `${id} covers ${l.id}`),
+      ]);
+    });
+    expect(covered).toEqual([]);
+  });
+
 test("a state diagram shows each state's name whole, beside its files", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

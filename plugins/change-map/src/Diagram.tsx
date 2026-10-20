@@ -36,7 +36,7 @@ import {
   Settings2,
   type LucideIcon,
 } from "lucide-react";
-import { createContext, memo, useContext, useEffect, useMemo, useRef } from "react";
+import { createContext, memo, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { heightOf, layout, routePath, widthOf, type CardStyle, type Route as LineRoute } from "./layout";
 import { lineCount, type LineCount } from "./lines";
 import { edgeStatus, nodeStatus, type Link, type NodeKind, type Part, type Payload, type Selection } from "./types";
@@ -391,41 +391,16 @@ export function Zoomer({
  *  never covers. */
 export function Zoom({
   onFit,
-  cards,
+  children,
 }: {
   onFit: () => void;
-  /** the map's card style and how to change it, for the switch beside the zoom */
-  cards?: { style: CardStyle; set(style: CardStyle): void };
+  /** the diagram's own buttons, before the zoom, such as one that switches its layout */
+  children?: ReactNode;
 }) {
   const flow = useReactFlow();
   return (
     <div className="cm-zoom">
-      {cards ? (
-        <span className="cm-zoom-cards">
-          {/* an action, not a state: it shows the style a click switches to */}
-          {cards.style === "detailed" ? (
-            <button
-              type="button"
-              className="pinrail-btn pinrail-btn-ghost"
-              onClick={() => cards.set("compact")}
-              title="Show compact cards"
-              aria-label="Show compact cards"
-            >
-              <RectangleHorizontal />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="pinrail-btn pinrail-btn-ghost"
-              onClick={() => cards.set("detailed")}
-              title="Show detailed cards"
-              aria-label="Show detailed cards"
-            >
-              <PanelTop />
-            </button>
-          )}
-        </span>
-      ) : null}
+      {children ? <span className="cm-zoom-own">{children}</span> : null}
       <button
         type="button"
         className="pinrail-btn pinrail-btn-ghost"
@@ -561,7 +536,30 @@ export function Diagram({
             <Fitter fit={fit} frame={frame} inset={inset} hold={followed.length > 0} />
             <Follower ids={followed} inset={inset} frame={frame} aim={aim} />
             <Zoomer zoom={zoom} inset={inset} frame={frame} aim={aim} />
-            <Zoom onFit={onFit} cards={setCards ? { style: cards, set: setCards } : undefined} />
+            <Zoom onFit={onFit}>
+              {/* an action, not a state: it shows the style a click switches to */}
+              {!setCards ? null : cards === "detailed" ? (
+                <button
+                  type="button"
+                  className="pinrail-btn pinrail-btn-ghost"
+                  onClick={() => setCards("compact")}
+                  title="Show compact cards"
+                  aria-label="Show compact cards"
+                >
+                  <RectangleHorizontal />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pinrail-btn pinrail-btn-ghost"
+                  onClick={() => setCards("detailed")}
+                  title="Show detailed cards"
+                  aria-label="Show detailed cards"
+                >
+                  <PanelTop />
+                </button>
+              )}
+            </Zoom>
           </ReactFlow>
         </ReactFlowProvider>
       </SharedContext.Provider>
