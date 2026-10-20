@@ -215,6 +215,17 @@ for (const style of ["detailed", "compact"])
     expect(covered).toEqual([]);
   });
 
+test("a state diagram shows each state's name whole, beside its files", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await f.locator('[data-tab="save-button"]').click();
+  for (const id of ["ready", "saving"]) {
+    const title = f.locator(`[data-item="${id}"] .cm-part-title`);
+    await expect(title).toBeVisible();
+    expect(await title.evaluate((el) => el.scrollWidth <= el.clientWidth), id).toBe(true);
+  }
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

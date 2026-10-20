@@ -111,11 +111,17 @@ export function layout(
   return { nodes, lanes: bands, edges };
 }
 
-/** A state's size: a dot for the start and the end, a card otherwise. */
+/** A state's size: a dot for the start and the end, a card otherwise,
+ *  with room for its name and, when it has files, their count. */
 export const DOT = 22;
-export function stateSize(title: string | undefined, kind: string | undefined): { width: number; height: number } {
+export function stateSize(
+  title: string | undefined,
+  kind: string | undefined,
+  files = 0,
+): { width: number; height: number } {
   if (kind === "initial" || kind === "final") return { width: DOT, height: DOT };
-  return { width: Math.round(Math.min(240, Math.max(110, (title ?? "").length * 7.4 + 44))), height: 44 };
+  const room = 44 + (files ? 34 : 0);
+  return { width: Math.round(Math.min(280, Math.max(110, (title ?? "").length * 7.8 + room))), height: 44 };
 }
 
 /** Where each state goes, and the routes of the transitions between
@@ -125,7 +131,7 @@ export function stateLayout(diagram: ExtraDiagram): { nodes: Map<string, Box>; e
   const g = new dagre.graphlib.Graph({ multigraph: true });
   g.setGraph({ rankdir: "LR", nodesep: 40, ranksep: 40, edgesep: 16, marginx: 24, marginy: 48 });
   g.setDefaultEdgeLabel(() => ({}));
-  for (const s of diagram.states ?? []) g.setNode(s.id, stateSize(s.title, s.kind));
+  for (const s of diagram.states ?? []) g.setNode(s.id, stateSize(s.title, s.kind, s.changes?.length ?? 0));
   for (const t of diagram.transitions ?? []) {
     if (t.from === t.to || !g.hasNode(t.from) || !g.hasNode(t.to)) continue;
     const label = t.label ?? "";

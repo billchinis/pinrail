@@ -229,9 +229,14 @@ body.cm-resizing-panel * {
     opacity 0.2s,
     box-shadow 0.2s;
 }
-/* each row of a card spans its width: a button's content does not stretch
-   by itself in the app's WebKit, where it shrinks to its text and centres */
-.cm-part > :not(.cm-marks-corner, .react-flow__handle) {
+/* each row of a part's card spans its width: a button's content does not
+   stretch by itself in the app's WebKit, where it shrinks to its text and
+   centres. A state's card lays its name and its files out in a row. */
+.cm-part:is(.cm-part-detailed, .cm-part-compact) > :not(.cm-marks-corner, .react-flow__handle, .cm-part-shot) {
+  width: 100%;
+  box-sizing: border-box;
+}
+.cm-part-compact > .cm-part-shot {
   width: 100%;
   box-sizing: border-box;
 }
