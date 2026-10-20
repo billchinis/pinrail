@@ -14,6 +14,7 @@ pub mod manifest;
 pub mod markdown;
 pub mod sample;
 pub mod schema;
+pub mod skill;
 pub mod summary;
 
 pub use manifest::{Install, Plugin};

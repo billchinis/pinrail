@@ -55,6 +55,10 @@ pub struct Plugin {
     pub summary_error: Option<String>,
     /// When an agent should ask with this plugin (the manifest's `use_when`).
     pub use_when: Option<String>,
+    /// What the plugin tells an agent beyond its schemas, from its `skill/`
+    /// folder; `skill_error` says why one that is there was dropped.
+    pub skill: Option<crate::skill::Skill>,
+    pub skill_error: Option<String>,
     /// Whole reviews anyone can send to see the plugin, from
     /// `samples/<name>.json`, in order of name. The first one's payload is
     /// the example an agent is shown. `sample_errors` says why each one
@@ -219,6 +223,8 @@ impl Plugin {
                 summary: Default::default(),
                 summary_error: None,
                 use_when: None,
+                skill: None,
+                skill_error: None,
                 samples: Vec::new(),
                 sample_errors: Vec::new(),
                 attachment_errors: Vec::new(),
@@ -394,6 +400,11 @@ impl Plugin {
             .get("use_when")
             .and_then(Value::as_str)
             .map(str::to_string);
+        // a skill that is not in order costs the plugin its skill, not its use
+        let (skill, skill_error) = match crate::skill::load(dir) {
+            Ok(skill) => (skill, None),
+            Err(message) => (None, Some(message)),
+        };
         let attachments = match manifest.get("attachments") {
             None | Some(Value::Null) => None,
             Some(block) => Some(crate::attachments::AttachmentRules::parse(block)?),
@@ -431,6 +442,8 @@ impl Plugin {
             summary,
             summary_error,
             use_when,
+            skill,
+            skill_error,
             samples,
             sample_errors,
             attachment_errors,
@@ -566,6 +579,7 @@ impl Plugin {
             "samples": self.sample_names(),
             "attachments": self.manifest.get("attachments"),
             "markdown": self.decision_template.is_some(),
+            "skill": self.skill.is_some(),
         })
     }
 
@@ -594,6 +608,7 @@ impl Plugin {
             ("template", &self.template_error),
             ("summary", &self.summary_error),
             ("icon", &self.icon_error),
+            ("skill", &self.skill_error),
         ]
         .into_iter()
         .filter_map(|(key, error)| {
@@ -653,6 +668,12 @@ impl Plugin {
             "summary_error": self.summary_error,
             "description": self.manifest.get("description"),
             "use_when": self.use_when,
+            "skill": self.skill.as_ref().map(|s| serde_json::json!({
+                "name": s.name,
+                "description": s.description,
+                "files": s.files,
+            })),
+            "skill_error": self.skill_error,
             "samples": self.sample_names(),
             "sample_errors": self.sample_errors,
             "attachments": self.manifest.get("attachments"),
@@ -1111,6 +1132,41 @@ mod tests {
         ] {
             assert!(!super::valid_name(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn a_skill_folder_is_the_plugins_skill_and_a_broken_one_only_a_warning() {
+        let root = tempfile::tempdir().unwrap();
+        let dir = plugin_dir(root.path(), "mapper", "");
+        std::fs::create_dir_all(dir.join("skill")).unwrap();
+        std::fs::write(
+            dir.join("skill/SKILL.md"),
+            "---\nname: mapper\ndescription: How to map a change\n---\n",
+        )
+        .unwrap();
+        let plugin = Plugin::load(&dir);
+        assert_eq!(
+            plugin.skill.as_ref().unwrap().description,
+            "How to map a change"
+        );
+        assert_eq!(
+            plugin.to_json()["skill"]["files"],
+            serde_json::json!(["SKILL.md"])
+        );
+        assert_eq!(plugin.describe()["skill"], true);
+
+        std::fs::write(dir.join("skill/SKILL.md"), "# no front matter").unwrap();
+        let plugin = Plugin::load(&dir);
+        assert!(plugin.usable());
+        assert!(plugin.skill.is_none());
+        let verdict = plugin.verdict();
+        assert_eq!(verdict["warnings"][0]["key"], "skill");
+        assert!(
+            verdict["warnings"][0]["message"]
+                .as_str()
+                .unwrap()
+                .contains("front matter")
+        );
     }
 
     /// A plugin directory with the given manifest fields on top of the

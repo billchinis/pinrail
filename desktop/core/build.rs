@@ -23,6 +23,7 @@ const LAYOUT: &[&str] = &[
     "view",
     "templates",
     "samples",
+    "skill",
 ];
 
 /// The plugins the app's catalog offers, by their folder in `plugins/`.

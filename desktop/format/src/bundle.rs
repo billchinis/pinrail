@@ -25,7 +25,7 @@ pub const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 /// The files a bundle holds at its top level, and nothing else.
 const TOP_FILES: &[&str] = &["manifest.json", "icon.svg", "README.md", "LICENSE"];
 /// The folders a bundle holds at its top level, with what is in them.
-const TOP_FOLDERS: &[&str] = &["schemas", "view", "templates", "samples"];
+const TOP_FOLDERS: &[&str] = &["schemas", "view", "templates", "samples", "skill"];
 
 /// Whether a top-level entry belongs in a bundle.
 pub fn in_layout(top: &str) -> bool {
@@ -507,6 +507,22 @@ mod tests {
         // a file called view
         assert!(listing(&[("manifest.json/a", "x")], Taken::AsBundle).is_err());
         assert!(listing(&[("view", "x")], Taken::AsBundle).is_err());
+    }
+
+    #[test]
+    fn a_bundle_keeps_the_plugins_skill_with_its_scripts() {
+        let mut source = PLUGIN.to_vec();
+        source.extend([
+            ("skill/SKILL.md", "---\ndescription: x\n---\n"),
+            ("skill/scripts/files.mjs", "x"),
+        ]);
+        let taken = Listing::of_folder(folder(&source).path(), Taken::FromSource).unwrap();
+        let paths: Vec<&str> = taken.files.iter().map(|f| f.path.as_str()).collect();
+        assert!(paths.contains(&"skill/SKILL.md"), "{paths:?}");
+        assert!(paths.contains(&"skill/scripts/files.mjs"), "{paths:?}");
+        // a bundle may hold one, and one without stays as it was
+        assert!(listing(&source, Taken::AsBundle).is_ok());
+        assert!(holds("skill/SKILL.md"));
     }
 
     #[test]
