@@ -4,6 +4,7 @@ description: Submit a review to the person through Pinrail and wait for their de
 metadata:
   managed-by: Pinrail
   sha: {sha}
+  base: {base}
 ---
 
 # Pinrail

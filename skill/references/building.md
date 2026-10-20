@@ -36,6 +36,12 @@ copies these files and nothing else:
 - `samples/<name>.json`: whole reviews that show the plugin at work.
 - `icon.svg`, `README.md`, and optionally `LICENSE` and
   `templates/decision.md.j2`.
+- Optionally `skill/`: a skill for the agents that ask with the plugin,
+  in the usual layout, with a `SKILL.md` whose front matter gives a
+  `description`, and the references and scripts it links to. Add one when
+  building the payload takes more than the schema says, such as how to
+  derive it from the work. Pinrail adds it to each connected agent's
+  `pinrail` skill, under `plugins/<name>/`.
 
 `pinrail-plugin.d.ts`, the SDK's types, is for your editor while you work,
 and is not installed. `pinrail plugins check <path>` reports what the app

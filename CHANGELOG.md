@@ -13,6 +13,12 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Added
 
+- The `pinrail` skill lists the installed plugins and when to use each.
+  A plugin can ship a skill of its own in a `skill/` folder, which
+  Pinrail writes into each connected agent's `pinrail` skill under
+  `plugins/<name>/`. Installing, updating or removing a plugin rewrites
+  the connected agents' skills. For now the skills of the official
+  plugins and of linked plugins reach the agents.
 - The change map plugin, `change-map`, among the official plugins. It
   shows a code change, such as a pull request, as a diagram of the parts
   it touches and how they interact, with each part's diff, screenshots

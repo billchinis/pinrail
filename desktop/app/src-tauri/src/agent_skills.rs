@@ -5,24 +5,143 @@
 //! prompt or skill that sends an agent to it says when. Its files are the
 //! `skill/` folder of the repository, embedded at build.
 //!
+//! To those files the app adds what is installed: SKILL.md ends with a list
+//! of the installed plugins, each with when to use it, and the skill of each
+//! plugin that ships one goes under `plugins/<name>/`, linked from the list.
+//!
 //! A skill the app wrote says `managed-by: Pinrail` in its front matter, so
 //! the app updates and removes only its own. A `pinrail` skill without that
 //! line is the person's, and is left alone. The front matter also carries
-//! a SHA-256 of the skill's files: a copy with another one is outdated.
+//! a SHA-256 of all the files written, so a copy with another one is
+//! outdated, and as `base` the SHA-256 of the app's own files, so a copy
+//! that differs only in its plugins can be told from one an older app wrote.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 
-/// The skill's files as the app writes them: each one's path in the
-/// skill's folder, such as `references/building.md`, and its text.
+/// The app's own files of the skill: each one's path in the skill's folder,
+/// such as `references/building.md`, and its text, SKILL.md with `{sha}`
+/// and `{base}` still in its front matter.
 const FILES: &[(&str, &str)] = include!(concat!(env!("OUT_DIR"), "/skill_files.rs"));
-/// The SHA-256 of the files, which SKILL.md's front matter carries.
-const SHA: &str = include!(concat!(env!("OUT_DIR"), "/skill_sha.rs"));
+/// The SHA-256 of the app's own files.
+const BASE: &str = include!(concat!(env!("OUT_DIR"), "/skill_sha.rs"));
 const MARK: &str = "managed-by: Pinrail";
-/// The folder of the skill's references, which is all the app's.
+/// The folders of the skill's references and of its plugins' skills, which
+/// are all the app's.
 const REFERENCES: &str = "references";
+const PLUGINS: &str = "plugins";
+
+/// An installed plugin as the skill names it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstalledPlugin {
+    pub name: String,
+    pub title: String,
+    /// when an agent should ask with it, or what it is
+    pub use_when: Option<String>,
+    /// the folder of its skill and the files in it, when its skill goes to
+    /// the agents
+    pub skill: Option<(PathBuf, Vec<String>)>,
+}
+
+/// The skill as this app writes it with the plugins installed now: its
+/// files, and the SHA-256 that names them.
+#[derive(Debug, Clone)]
+pub struct Skill {
+    files: Vec<(String, Vec<u8>)>,
+    sha: String,
+}
+
+impl Skill {
+    /// The app's files, with the list of `plugins` at the end of SKILL.md
+    /// and the skills they ship under `plugins/`. A plugin skill whose files
+    /// cannot be read is left out, and its plugin listed without it.
+    pub fn with(plugins: &[InstalledPlugin]) -> Skill {
+        let mut extra: Vec<(String, Vec<u8>)> = Vec::new();
+        let mut list = String::new();
+        for plugin in plugins {
+            let read: Option<Vec<(String, Vec<u8>)>> =
+                plugin.skill.as_ref().and_then(|(dir, files)| {
+                    files
+                        .iter()
+                        .map(|rel| {
+                            let path = dir.join(rel);
+                            // the files of a skill are below its folder
+                            (!rel.split('/').any(|part| part == ".." || part.is_empty()))
+                                .then(|| fs::read(&path).ok())
+                                .flatten()
+                                .map(|bytes| (format!("{PLUGINS}/{}/{rel}", plugin.name), bytes))
+                        })
+                        .collect()
+                });
+            list.push_str(&format!("- `{}` ({})", plugin.name, plugin.title));
+            if let Some(when) = plugin.use_when.as_deref().filter(|w| !w.trim().is_empty()) {
+                list.push_str(&format!(": {}", when.trim()));
+            }
+            if let Some(files) = read {
+                list.push_str(&format!(
+                    " Before you submit to it, read [its skill]({PLUGINS}/{}/SKILL.md).",
+                    plugin.name
+                ));
+                extra.extend(files);
+            }
+            list.push('\n');
+        }
+        let section = if plugins.is_empty() {
+            "\n## Installed plugins\n\nNo plugins were installed in Pinrail when it wrote this skill. \
+             `pinrail plugins` lists the ones installed since.\n"
+                .to_string()
+        } else {
+            format!(
+                "\n## Installed plugins\n\nThe plugins installed in Pinrail when it wrote this skill. \
+                 `pinrail plugins` lists the ones installed since.\n\n{list}"
+            )
+        };
+        let mut files: Vec<(String, Vec<u8>)> = FILES
+            .iter()
+            .map(|(rel, text)| {
+                let text = if *rel == "SKILL.md" {
+                    format!("{}\n{section}", text.trim_end_matches('\n'))
+                } else {
+                    text.to_string()
+                };
+                (rel.to_string(), text.into_bytes())
+            })
+            .collect();
+        files.extend(extra);
+        files.sort_by(|a, b| a.0.cmp(&b.0));
+        // all the files as they are written, SKILL.md with its placeholders
+        let mut hash = Sha256::new();
+        for (rel, bytes) in &files {
+            hash.update(rel.as_bytes());
+            hash.update([0]);
+            hash.update(bytes);
+            hash.update([0]);
+        }
+        let sha: String = hash.finalize().iter().map(|b| format!("{b:02x}")).collect();
+        for (rel, bytes) in &mut files {
+            if rel == "SKILL.md" {
+                let text = String::from_utf8_lossy(bytes)
+                    .replace("{sha}", &sha)
+                    .replace("{base}", BASE);
+                *bytes = text.into_bytes();
+            }
+        }
+        Skill { files, sha }
+    }
+
+    /// SKILL.md as it is written.
+    #[cfg(test)]
+    pub fn text(&self) -> String {
+        self.files
+            .iter()
+            .find(|(rel, _)| rel == "SKILL.md")
+            .map(|(_, bytes)| String::from_utf8_lossy(bytes).into_owned())
+            .expect("the skill has a SKILL.md")
+    }
+}
 
 /// An agent the app knows: where its configuration folder is, and where it
 /// keeps global skills, both under the home folder.
@@ -176,12 +295,12 @@ pub enum State {
     Theirs,
 }
 
-/// The skill's SKILL.md as this version of the app writes it.
-pub fn skill_text() -> &'static str {
+/// The app's own SKILL.md, without the installed plugins.
+fn base_text() -> String {
     FILES
         .iter()
         .find(|(path, _)| *path == "SKILL.md")
-        .map(|(_, text)| *text)
+        .map(|(_, text)| text.replace("{sha}", BASE).replace("{base}", BASE))
         .expect("the skill has a SKILL.md")
 }
 
@@ -190,7 +309,8 @@ pub fn skill_text() -> &'static str {
 /// command that prints the same text.
 pub fn skill_to_copy() -> String {
     let mut out = String::new();
-    let mut rest = skill_text();
+    let text = base_text();
+    let mut rest = text.as_str();
     while let Some(at) = rest.find("](references/") {
         let Some(open) = rest[..at].rfind('[') else {
             break;
@@ -212,11 +332,11 @@ fn skill_path(home: &Path, agent: &Agent) -> PathBuf {
 }
 
 /// What is in an agent's place for the skill.
-fn state_of(path: &Path) -> State {
+fn state_of(path: &Path, skill: &Skill) -> State {
     match fs::read_to_string(path) {
         Err(_) => State::Absent,
         Ok(text) if !managed(&text) => State::Theirs,
-        Ok(text) if sha(&text) == Some(SHA) => State::Connected,
+        Ok(text) if sha(&text, "sha") == Some(skill.sha.as_str()) => State::Connected,
         Ok(_) => State::Outdated,
     }
 }
@@ -238,13 +358,15 @@ fn managed(text: &str) -> bool {
     front_matter(text).is_some_and(|mut lines| lines.any(|line| line == MARK))
 }
 
-/// The SHA-256 the front matter gives for the skill's files.
-fn sha(text: &str) -> Option<&str> {
-    front_matter(text)?.find_map(|line| line.strip_prefix("sha:").map(str::trim))
+/// A SHA-256 the front matter gives: `sha` for all the skill's files,
+/// `base` for the app's own.
+fn sha<'a>(text: &'a str, key: &str) -> Option<&'a str> {
+    let key = format!("{key}:");
+    front_matter(text)?.find_map(|line| line.strip_prefix(key.as_str()).map(str::trim))
 }
 
 /// Every agent the app knows, found or not.
-pub fn status(home: &Path) -> Vec<AgentStatus> {
+pub fn status(home: &Path, skill: &Skill) -> Vec<AgentStatus> {
     AGENTS
         .iter()
         .map(|agent| AgentStatus {
@@ -252,7 +374,7 @@ pub fn status(home: &Path) -> Vec<AgentStatus> {
             name: agent.name,
             found: home.join(agent.config).is_dir(),
             skill: skill_path(home, agent).display().to_string(),
-            state: state_of(&skill_path(home, agent)),
+            state: state_of(&skill_path(home, agent), skill),
             also_reads: agent
                 .also_reads
                 .iter()
@@ -272,7 +394,7 @@ fn find(id: &str) -> Result<&'static Agent, String> {
 
 /// Writes the skill for an agent that is installed, or brings an older one
 /// up to date. A `pinrail` skill of the person's own is never replaced.
-pub fn connect(home: &Path, id: &str) -> Result<(), String> {
+pub fn connect(home: &Path, id: &str, skill: &Skill) -> Result<(), String> {
     let agent = find(id)?;
     if !home.join(agent.config).is_dir() {
         return Err(format!(
@@ -281,20 +403,25 @@ pub fn connect(home: &Path, id: &str) -> Result<(), String> {
         ));
     }
     let path = skill_path(home, agent);
-    if state_of(&path) == State::Theirs {
+    if state_of(&path, skill) == State::Theirs {
         return Err(format!(
             "{} is a skill of yours, not Pinrail's; it is left alone",
             path.display()
         ));
     }
     let dir = path.parent().expect("the skill's path has a folder");
-    // the references of an older version go, and this version's take their place
-    remove_references(dir)?;
+    // the references and plugin skills written before go, and these take
+    // their place: a plugin removed since is left out
+    remove_generated(dir)?;
     // SKILL.md last, so the skill counts as connected only once it is whole
-    let mut files: Vec<&(&str, &str)> = FILES.iter().filter(|(p, _)| *p != "SKILL.md").collect();
-    files.extend(FILES.iter().filter(|(p, _)| *p == "SKILL.md"));
-    for (rel, text) in files {
-        write(&dir.join(rel), text)?;
+    let mut files: Vec<&(String, Vec<u8>)> = skill
+        .files
+        .iter()
+        .filter(|(p, _)| p != "SKILL.md")
+        .collect();
+    files.extend(skill.files.iter().filter(|(p, _)| p == "SKILL.md"));
+    for (rel, bytes) in files {
+        write(&dir.join(rel), bytes)?;
     }
     Ok(())
 }
@@ -302,18 +429,36 @@ pub fn connect(home: &Path, id: &str) -> Result<(), String> {
 /// Brings every agent's outdated skill up to date, and returns the names of
 /// the agents it updated. An agent whose skill is missing, current or the
 /// person's own is left as it is.
-pub fn update_outdated(home: &Path) -> Vec<&'static str> {
-    status(home)
+pub fn update_outdated(home: &Path, skill: &Skill) -> Vec<&'static str> {
+    status(home, skill)
         .into_iter()
         .filter(|a| a.found && a.state == State::Outdated)
-        .filter(|a| connect(home, a.id).is_ok())
+        .filter(|a| connect(home, a.id, skill).is_ok())
         .map(|a| a.name)
+        .collect()
+}
+
+/// Rewrites each agent's skill that differs from `skill` only in its
+/// plugins, after a plugin was installed, updated or removed, and returns
+/// the names of the agents it rewrote. A skill an older app wrote waits for
+/// the person, or for the update at start when they asked for one.
+pub fn refresh_plugins(home: &Path, skill: &Skill) -> Vec<&'static str> {
+    AGENTS
+        .iter()
+        .filter(|agent| home.join(agent.config).is_dir())
+        .filter(|agent| {
+            let path = skill_path(home, agent);
+            state_of(&path, skill) == State::Outdated
+                && fs::read_to_string(&path).is_ok_and(|text| sha(&text, "base") == Some(BASE))
+        })
+        .filter(|agent| connect(home, agent.id, skill).is_ok())
+        .map(|agent| agent.name)
         .collect()
 }
 
 /// Writes one file beside where it goes and renames it, so an agent never
 /// reads half of it.
-fn write(path: &Path, text: &str) -> Result<(), String> {
+fn write(path: &Path, text: &[u8]) -> Result<(), String> {
     let folder = path.parent().expect("a skill file has a folder");
     fs::create_dir_all(folder).map_err(|e| format!("creating {}: {e}", folder.display()))?;
     let name = path.file_name().unwrap().to_string_lossy();
@@ -322,14 +467,19 @@ fn write(path: &Path, text: &str) -> Result<(), String> {
     fs::rename(&partial, path).map_err(|e| format!("writing {}: {e}", path.display()))
 }
 
-fn remove_references(dir: &Path) -> Result<(), String> {
-    let references = dir.join(REFERENCES);
-    match fs::remove_dir_all(&references) {
-        Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-            Err(format!("removing {}: {e}", references.display()))
+/// Removes the folders the app writes beside SKILL.md: its references and
+/// the plugins' skills.
+fn remove_generated(dir: &Path) -> Result<(), String> {
+    for folder in [REFERENCES, PLUGINS] {
+        let path = dir.join(folder);
+        match fs::remove_dir_all(&path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                return Err(format!("removing {}: {e}", path.display()));
+            }
+            _ => {}
         }
-        _ => Ok(()),
     }
+    Ok(())
 }
 
 /// Removes the app's skill from an agent, and its folder when nothing else
@@ -349,7 +499,7 @@ pub fn disconnect(home: &Path, id: &str) -> Result<(), String> {
     }
     fs::remove_file(&path).map_err(|e| format!("removing {}: {e}", path.display()))?;
     if let Some(dir) = path.parent() {
-        remove_references(dir)?;
+        remove_generated(dir)?;
         // only when empty: the person may keep files of their own beside it
         let _ = fs::remove_dir(dir);
     }
@@ -368,17 +518,28 @@ mod tests {
         home
     }
 
+    /// The skill with no plugins installed.
+    fn none() -> Skill {
+        Skill::with(&[])
+    }
+
     fn state(home: &Path, id: &str) -> AgentStatus {
-        status(home).into_iter().find(|a| a.id == id).unwrap()
+        status(home, &none())
+            .into_iter()
+            .find(|a| a.id == id)
+            .unwrap()
     }
 
     #[test]
     fn the_skill_in_the_repository_is_marked_as_the_apps() {
-        let text = skill_text();
-        assert!(managed(text));
-        assert_eq!(sha(text), Some(SHA));
-        assert_eq!(SHA.len(), 64);
+        let skill = none();
+        let text = skill.text();
+        assert!(managed(&text));
+        assert_eq!(sha(&text, "sha"), Some(skill.sha.as_str()));
+        assert_eq!(sha(&text, "base"), Some(BASE));
+        assert_eq!(BASE.len(), 64);
         assert!(text.starts_with("---\nname: pinrail\n"));
+        assert!(!text.contains("{sha}") && !text.contains("{base}"));
     }
 
     #[test]
@@ -435,10 +596,124 @@ mod tests {
         }
     }
 
+    /// The list plugin, without a skill, and the change map with one, in a
+    /// folder under `root`.
+    fn plugins(root: &Path) -> Vec<InstalledPlugin> {
+        let skill = root.join("change-map/skill");
+        fs::create_dir_all(skill.join("scripts")).unwrap();
+        fs::write(
+            skill.join("SKILL.md"),
+            "---\ndescription: Map a change\n---\n# Change map\n",
+        )
+        .unwrap();
+        fs::write(skill.join("scripts/files.mjs"), "// the diff's files\n").unwrap();
+        vec![
+            InstalledPlugin {
+                name: "list".into(),
+                title: "List".into(),
+                use_when: Some("Items to accept or reject.".into()),
+                skill: None,
+            },
+            InstalledPlugin {
+                name: "change-map".into(),
+                title: "Change map".into(),
+                use_when: Some("A code change to review as a diagram.".into()),
+                skill: Some((skill, vec!["SKILL.md".into(), "scripts/files.mjs".into()])),
+            },
+        ]
+    }
+
+    #[test]
+    fn the_skill_lists_the_installed_plugins_and_carries_their_skills() {
+        let root = tempfile::tempdir().unwrap();
+        let skill = Skill::with(&plugins(root.path()));
+        let text = skill.text();
+        assert!(
+            text.ends_with(
+                "## Installed plugins\n\nThe plugins installed in Pinrail when it wrote this skill. \
+                 `pinrail plugins` lists the ones installed since.\n\n\
+                 - `list` (List): Items to accept or reject.\n\
+                 - `change-map` (Change map): A code change to review as a diagram. \
+                 Before you submit to it, read [its skill](plugins/change-map/SKILL.md).\n"
+            ),
+            "{text}"
+        );
+        assert_ne!(skill.sha, none().sha, "the hash covers the plugins");
+
+        let home = home_with(&[".claude"]);
+        connect(home.path(), "claude", &skill).unwrap();
+        let dir = home.path().join(".claude/skills/pinrail");
+        assert_eq!(
+            fs::read_to_string(dir.join("plugins/change-map/scripts/files.mjs")).unwrap(),
+            "// the diff's files\n"
+        );
+        assert_eq!(fs::read_to_string(dir.join("SKILL.md")).unwrap(), text);
+        assert_eq!(status(home.path(), &skill)[0].state, State::Connected);
+    }
+
+    #[test]
+    fn a_removed_plugins_skill_goes_and_the_agents_follow_the_plugins() {
+        let root = tempfile::tempdir().unwrap();
+        let with = Skill::with(&plugins(root.path()));
+        let home = home_with(&[".claude", ".codex"]);
+        connect(home.path(), "claude", &with).unwrap();
+        connect(home.path(), "codex", &with).unwrap();
+        // Codex's skill as an older app wrote it: its base differs
+        let codex = home.path().join(".codex/skills/pinrail/SKILL.md");
+        let older = fs::read_to_string(&codex)
+            .unwrap()
+            .replace(BASE, "0123")
+            .replace(&with.sha, "4567");
+        fs::write(&codex, &older).unwrap();
+
+        // the change map removed: the list alone
+        let without = Skill::with(&plugins(root.path())[..1]);
+        assert_eq!(status(home.path(), &without)[0].state, State::Outdated);
+        assert_eq!(refresh_plugins(home.path(), &without), ["Claude Code"]);
+        let claude = home.path().join(".claude/skills/pinrail");
+        assert!(!claude.join("plugins/change-map").exists());
+        assert_eq!(
+            fs::read_to_string(claude.join("SKILL.md")).unwrap(),
+            without.text()
+        );
+        // an older app's skill waits for the update the person chooses
+        assert_eq!(fs::read_to_string(&codex).unwrap(), older);
+        assert_eq!(update_outdated(home.path(), &without), ["Codex"]);
+    }
+
+    #[test]
+    fn a_plugin_skill_that_cannot_be_read_is_left_out_and_its_plugin_listed() {
+        let root = tempfile::tempdir().unwrap();
+        let mut listed = plugins(root.path());
+        fs::remove_file(root.path().join("change-map/skill/scripts/files.mjs")).unwrap();
+        // and a path that leaves the skill's folder is never read
+        listed[0].skill = Some((
+            root.path().join("change-map/skill"),
+            vec!["../../secret".into()],
+        ));
+        let skill = Skill::with(&listed);
+        let text = skill.text();
+        assert!(
+            text.contains("- `change-map` (Change map): A code change to review as a diagram.\n"),
+            "{text}"
+        );
+        assert!(
+            text.contains("- `list` (List): Items to accept or reject.\n"),
+            "{text}"
+        );
+        assert!(!text.contains("plugins/"), "{text}");
+        assert!(
+            skill
+                .files
+                .iter()
+                .all(|(rel, _)| !rel.starts_with("plugins/"))
+        );
+    }
+
     #[test]
     fn an_agent_is_found_by_its_configuration_folder() {
         let home = home_with(&[".claude", ".config/opencode"]);
-        let found: Vec<_> = status(home.path())
+        let found: Vec<_> = status(home.path(), &none())
             .into_iter()
             .filter(|a| a.found)
             .map(|a| a.id)
@@ -452,9 +727,9 @@ mod tests {
     #[test]
     fn connecting_writes_the_skill_and_removing_takes_it_away() {
         let home = home_with(&[".codex"]);
-        connect(home.path(), "codex").unwrap();
+        connect(home.path(), "codex", &none()).unwrap();
         let path = home.path().join(".codex/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(&path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(&path).unwrap(), none().text());
         let building = home
             .path()
             .join(".codex/skills/pinrail/references/building.md");
@@ -480,7 +755,7 @@ mod tests {
     #[test]
     fn an_agent_that_is_not_installed_is_not_connected() {
         let home = home_with(&[]);
-        let refused = connect(home.path(), "antigravity").unwrap_err();
+        let refused = connect(home.path(), "antigravity", &none()).unwrap_err();
         assert!(
             refused.contains("Antigravity CLI is not installed"),
             "{refused}"
@@ -491,19 +766,19 @@ mod tests {
     #[test]
     fn a_skill_with_other_contents_is_outdated_and_connecting_updates_it() {
         let home = home_with(&[".claude"]);
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         let dir = home.path().join(".claude/skills/pinrail");
         // as an older app wrote it: another hash, and a reference since dropped
-        let older = skill_text().replace(SHA, "0123");
+        let older = none().text().replace(&none().sha, "0123");
         fs::write(dir.join("SKILL.md"), &older).unwrap();
         fs::write(dir.join("references/dropped.md"), "# Dropped\n").unwrap();
         assert_eq!(state(home.path(), "claude").state, State::Outdated);
 
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         assert_eq!(state(home.path(), "claude").state, State::Connected);
         assert_eq!(
             fs::read_to_string(dir.join("SKILL.md")).unwrap(),
-            skill_text()
+            none().text()
         );
         assert!(!dir.join("references/dropped.md").exists());
     }
@@ -511,18 +786,18 @@ mod tests {
     #[test]
     fn updating_outdated_skills_leaves_the_others_alone() {
         let home = home_with(&[".claude", ".codex", ".cursor", ".config/opencode"]);
-        connect(home.path(), "claude").unwrap();
-        connect(home.path(), "codex").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
+        connect(home.path(), "codex", &none()).unwrap();
         // Claude Code's skill as an older app wrote it
         let claude = home.path().join(".claude/skills/pinrail/SKILL.md");
-        fs::write(&claude, skill_text().replace(SHA, "0123")).unwrap();
+        fs::write(&claude, none().text().replace(&none().sha, "0123")).unwrap();
         // a skill of the person's own
         let cursor = home.path().join(".cursor/skills/pinrail");
         fs::create_dir_all(&cursor).unwrap();
         fs::write(cursor.join("SKILL.md"), "---\nname: pinrail\n---\nmine\n").unwrap();
 
-        assert_eq!(update_outdated(home.path()), ["Claude Code"]);
-        assert_eq!(fs::read_to_string(&claude).unwrap(), skill_text());
+        assert_eq!(update_outdated(home.path(), &none()), ["Claude Code"]);
+        assert_eq!(fs::read_to_string(&claude).unwrap(), none().text());
         assert_eq!(state(home.path(), "codex").state, State::Connected);
         assert_eq!(state(home.path(), "cursor").state, State::Theirs);
         // an agent never connected is not connected by an update
@@ -532,7 +807,7 @@ mod tests {
     #[test]
     fn only_the_hash_decides_whether_a_skill_is_current() {
         let home = home_with(&[".claude"]);
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         // a reference changed by hand does not make the skill outdated, nor
         // does any other change that keeps the hash
         let dir = home.path().join(".claude/skills/pinrail");
@@ -551,7 +826,7 @@ mod tests {
 
         assert_eq!(state(home.path(), "cursor").state, State::Theirs);
         assert!(
-            connect(home.path(), "cursor")
+            connect(home.path(), "cursor", &none())
                 .unwrap_err()
                 .contains("a skill of yours")
         );
@@ -575,7 +850,7 @@ mod tests {
     #[test]
     fn removing_keeps_files_of_the_persons_own_beside_the_skill() {
         let home = home_with(&[".claude"]);
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         let dir = home.path().join(".claude/skills/pinrail");
         fs::write(dir.join("notes.md"), "mine").unwrap();
         disconnect(home.path(), "claude").unwrap();
@@ -587,13 +862,13 @@ mod tests {
     #[test]
     fn opencode_gets_its_own_skill_beside_claude_codes() {
         let home = home_with(&[".claude", ".config/opencode"]);
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         let opencode = state(home.path(), "opencode");
         assert_eq!(opencode.state, State::Absent);
         assert_eq!(opencode.also_reads, ["Claude Code"]);
-        connect(home.path(), "opencode").unwrap();
+        connect(home.path(), "opencode", &none()).unwrap();
         let path = home.path().join(".config/opencode/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "opencode").state, State::Connected);
         assert_eq!(state(home.path(), "claude").state, State::Connected);
     }
@@ -601,52 +876,52 @@ mod tests {
     #[test]
     fn antigravity_keeps_its_skills_in_geminis_config_folder() {
         let home = home_with(&[".gemini"]);
-        connect(home.path(), "antigravity").unwrap();
+        connect(home.path(), "antigravity", &none()).unwrap();
         let path = home.path().join(".gemini/config/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "antigravity").state, State::Connected);
     }
 
     #[test]
     fn grok_gets_its_own_skill_beside_claude_codes_and_cursors() {
         let home = home_with(&[".grok", ".claude", ".cursor"]);
-        connect(home.path(), "claude").unwrap();
-        connect(home.path(), "cursor").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
+        connect(home.path(), "cursor", &none()).unwrap();
         let grok = state(home.path(), "grok");
         assert!(grok.found);
         assert_eq!(grok.state, State::Absent);
         assert_eq!(grok.also_reads, ["Claude Code", "Cursor"]);
-        connect(home.path(), "grok").unwrap();
+        connect(home.path(), "grok", &none()).unwrap();
         let path = home.path().join(".grok/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "grok").state, State::Connected);
     }
 
     #[test]
     fn goose_gets_its_own_skill_beside_claude_codes() {
         let home = home_with(&[".claude", ".config/goose"]);
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         let goose = state(home.path(), "goose");
         assert!(goose.found);
         assert_eq!(goose.state, State::Absent);
         assert_eq!(goose.also_reads, ["Claude Code"]);
-        connect(home.path(), "goose").unwrap();
+        connect(home.path(), "goose", &none()).unwrap();
         let path = home.path().join(".config/goose/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "goose").state, State::Connected);
     }
 
     #[test]
     fn amp_gets_its_own_skill_beside_claude_codes() {
         let home = home_with(&[".claude", ".config/amp"]);
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         let amp = state(home.path(), "amp");
         assert!(amp.found);
         assert_eq!(amp.state, State::Absent);
         assert_eq!(amp.also_reads, ["Claude Code"]);
-        connect(home.path(), "amp").unwrap();
+        connect(home.path(), "amp", &none()).unwrap();
         let path = home.path().join(".config/amp/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "amp").state, State::Connected);
     }
 
@@ -654,9 +929,9 @@ mod tests {
     fn copilot_cli_keeps_its_skills_in_its_folder() {
         let home = home_with(&[".copilot"]);
         assert!(state(home.path(), "copilot").found);
-        connect(home.path(), "copilot").unwrap();
+        connect(home.path(), "copilot", &none()).unwrap();
         let path = home.path().join(".copilot/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "copilot").state, State::Connected);
     }
 
@@ -664,23 +939,23 @@ mod tests {
     fn kiro_cli_keeps_its_skills_in_its_folder() {
         let home = home_with(&[".kiro"]);
         assert!(state(home.path(), "kiro").found);
-        connect(home.path(), "kiro").unwrap();
+        connect(home.path(), "kiro", &none()).unwrap();
         let path = home.path().join(".kiro/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "kiro").state, State::Connected);
     }
 
     #[test]
     fn augment_gets_its_own_skill_beside_claude_codes() {
         let home = home_with(&[".claude", ".augment"]);
-        connect(home.path(), "claude").unwrap();
+        connect(home.path(), "claude", &none()).unwrap();
         let augment = state(home.path(), "augment");
         assert!(augment.found);
         assert_eq!(augment.state, State::Absent);
         assert_eq!(augment.also_reads, ["Claude Code"]);
-        connect(home.path(), "augment").unwrap();
+        connect(home.path(), "augment", &none()).unwrap();
         let path = home.path().join(".augment/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "augment").state, State::Connected);
     }
 
@@ -688,9 +963,9 @@ mod tests {
     fn cline_keeps_its_skills_in_its_folder() {
         let home = home_with(&[".cline"]);
         assert!(state(home.path(), "cline").found);
-        connect(home.path(), "cline").unwrap();
+        connect(home.path(), "cline", &none()).unwrap();
         let path = home.path().join(".cline/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "cline").state, State::Connected);
     }
 
@@ -698,9 +973,9 @@ mod tests {
     fn hermes_agent_keeps_its_skills_in_its_folder() {
         let home = home_with(&[".hermes"]);
         assert!(state(home.path(), "hermes").found);
-        connect(home.path(), "hermes").unwrap();
+        connect(home.path(), "hermes", &none()).unwrap();
         let path = home.path().join(".hermes/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "hermes").state, State::Connected);
     }
 
@@ -708,9 +983,9 @@ mod tests {
     fn pi_keeps_its_skills_in_its_agent_folder() {
         let home = home_with(&[".pi/agent"]);
         assert!(state(home.path(), "pi").found);
-        connect(home.path(), "pi").unwrap();
+        connect(home.path(), "pi", &none()).unwrap();
         let path = home.path().join(".pi/agent/skills/pinrail/SKILL.md");
-        assert_eq!(fs::read_to_string(path).unwrap(), skill_text());
+        assert_eq!(fs::read_to_string(path).unwrap(), none().text());
         assert_eq!(state(home.path(), "pi").state, State::Connected);
     }
 }

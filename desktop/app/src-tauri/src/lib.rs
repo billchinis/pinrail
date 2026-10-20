@@ -175,13 +175,67 @@ fn home() -> Result<PathBuf, String> {
         .ok_or_else(|| "HOME is not set".to_string())
 }
 
+/// The installed plugins as the agents' skill names them: each usable one,
+/// with its skill when that goes to the agents. An official plugin's skill,
+/// installed from a catalog, is read from its bundle, and a linked plugin's from its
+/// folder as it is now, so an edit reaches the agents without a reinstall.
+fn installed_plugins(state: &Pinrail) -> Vec<agent_skills::InstalledPlugin> {
+    let listing = state.plugins().listing(&serde_json::json!({}));
+    let text = |v: &serde_json::Value| v.as_str().unwrap_or_default().to_string();
+    listing["plugins"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|p| p["usable"] == true)
+        .map(|p| {
+            let install = &p["install"];
+            let skill = if install["link"] == true {
+                let folder = PathBuf::from(text(&install["source"]));
+                pinrail_core::skill::load(&folder)
+                    .ok()
+                    .flatten()
+                    .map(|s| (folder.join(pinrail_core::skill::FOLDER), s.files))
+            } else if install["source_kind"] == "index" {
+                p["skill"]["files"].as_array().map(|files| {
+                    (
+                        PathBuf::from(text(&p["path"])).join(pinrail_core::skill::FOLDER),
+                        files.iter().map(text).collect(),
+                    )
+                })
+            } else {
+                None
+            };
+            agent_skills::InstalledPlugin {
+                name: text(&p["name"]),
+                title: text(&p["title"]),
+                use_when: p["use_when"]
+                    .as_str()
+                    .or_else(|| p["description"].as_str())
+                    .map(str::to_string),
+                skill,
+            }
+        })
+        .collect()
+}
+
+/// The `pinrail` skill as the app writes it now, with the plugins
+/// installed now.
+pub(crate) fn current_skill(state: &Pinrail) -> agent_skills::Skill {
+    agent_skills::Skill::with(&installed_plugins(state))
+}
+
 /// The agents found on this computer, and whether each has the `pinrail`
 /// skill.
 #[tauri::command]
-async fn agents_status() -> Result<Vec<agent_skills::AgentStatus>, String> {
-    tauri::async_runtime::spawn_blocking(move || Ok(agent_skills::status(&home()?)))
-        .await
-        .map_err(|e| e.to_string())?
+async fn agents_status(
+    native: State<'_, Native>,
+) -> Result<Vec<agent_skills::AgentStatus>, String> {
+    let state = native.state.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        Ok(agent_skills::status(&home()?, &current_skill(&state)))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// The skill as this version writes it, for an agent the app does not know.
@@ -193,11 +247,16 @@ fn agent_skill() -> String {
 /// Writes or updates the `pinrail` skill for an agent, then reports as
 /// `agents_status`.
 #[tauri::command]
-async fn connect_agent(id: String) -> Result<Vec<agent_skills::AgentStatus>, String> {
+async fn connect_agent(
+    native: State<'_, Native>,
+    id: String,
+) -> Result<Vec<agent_skills::AgentStatus>, String> {
+    let state = native.state.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let home = home()?;
-        agent_skills::connect(&home, &id)?;
-        Ok(agent_skills::status(&home))
+        let skill = current_skill(&state);
+        agent_skills::connect(&home, &id, &skill)?;
+        Ok(agent_skills::status(&home, &skill))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -206,11 +265,15 @@ async fn connect_agent(id: String) -> Result<Vec<agent_skills::AgentStatus>, Str
 /// Removes the app's `pinrail` skill from an agent, then reports as
 /// `agents_status`.
 #[tauri::command]
-async fn disconnect_agent(id: String) -> Result<Vec<agent_skills::AgentStatus>, String> {
+async fn disconnect_agent(
+    native: State<'_, Native>,
+    id: String,
+) -> Result<Vec<agent_skills::AgentStatus>, String> {
+    let state = native.state.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let home = home()?;
         agent_skills::disconnect(&home, &id)?;
-        Ok(agent_skills::status(&home))
+        Ok(agent_skills::status(&home, &current_skill(&state)))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -484,9 +547,10 @@ pub fn run() {
                 .as_bool()
                 .unwrap_or(false)
             {
-                std::thread::spawn(|| {
+                let skills = state.clone();
+                std::thread::spawn(move || {
                     if let Ok(home) = home() {
-                        for name in agent_skills::update_outdated(&home) {
+                        for name in agent_skills::update_outdated(&home, &current_skill(&skills)) {
                             eprintln!("pinrail: updated the pinrail skill of {name}");
                         }
                     }
@@ -757,6 +821,89 @@ pub(crate) fn sdk_dir(exe: &Path) -> Option<PathBuf> {
 #[cfg(all(test, unix))]
 mod tests {
     use std::os::unix::fs::PermissionsExt;
+
+    /// A plugin folder with a skill, named `name`.
+    fn plugin_with_skill(root: &std::path::Path, name: &str) -> std::path::PathBuf {
+        let dir = root.join(name);
+        for (path, text) in [
+            (
+                "manifest.json",
+                format!(
+                    r#"{{"name":"{name}","version":"1.0.0","title":"Mapper","use_when":"A change to map."}}"#
+                ),
+            ),
+            ("view/index.html", "<html></html>".to_string()),
+            ("schemas/payload.schema.json", "{}".to_string()),
+            ("schemas/decision.schema.json", "{}".to_string()),
+            (
+                "skill/SKILL.md",
+                "---\ndescription: Map a change\n---\n".to_string(),
+            ),
+        ] {
+            let path = dir.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        dir
+    }
+
+    #[test]
+    fn an_official_plugins_skill_reaches_the_agents() {
+        let root = tempfile::tempdir().unwrap();
+        let catalog = root.path().join("catalog");
+        plugin_with_skill(&catalog, "mapper");
+        let mut config = pinrail_core::Config::new(root.path().join("data"), 0);
+        config.catalog_dir = Some(catalog);
+        let app = pinrail_core::Pinrail::open(config).unwrap();
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(app.plugins().install_offered("forgeplane/mapper"))
+            .unwrap();
+
+        let plugins = super::installed_plugins(&app);
+        let mapper = plugins.iter().find(|p| p.name == "mapper").unwrap();
+        let (folder, files) = mapper.skill.clone().expect("the official plugin's skill");
+        assert_eq!(files, ["SKILL.md"]);
+        assert!(folder.join("SKILL.md").is_file(), "{}", folder.display());
+    }
+
+    #[test]
+    fn a_linked_plugins_skill_reaches_the_agents_and_a_copied_ones_does_not() {
+        let root = tempfile::tempdir().unwrap();
+        let app =
+            pinrail_core::Pinrail::open(pinrail_core::Config::new(root.path().join("data"), 0))
+                .unwrap();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let install = |name: &str, link: bool| {
+            let folder = plugin_with_skill(root.path(), name);
+            runtime
+                .block_on(app.plugins().install(
+                    folder.to_str().unwrap(),
+                    pinrail_core::plugins::InstallOptions { link },
+                ))
+                .unwrap();
+        };
+        install("linked", true);
+        install("copied", false);
+
+        let plugins = super::installed_plugins(&app);
+        let linked = plugins.iter().find(|p| p.name == "linked").unwrap();
+        let (folder, files) = linked.skill.clone().unwrap();
+        assert_eq!(folder, root.path().join("linked/skill"));
+        assert_eq!(files, ["SKILL.md"]);
+        assert_eq!(linked.use_when.as_deref(), Some("A change to map."));
+        let copied = plugins.iter().find(|p| p.name == "copied").unwrap();
+        assert!(
+            copied.skill.is_none(),
+            "a copied plugin's skill waits to be allowed"
+        );
+
+        // an edit in the linked folder is read as it is now
+        std::fs::write(root.path().join("linked/skill/notes.md"), "# Notes").unwrap();
+        let plugins = super::installed_plugins(&app);
+        let linked = plugins.iter().find(|p| p.name == "linked").unwrap();
+        assert_eq!(linked.skill.as_ref().unwrap().1, ["SKILL.md", "notes.md"]);
+    }
 
     #[test]
     fn a_saved_attachment_is_a_new_file_of_the_persons() {

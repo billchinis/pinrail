@@ -66,6 +66,7 @@ Each of the files the app reads has a fixed place in the folder, so the manifest
 | `templates/decision.md.j2` | Optional. A template that renders a decision as markdown. |
 | `icon.svg` | Optional. The plugin's icon, shown wherever the app names the plugin, in the text's colour. A [Lucide](https://lucide.dev/icons) icon fits the app best. |
 | `samples/` | Optional. Reviews to try the plugin with, one `<name>.json` file each, and the files they attach. |
+| `skill/` | Optional. A skill for the agents that ask with the plugin. See [A skill for agents](#a-skill-for-agents). |
 | `README.md`, `LICENSE` | Optional. What the plugin is, and the terms it is shared under. |
 
 When the plugin is installed, Pinrail copies these entries and nothing else. Sources, tests, fixtures, `node_modules/`, package and tool configuration, hidden files and `pinrail-plugin.d.ts` stay in your folder.
@@ -489,6 +490,34 @@ The app uses the template when the plugin has one at `templates/decision.md.j2`.
 Templates are written in [MiniJinja](https://docs.rs/minijinja). Each object in `items` has a `payload` field that holds the object with the same `id` from the review's payload, wherever the payload nests it. The template also receives `review`, `decision`, `data` and `note`. The app writes the heading itself, so every plugin's output starts the same way.
 
 The `verb` filter turns common actions into past participles: `accept` and `keep` become "accepted", `reject` and `decline` become "rejected", and `send`, `revise`, `discard`, `approve`, `edit` and `skip` become "sent", "revised", "discarded", "approved", "edited" and "skipped". `request_changes` becomes "changes requested". It leaves any other word unchanged, so `{{ item.action | verb }}` suits a plugin whose actions are among these, and a plugin with other actions spells its own words, as the example above does.
+
+## A skill for agents
+
+The schemas say what a payload holds. Some plugins also need an agent to know how to build one: how to derive it from the work, which choices to make, or which commands to run. A plugin ships that as a skill, in a `skill/` folder beside its manifest, in the layout agents read skills in:
+
+```text title="change-map/skill/"
+skill/
+├── SKILL.md             what to do, with a description in its front matter
+├── references/          longer guides that SKILL.md links to
+└── scripts/             scripts that SKILL.md tells the agent to run
+```
+
+`SKILL.md` starts with front matter that gives a `description`:
+
+```md title="skill/SKILL.md"
+---
+name: change-map
+description: How to build a change map of a code change for review.
+---
+
+# Change map
+
+Before you submit a change map, work out the parts of the change…
+```
+
+When an agent is connected in *Settings › Agents*, Pinrail writes its `pinrail` skill with a list of the installed plugins at the end, each with its `use_when`. For a plugin that ships a skill, the list tells the agent to read it before it submits, and Pinrail writes the skill under `plugins/<name>/` in the `pinrail` skill's folder. Installing, updating or removing a plugin rewrites the connected agents' skills, and so does an edit to the skill of a plugin linked with `--link`, within a second or so.
+
+A skill reaches the agents from the official plugins and from plugins you link from a folder. `pinrail plugins check` reports a skill it cannot use: one without `SKILL.md` or a description, one with links, or one with more than 200 files or 2 MB. The plugin still works without it.
 
 ## Summing up a review
 

@@ -23,6 +23,7 @@ tauri-build = { version = "2", features = [] }
 sha2 = "0.10"
 
 [dependencies]
+sha2 = "0.10"
 ureq = { version = "3", features = ["json"] }
 chrono = "0.4"
 serde = { version = "1", features = ["derive"] }

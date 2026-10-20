@@ -1,8 +1,8 @@
 // The agent skill the app installs is the `skill/` folder at the top of the
-// repository, the same files `pinrail docs` prints. This embeds them as
-// they are installed: the SDK's version put into the brief that runs the
-// dev shell, and a SHA-256 of all the files put into SKILL.md's front
-// matter, so the app can tell an agent's copy is outdated by that alone.
+// repository, the same files `pinrail docs` prints. This embeds them with
+// the SDK's version put into the brief that runs the dev shell, and a
+// SHA-256 of all the files: the base the app adds the installed plugins'
+// list and skills to, and records in SKILL.md's front matter as `base`.
 
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -29,7 +29,7 @@ fn main() {
         })
         .collect();
 
-    // the files as they are written, SKILL.md with `{sha}` still in it
+    // the files as they are embedded, SKILL.md with its placeholders
     let mut hash = Sha256::new();
     for (rel, text) in &files {
         hash.update(rel.as_bytes());
@@ -42,15 +42,12 @@ fn main() {
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     let mut table = String::from("&[\n");
     for (rel, text) in &files {
-        let text = if rel == "SKILL.md" {
+        if rel == "SKILL.md" {
             assert!(
-                text.contains("{sha}"),
-                "skill/SKILL.md has no {{sha}} in its front matter"
+                text.contains("{sha}") && text.contains("{base}"),
+                "skill/SKILL.md has no {{sha}} or {{base}} in its front matter"
             );
-            text.replace("{sha}", &sha)
-        } else {
-            text.clone()
-        };
+        }
         let path = out.join("skill").join(rel);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, text).unwrap();

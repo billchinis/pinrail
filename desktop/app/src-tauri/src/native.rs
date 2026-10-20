@@ -702,6 +702,25 @@ pub fn watch(app: AppHandle) {
                     if notice.kind == events::CREATED {
                         notify(&app, &notice);
                     }
+                    // a plugin installed, updated, removed or edited in its
+                    // linked folder: the agents' skills list it as it is now
+                    if notice.kind == events::PLUGINS_RELOADED
+                        && let Some(native) = app.try_state::<Native>()
+                    {
+                        let state = native.state.clone();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            let Some(home) = std::env::var_os("HOME") else {
+                                return;
+                            };
+                            let skill = crate::current_skill(&state);
+                            for name in crate::agent_skills::refresh_plugins(home.as_ref(), &skill)
+                            {
+                                eprintln!(
+                                    "pinrail: updated the pinrail skill of {name} for its plugins"
+                                );
+                            }
+                        });
+                    }
                     if ends_notification(&notice.kind)
                         && let Some(id) = &notice.review_id
                     {

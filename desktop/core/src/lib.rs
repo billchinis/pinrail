@@ -21,6 +21,7 @@ pub use pinrail_format::markdown;
 pub mod plugins;
 pub mod reviews;
 pub use pinrail_format::schema;
+pub use pinrail_format::skill;
 pub mod server_info;
 pub mod settings;
 
