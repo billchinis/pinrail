@@ -15,13 +15,22 @@
       },
       "screen_mode": {
         "type": "string",
-        "enum": [
-          "side",
-          "wipe",
-          "after"
-        ],
         "title": "Screenshot comparison",
-        "description": "How a part's screenshots open when it has a before and an after: side by side, with a slider, or the after alone.",
+        "description": "How a part's screenshots open when it has a before and an after",
+        "oneOf": [
+          {
+            "const": "side",
+            "title": "Side by side"
+          },
+          {
+            "const": "wipe",
+            "title": "Slider"
+          },
+          {
+            "const": "after",
+            "title": "After only"
+          }
+        ],
         "default": "side"
       },
       "panel_width": {

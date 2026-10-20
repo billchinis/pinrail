@@ -289,6 +289,28 @@ mod tests {
         }
     }
 
+    /// Every plugin the app carries loads with all it declares: a setting,
+    /// a template or a skill the loader dropped would be lost on everyone's
+    /// machine.
+    #[test]
+    fn every_carried_plugin_loads_without_dropping_a_feature() {
+        for (folder, files) in carried() {
+            let dir = tempfile::tempdir().unwrap();
+            for (path, bytes) in &files {
+                let to = dir.path().join(path);
+                std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+                std::fs::write(to, bytes).unwrap();
+            }
+            let plugin = crate::plugins::Plugin::load(dir.path());
+            assert!(plugin.usable(), "{folder}: {:?}", plugin.error);
+            assert_eq!(
+                plugin.verdict()["warnings"],
+                serde_json::json!([]),
+                "{folder}"
+            );
+        }
+    }
+
     /// The change map carries a skill for agents, which loads whole.
     #[test]
     fn the_change_map_carries_its_skill() {
