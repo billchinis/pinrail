@@ -885,3 +885,15 @@ test("the slider fits its images in the drawer, with the handle on the split", a
   const handle = (await wipe.getByRole("slider").boundingBox())!;
   expect(Math.abs(handle.x + handle.width / 2 - (image.x + image.width / 2))).toBeLessThan(2);
 });
+
+test("the zoom buttons stay above the diff drawer", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 760 });
+  const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { show_diff: true } });
+  const f = plugin.frame;
+  await f.locator(".cm-diff").waitFor();
+  const fit = f.getByRole("button", { name: "Fit to the frame" });
+  const drawer = (await f.locator(".cm-diff").boundingBox())!;
+  const button = (await fit.boundingBox())!;
+  expect(button.y + button.height).toBeLessThanOrEqual(drawer.y);
+  await fit.click({ timeout: 2000 });
+});

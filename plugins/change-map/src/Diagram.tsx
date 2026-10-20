@@ -313,6 +313,8 @@ export function Follower({
   return null;
 }
 
+/** The zoom buttons, in the diagram's top corner, which the diff drawer
+ *  never covers. */
 export function Zoom({ onFit }: { onFit: () => void }) {
   const flow = useReactFlow();
   return (

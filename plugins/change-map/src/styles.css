@@ -405,10 +405,11 @@ body.cm-resizing-panel * {
 
 /* the zoom buttons */
 
+/* the zoom buttons, at the top, where the diff drawer never covers them */
 .cm-zoom {
   position: absolute;
   right: 10px;
-  bottom: 10px;
+  top: 10px;
   z-index: 5;
   display: flex;
   gap: 2px;
