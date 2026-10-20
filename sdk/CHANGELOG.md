@@ -17,6 +17,14 @@ change to the protocol is a new major and a new path.
   The dev shell copies to the browser's clipboard, and the test harness
   records each copy for `copied()`.
 
+## [Unreleased]
+
+### Fixed
+
+- Dictated text now reaches fields that React controls, so a view's
+  state follows the dictation, and a button that waits for text, such as
+  Add comment, is enabled as you dictate.
+
 ## [1.2.0]
 
 ### Added

@@ -425,6 +425,19 @@
       return true;
     }
 
+    /* A field's value, set through the setter of its element's prototype.
+       React keeps a controlled field's value in a `value` property of the
+       element itself: set through that, the value React holds already
+       matches, and the input event that follows changes nothing in the
+       view's state. */
+    function setValue(field, value) {
+      let proto = Object.getPrototypeOf(field);
+      while (proto && !Object.getOwnPropertyDescriptor(proto, "value")) proto = Object.getPrototypeOf(proto);
+      const own = proto && Object.getOwnPropertyDescriptor(proto, "value");
+      if (own && own.set) own.set.call(field, value);
+      else field.value = value;
+    }
+
     function hear(text) {
       if (follow()) heard();
       const { field, before, after } = speaking;
@@ -436,7 +449,7 @@
       }
       const said = text.trimStart();
       const gap = said && after && !/^\s/.test(after) ? " " : "";
-      field.value = before + said + gap + after;
+      setValue(field, before + said + gap + after);
       const caret = (before + said).length;
       if (typeof field.setSelectionRange === "function") field.setSelectionRange(caret, caret);
       if (env.changed) env.changed(field);

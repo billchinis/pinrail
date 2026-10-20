@@ -174,3 +174,48 @@ test("Esc stops a dictation before the view hears it, and the next Esc is the vi
   await note.press("Escape");
   expect(await viewEscapes()).toBe(1);
 });
+
+/** A view whose field tracks its value as React does for a controlled
+ *  field: a `value` property on the element itself that remembers what was
+ *  set through it, and an input handler that counts a change only when the
+ *  field holds something else. */
+function trackedPlugin(): string {
+  const dir = scratch("pinrail-dictation-tracked-");
+  fs.mkdirSync(path.join(dir, "view"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ name: "tracked", version: "1.0.0" }));
+  fs.writeFileSync(
+    path.join(dir, "view", "index.html"),
+    `<!doctype html>
+<meta charset="utf-8">
+<script src="/sdk/v1/pinrail-plugin.js"></script>
+<div><textarea id="note" aria-label="note" data-pinrail-dictate></textarea></div>
+<script>
+const plugin = Pinrail.connect({});
+const note = document.getElementById("note");
+const own = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+let tracked = "";
+Object.defineProperty(note, "value", {
+  configurable: true,
+  get() { return own.get.call(this); },
+  set(v) { tracked = String(v); own.set.call(this, v); },
+});
+note.addEventListener("input", () => {
+  if (note.value === tracked) return;
+  tracked = note.value;
+  plugin.draft({ note: note.value });
+});
+</script>`,
+  );
+  return dir;
+}
+
+test("dictated text reaches a field that tracks its value, as React's controlled fields do", async ({ page }) => {
+  const plugin = await mountPlugin(page, trackedPlugin(), { review: reviewFrom({ payload: {} }), dictation: true });
+  const f = plugin.frame;
+  await f.getByRole("button", { name: "Dictate" }).click();
+  await expect.poll(() => plugin.dictating()).toBe(true);
+  await plugin.say("ship it");
+  await expect(f.getByRole("textbox", { name: "note" })).toHaveValue("ship it");
+  // the view saw the change
+  await expect.poll(() => plugin.lastDraft()).toEqual({ note: "ship it" });
+});
