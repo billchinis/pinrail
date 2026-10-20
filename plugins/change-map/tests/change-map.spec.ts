@@ -95,6 +95,25 @@ test("the cards button on the map switches to the other style, and the choice is
   await expect(back).toBeVisible();
 });
 
+for (const style of ["detailed", "compact"])
+  test(`a selected ${style} card has a border in the accent colour`, async ({ page }) => {
+    const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { card_style: style } });
+    const f = plugin.frame;
+    const form = f.locator('[data-node="ticket-form"]');
+    const accent = await form.evaluate((el) => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--pinrail-accent)";
+      el.ownerDocument.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    const border = () => form.evaluate((el) => getComputedStyle(el).borderTopColor);
+    expect(await border()).not.toBe(accent);
+    await form.click();
+    await expect.poll(border).toBe(accent);
+  });
+
 test("a compact card's status line starts at the card's left, under its icon", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup(), settings: { card_style: "compact" } });
   const f = plugin.frame;

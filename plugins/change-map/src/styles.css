@@ -253,10 +253,13 @@ body.cm-resizing-panel * {
 .cm-part:hover {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--pinrail-accent) 45%, transparent);
 }
-/* the selected card's border is twice as thick, in its status colour, and
-   the padding gives back what the border takes, so nothing inside moves */
+/* the selected card's border is twice as thick, in the accent colour, so
+   it stands out from the status colours, and the padding gives back what
+   the border takes, so nothing inside moves */
 .cm-part.cm-selected {
   border-width: 3px;
+  border-style: solid;
+  border-color: var(--pinrail-accent);
   padding: 7.5px 9.5px;
   box-shadow: none;
 }
@@ -316,7 +319,7 @@ body.cm-resizing-panel * {
 .cm-part.cm-part-detailed.cm-selected {
   padding: 0;
   border-width: 2.5px;
-  border-color: var(--cm-color, var(--pinrail-border-strong));
+  border-color: var(--pinrail-accent);
 }
 .cm-part-band {
   display: flex;
