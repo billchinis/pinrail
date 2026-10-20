@@ -11,6 +11,10 @@ plugins that are not here yet are in
 |---|---|
 | [`list`](list/README.md) | Official: a list of proposed actions, each accepted or rejected. |
 | [`feedback`](feedback/README.md) | Official: questions an agent wants answered before it continues. |
+| [`code-review`](code-review/README.md) | Official: the comments a reviewer agent proposes to post on a change, each accepted or rejected. |
+| [`change-map`](change-map/README.md) | Official: a code change as a diagram of its parts and their interactions, with diffs and screenshots. |
+| [`image`](image/README.md) | Official: generated images to choose between, with changes marked on them. |
+| [`markdown`](markdown/README.md) | Official: a Markdown document, commented on section by section. |
 | [`hello`](hello/README.md) | The smallest complete plugin, used in tests and as an example to copy. |
 | [`sampler`](sampler/README.md) | A test fixture: a plugin that takes files and declares a verdict. |
 

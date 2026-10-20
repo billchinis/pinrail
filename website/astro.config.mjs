@@ -137,6 +137,7 @@ export default defineConfig({
             "docs/plugins/list",
             "docs/plugins/feedback",
             "docs/plugins/code-review",
+            "docs/plugins/change-map",
             "docs/plugins/image",
             "docs/plugins/markdown",
             "docs/plugins/more",

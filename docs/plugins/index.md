@@ -3,7 +3,7 @@ title: Plugins
 description: "The plugins that come with Pinrail, what each is for, and how to pick one for the decision your agent needs."
 ---
 
-Every review uses a plugin, and the plugin decides what the person sees and what the agent gets back. Five official plugins come with the app. The setup installs the two it recommends, and you install the others when your agents need them.
+Every review uses a plugin, and the plugin decides what the person sees and what the agent gets back. Six official plugins come with the app. The setup installs the two it recommends, and you install the others when your agents need them.
 
 ## Which plugin to use
 
@@ -12,6 +12,7 @@ Every review uses a plugin, and the plugin decides what the person sees and what
 | Accept or reject a set of findings, tasks or proposed actions | [List](/docs/plugins/list/) | <span class="pr-badge recommended">Recommended</span> |
 | Answer questions before it goes on: choices, preferences, confirmations | [Feedback](/docs/plugins/feedback/) | <span class="pr-badge recommended">Recommended</span> |
 | Review the comments it wants to post on a pull or merge request | [Code review](/docs/plugins/code-review/) | <span class="pr-badge optional">Optional</span> |
+| Review a code change it made as a map of the parts it touches, with their diffs and screenshots | [Change map](/docs/plugins/change-map/) | <span class="pr-badge optional">Optional</span> |
 | Choose between images or illustrations it generated, and mark what to change on them | [Image review](/docs/plugins/image/) | <span class="pr-badge optional">Optional</span> |
 | Read a plan, spec or document it wrote, and ask for changes or explanations | [Markdown review](/docs/plugins/markdown/) | <span class="pr-badge optional">Optional</span> |
 | Edit emails, choose calendar slots, or review designed pages, logos or 3D models | [Sample plugins](/docs/plugins/more/) | |

@@ -363,6 +363,30 @@ export const scenes = [
     },
   },
   {
+    // a part selected, its file in the drawer with a comment on three of its
+    // lines, and a comment on the part being typed
+    name: "change-map",
+    async run({ page, app, reviews, shot }) {
+      const f = await openReview(page, app, reviews["27-change-map-dedup"]);
+      await f.locator(".cm-part").first().waitFor();
+      await f.locator('[data-node="ticket-form"]').click();
+      await f.locator(".cm-file", { hasText: "TicketForm.tsx" }).click();
+      // drag down the gutter from line 47 to 49
+      await f.locator('[data-line="new:47"]').hover();
+      const from = await f.getByRole("button", { name: "Comment on line 47" }).boundingBox();
+      const to = await f.locator('[data-line="new:49"]').boundingBox();
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(from.x + from.width / 2, to.y + to.height / 2, { steps: 5 });
+      await page.mouse.up();
+      await f.locator("#line-comment").fill("Keep the key after a failed save, so that a retry sends it again.");
+      await f.locator("#line-comment").press("Enter");
+      await f.getByPlaceholder("Add a comment").fill("Disable the whole form while it saves, not only the button");
+      await settle(page, 600);
+      await shot("change-map");
+    },
+  },
+  {
     // two comments pinned, a third element picked and its comment being typed
     name: "artifact",
     async run({ page, app, reviews, shot }) {

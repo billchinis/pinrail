@@ -43,6 +43,7 @@ const CARRIED = [
   "forgeplane/code-review",
   "forgeplane/image",
   "forgeplane/markdown",
+  "forgeplane/change-map",
 ];
 
 /** The plugins the fixtures use from forgeplane/pinrail-plugins. */

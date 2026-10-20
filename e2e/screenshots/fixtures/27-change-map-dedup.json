@@ -1,0 +1,784 @@
+{
+  "plugin": "change-map",
+  "title": "Dedup tickets on save",
+  "origin": {
+    "repo": "acme/helpdesk",
+    "workflow": "pull-request"
+  },
+  "requested_by": "claude",
+  "age": "12m",
+  "attachments": {
+    "form-before.png": {
+      "path": "../../../plugins/change-map/samples/images/form-before.png",
+      "media_type": "image/png"
+    },
+    "form-after.png": {
+      "path": "../../../plugins/change-map/samples/images/form-after.png",
+      "media_type": "image/png"
+    }
+  },
+  "payload": {
+    "change": {
+      "ref": "#128",
+      "title": "Dedup tickets on save",
+      "url": "https://github.com/acme/helpdesk/pull/128",
+      "source": "fix/ticket-dedup",
+      "target": "main",
+      "description": "A double click on Save created two tickets. The form now sends a dedup key, and the API returns the ticket it already created."
+    },
+    "summary": "Pressing **Save** twice, or a retried request, created duplicate tickets. The form now sends one **dedup key** per form, disables Save while saving, and the API returns the existing ticket for a repeated key within ten seconds.",
+    "lanes": [
+      {
+        "id": "web",
+        "title": "Web app"
+      },
+      {
+        "id": "api",
+        "title": "API"
+      },
+      {
+        "id": "db",
+        "title": "Database"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ticket-form",
+        "title": "Ticket form",
+        "kind": "ui",
+        "lane": "web",
+        "status": "changed",
+        "summary": "Disables **Save** while a save is in flight, and sends the form's dedup key with each save.",
+        "changes": [
+          {
+            "file": "web/src/TicketForm.tsx",
+            "lines": [
+              [
+                40,
+                68
+              ]
+            ]
+          }
+        ],
+        "screens": [
+          {
+            "title": "Save while saving",
+            "before": {
+              "$attachment": "form-before.png"
+            },
+            "after": {
+              "$attachment": "form-after.png"
+            }
+          }
+        ]
+      },
+      {
+        "id": "api-client",
+        "title": "API client",
+        "kind": "module",
+        "lane": "web",
+        "status": "changed",
+        "summary": "Sends the key as an `Idempotency-Key` header, and treats `409` as success.",
+        "changes": [
+          {
+            "file": "web/src/api.ts"
+          }
+        ]
+      },
+      {
+        "id": "tickets-endpoint",
+        "title": "POST /tickets",
+        "kind": "endpoint",
+        "lane": "api",
+        "status": "changed",
+        "summary": "Reads the key from the header and answers `409` with the existing ticket.",
+        "changes": [
+          {
+            "file": "lib/helpdesk_web/controllers/ticket_controller.ex"
+          }
+        ]
+      },
+      {
+        "id": "tickets-context",
+        "title": "Tickets",
+        "kind": "module",
+        "lane": "api",
+        "status": "changed",
+        "summary": "Looks for a ticket with the same key from the last ten seconds before inserting.",
+        "changes": [
+          {
+            "file": "lib/helpdesk/tickets.ex"
+          },
+          {
+            "file": "test/helpdesk/tickets_test.exs"
+          }
+        ]
+      },
+      {
+        "id": "mailer",
+        "title": "Mailer",
+        "kind": "service",
+        "lane": "api",
+        "status": "context",
+        "summary": "Sends the *ticket created* email. A duplicate no longer reaches it."
+      },
+      {
+        "id": "tickets-table",
+        "title": "tickets",
+        "kind": "store",
+        "lane": "db",
+        "status": "changed",
+        "summary": "A new `dedup_key` column, indexed with `inserted_at`.",
+        "changes": [
+          {
+            "file": "priv/repo/migrations/20261019_add_dedup_key_to_tickets.exs"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "save",
+        "from": "ticket-form",
+        "to": "api-client",
+        "label": "createTicket",
+        "kind": "call",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "web/src/TicketForm.tsx",
+            "lines": [
+              [
+                47,
+                49
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "post",
+        "from": "api-client",
+        "to": "tickets-endpoint",
+        "label": "POST /tickets",
+        "kind": "call",
+        "status": "changed",
+        "summary": "The key travels as a header, so a proxy's retry carries it too.",
+        "detail": {
+          "request": "POST /api/tickets\nIdempotency-Key: 3f2c…\n{ \"title\": \"…\", \"body\": \"…\" }",
+          "response": "201 Created  { ticket }\n409 Conflict { ticket }  // the same key, within 10 s"
+        },
+        "changes": [
+          {
+            "file": "web/src/api.ts"
+          }
+        ]
+      },
+      {
+        "id": "create",
+        "from": "tickets-endpoint",
+        "to": "tickets-context",
+        "label": "create/2",
+        "kind": "call",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "lib/helpdesk_web/controllers/ticket_controller.ex",
+            "lines": [
+              [
+                15,
+                17
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "lookup",
+        "from": "tickets-context",
+        "to": "tickets-table",
+        "label": "recent with key",
+        "kind": "data",
+        "status": "added",
+        "changes": [
+          {
+            "file": "lib/helpdesk/tickets.ex",
+            "lines": [
+              [
+                90,
+                93
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "insert",
+        "from": "tickets-context",
+        "to": "tickets-table",
+        "label": "insert",
+        "kind": "data",
+        "status": "changed",
+        "changes": [
+          {
+            "file": "lib/helpdesk/tickets.ex",
+            "lines": [
+              [
+                82,
+                85
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "notify",
+        "from": "tickets-context",
+        "to": "mailer",
+        "label": "ticket created",
+        "kind": "event",
+        "status": "unchanged",
+        "changes": [
+          {
+            "file": "lib/helpdesk/tickets.ex",
+            "lines": [
+              [
+                86,
+                86
+              ]
+            ]
+          }
+        ]
+      }
+    ],
+    "files": [
+      {
+        "path": "web/src/TicketForm.tsx",
+        "status": "modified",
+        "diff": "@@ -38,20 +38,31 @@ export function TicketForm({ onSaved }: Props) {\n   const [title, setTitle] = useState(\"\");\n   const [body, setBody] = useState(\"\");\n+  const [saving, setSaving] = useState(false);\n+  // one key per form: a second press of Save sends the same key, and the\n+  // API answers with the ticket it already created\n+  const dedupKey = useMemo(() => crypto.randomUUID(), []);\n \n   async function save() {\n-    const ticket = await createTicket({ title, body });\n-    onSaved(ticket);\n+    if (saving) return;\n+    setSaving(true);\n+    try {\n+      const ticket = await createTicket({ title, body, dedupKey });\n+      onSaved(ticket);\n+    } finally {\n+      setSaving(false);\n+    }\n   }\n \n   return (\n     <form onSubmit={(e) => { e.preventDefault(); save(); }}>\n       <Field label=\"Title\" value={title} onChange={setTitle} />\n       <Field label=\"Description\" value={body} onChange={setBody} multiline />\n       <div className=\"row\">\n         <Button onClick={onCancel}>Cancel</Button>\n-        <Button primary type=\"submit\">Save</Button>\n+        <Button primary type=\"submit\" disabled={saving}>\n+          {saving ? <><Spinner /> Saving…</> : \"Save\"}\n+        </Button>\n       </div>\n     </form>\n   );\n"
+      },
+      {
+        "path": "web/src/api.ts",
+        "status": "modified",
+        "diff": "@@ -10,12 +10,19 @@ export type NewTicket = {\n   title: string;\n   body: string;\n+  dedupKey: string;\n };\n \n export async function createTicket(ticket: NewTicket): Promise<Ticket> {\n-  const res = await fetch(\"/api/tickets\", { method: \"POST\", body: JSON.stringify(ticket) });\n-  if (!res.ok) throw new ApiError(res.status);\n-  return res.json();\n+  const res = await fetch(\"/api/tickets\", {\n+    method: \"POST\",\n+    headers: { \"Idempotency-Key\": ticket.dedupKey },\n+    body: JSON.stringify({ title: ticket.title, body: ticket.body }),\n+  });\n+  // 409: the same key created a ticket already; the body is that ticket\n+  if (!res.ok && res.status !== 409) throw new ApiError(res.status);\n+  return res.json();\n }\n"
+      },
+      {
+        "path": "lib/helpdesk_web/controllers/ticket_controller.ex",
+        "status": "modified",
+        "diff": "@@ -14,9 +14,14 @@ defmodule HelpdeskWeb.TicketController do\n-  def create(conn, params) do\n-    with {:ok, ticket} <- Tickets.create(params) do\n-      conn |> put_status(:created) |> json(ticket)\n+  def create(conn, params) do\n+    key = conn |> get_req_header(\"idempotency-key\") |> List.first()\n+\n+    case Tickets.create(params, key) do\n+      {:ok, ticket} -> conn |> put_status(:created) |> json(ticket)\n+      {:duplicate, ticket} -> conn |> put_status(:conflict) |> json(ticket)\n+      {:error, changeset} -> conn |> put_status(:unprocessable_entity) |> json(errors(changeset))\n     end\n   end\n"
+      },
+      {
+        "path": "lib/helpdesk/tickets.ex",
+        "status": "modified",
+        "diff": "@@ -71,18 +71,34 @@ defmodule Helpdesk.Tickets do\n   @doc \"\"\"\n   Creates a ticket from the form's fields.\n+\n+  A second call with the same dedup key within ten seconds returns the\n+  ticket the first call created, as `{:duplicate, ticket}`.\n   \"\"\"\n-  def create(attrs) do\n-    %Ticket{}\n-    |> Ticket.changeset(attrs)\n-    |> Repo.insert()\n-    |> notify()\n+  def create(attrs, dedup_key) do\n+    case recent_with_key(dedup_key) do\n+      %Ticket{} = ticket ->\n+        {:duplicate, ticket}\n+\n+      nil ->\n+        %Ticket{dedup_key: dedup_key}\n+        |> Ticket.changeset(attrs)\n+        |> Repo.insert()\n+        |> notify()\n+    end\n+  end\n+\n+  defp recent_with_key(key) do\n+    since = DateTime.add(DateTime.utc_now(), -10, :second)\n+    Repo.one(from t in Ticket, where: t.dedup_key == ^key and t.inserted_at > ^since)\n   end\n"
+      },
+      {
+        "path": "priv/repo/migrations/20261019_add_dedup_key_to_tickets.exs",
+        "status": "added",
+        "diff": "@@ -0,0 +1,10 @@\n+defmodule Helpdesk.Repo.Migrations.AddDedupKeyToTickets do\n+  use Ecto.Migration\n+\n+  def change do\n+    alter table(:tickets) do\n+      add :dedup_key, :string\n+    end\n+\n+    create index(:tickets, [:dedup_key, :inserted_at])\n+  end\n+end\n"
+      },
+      {
+        "path": "test/helpdesk/tickets_test.exs",
+        "status": "modified",
+        "diff": "@@ -40,6 +40,19 @@ defmodule Helpdesk.TicketsTest do\n+  test \"a second create with the same key returns the first ticket\" do\n+    {:ok, first} = Tickets.create(@valid, \"k-1\")\n+    assert {:duplicate, ^first} = Tickets.create(@valid, \"k-1\")\n+  end\n+\n+  test \"the same key ten seconds later creates a new ticket\" do\n+    {:ok, first} = Tickets.create(@valid, \"k-2\")\n+    backdate(first, 11)\n+    assert {:ok, second} = Tickets.create(@valid, \"k-2\")\n+    refute second.id == first.id\n+  end\n+\n"
+      },
+      {
+        "path": "CHANGELOG.md",
+        "status": "modified",
+        "diff": "@@ -3,6 +3,8 @@\n ## Unreleased\n \n+- Saving a ticket twice no longer creates two tickets.\n+\n"
+      }
+    ],
+    "diagrams": [
+      {
+        "id": "first-save",
+        "kind": "sequence",
+        "title": "A first save",
+        "summary": "The form sends a new dedup key with the ticket. No ticket has the key yet, so `Tickets.create/2` inserts one as before.",
+        "participants": [
+          {
+            "id": "form",
+            "title": "Ticket form",
+            "node": "ticket-form"
+          },
+          {
+            "id": "client",
+            "title": "API client",
+            "node": "api-client"
+          },
+          {
+            "id": "api",
+            "title": "POST /tickets",
+            "node": "tickets-endpoint"
+          },
+          {
+            "id": "tickets",
+            "title": "Tickets",
+            "node": "tickets-context"
+          },
+          {
+            "id": "db",
+            "title": "tickets",
+            "node": "tickets-table"
+          },
+          {
+            "id": "mailer",
+            "title": "Mailer",
+            "node": "mailer"
+          }
+        ],
+        "messages": [
+          {
+            "id": "m1",
+            "from": "form",
+            "to": "client",
+            "label": "createTicket(…, dedupKey)",
+            "edge": "save"
+          },
+          {
+            "id": "m2",
+            "from": "client",
+            "to": "api",
+            "label": "POST, Idempotency-Key",
+            "edge": "post"
+          },
+          {
+            "id": "m3",
+            "from": "api",
+            "to": "tickets",
+            "label": "create(params, key)",
+            "edge": "create"
+          },
+          {
+            "id": "m4",
+            "from": "tickets",
+            "to": "db",
+            "label": "recent_with_key(key)",
+            "edge": "lookup"
+          },
+          {
+            "id": "m5",
+            "from": "db",
+            "to": "tickets",
+            "label": "nil",
+            "kind": "reply",
+            "status": "added",
+            "summary": "No ticket has the key in the last ten seconds.",
+            "changes": [
+              {
+                "file": "lib/helpdesk/tickets.ex",
+                "lines": [
+                  [
+                    82,
+                    82
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "m6",
+            "from": "tickets",
+            "to": "db",
+            "label": "insert",
+            "edge": "insert"
+          },
+          {
+            "id": "m7",
+            "from": "tickets",
+            "to": "mailer",
+            "label": "ticket created",
+            "kind": "async",
+            "edge": "notify"
+          },
+          {
+            "id": "m8",
+            "from": "tickets",
+            "to": "api",
+            "label": "{:ok, ticket}",
+            "kind": "reply",
+            "status": "unchanged",
+            "changes": [
+              {
+                "file": "lib/helpdesk/tickets.ex",
+                "lines": [
+                  [
+                    82,
+                    86
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "m9",
+            "from": "api",
+            "to": "client",
+            "label": "201 Created",
+            "kind": "reply",
+            "status": "unchanged",
+            "changes": [
+              {
+                "file": "lib/helpdesk_web/controllers/ticket_controller.ex",
+                "lines": [
+                  [
+                    18,
+                    18
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "m10",
+            "from": "client",
+            "to": "form",
+            "label": "ticket",
+            "kind": "reply",
+            "status": "unchanged",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    49,
+                    50
+                  ]
+                ]
+              }
+            ]
+          }
+        ],
+        "groups": [
+          {
+            "id": "g1",
+            "kind": "alt",
+            "label": "no ticket with the key",
+            "first": "m5",
+            "last": "m8"
+          }
+        ]
+      },
+      {
+        "id": "second-save",
+        "kind": "sequence",
+        "title": "Save pressed twice",
+        "summary": "A second press while the first request is out does nothing. A retry after a lost response sends the same key, and the API answers with the ticket it already created.",
+        "participants": [
+          {
+            "id": "form",
+            "title": "Ticket form",
+            "node": "ticket-form"
+          },
+          {
+            "id": "client",
+            "title": "API client",
+            "node": "api-client"
+          },
+          {
+            "id": "api",
+            "title": "POST /tickets",
+            "node": "tickets-endpoint"
+          },
+          {
+            "id": "tickets",
+            "title": "Tickets",
+            "node": "tickets-context"
+          },
+          {
+            "id": "db",
+            "title": "tickets",
+            "node": "tickets-table"
+          }
+        ],
+        "messages": [
+          {
+            "id": "n1",
+            "from": "form",
+            "to": "form",
+            "label": "second press: ignored",
+            "kind": "self",
+            "status": "added",
+            "summary": "`save()` returns at once while `saving` is set.",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    46,
+                    47
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "n2",
+            "from": "client",
+            "to": "api",
+            "label": "POST, the same key",
+            "edge": "post"
+          },
+          {
+            "id": "n3",
+            "from": "api",
+            "to": "tickets",
+            "label": "create(params, key)",
+            "edge": "create"
+          },
+          {
+            "id": "n4",
+            "from": "tickets",
+            "to": "db",
+            "label": "recent_with_key(key)",
+            "edge": "lookup"
+          },
+          {
+            "id": "n5",
+            "from": "db",
+            "to": "tickets",
+            "label": "the ticket",
+            "kind": "reply",
+            "status": "added",
+            "changes": [
+              {
+                "file": "lib/helpdesk/tickets.ex",
+                "lines": [
+                  [
+                    79,
+                    80
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "n6",
+            "from": "tickets",
+            "to": "api",
+            "label": "{:duplicate, ticket}",
+            "kind": "reply",
+            "status": "added",
+            "changes": [
+              {
+                "file": "lib/helpdesk/tickets.ex",
+                "lines": [
+                  [
+                    79,
+                    80
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "n7",
+            "from": "api",
+            "to": "client",
+            "label": "409 Conflict, the ticket",
+            "kind": "reply",
+            "status": "added",
+            "summary": "The controller answers 409 with the ticket the first request created.",
+            "changes": [
+              {
+                "file": "lib/helpdesk_web/controllers/ticket_controller.ex",
+                "lines": [
+                  [
+                    19,
+                    19
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "n8",
+            "from": "client",
+            "to": "form",
+            "label": "ticket",
+            "kind": "reply",
+            "status": "changed",
+            "summary": "The client reads a 409 as success, so the form shows the ticket.",
+            "changes": [
+              {
+                "file": "web/src/api.ts",
+                "lines": [
+                  [
+                    21,
+                    23
+                  ]
+                ]
+              }
+            ]
+          }
+        ],
+        "groups": [
+          {
+            "id": "h1",
+            "kind": "opt",
+            "label": "a retry after a lost response",
+            "first": "n2",
+            "last": "n8"
+          },
+          {
+            "id": "h2",
+            "kind": "alt",
+            "label": "a ticket with the key in the last ten seconds",
+            "first": "n5",
+            "last": "n7"
+          }
+        ]
+      },
+      {
+        "id": "save-button",
+        "kind": "state",
+        "title": "The Save button",
+        "summary": "The form's Save button is disabled and shows a spinner while a save is out.",
+        "states": [
+          {
+            "id": "start",
+            "kind": "initial"
+          },
+          {
+            "id": "ready",
+            "title": "Ready",
+            "status": "unchanged",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    40,
+                    40
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "saving",
+            "title": "Saving…",
+            "status": "added",
+            "summary": "The button is disabled and shows a spinner.",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    62,
+                    64
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "saved",
+            "kind": "final",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    50,
+                    50
+                  ]
+                ]
+              }
+            ]
+          }
+        ],
+        "transitions": [
+          {
+            "id": "t1",
+            "from": "start",
+            "to": "ready",
+            "status": "unchanged",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    40,
+                    40
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "from": "ready",
+            "to": "saving",
+            "label": "press Save / setSaving(true)",
+            "status": "added",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    47,
+                    47
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t3",
+            "from": "saving",
+            "to": "saving",
+            "label": "press Save / ignored",
+            "status": "added",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    46,
+                    46
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t4",
+            "from": "saving",
+            "to": "ready",
+            "label": "failed / setSaving(false)",
+            "status": "added",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    51,
+                    53
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "t5",
+            "from": "saving",
+            "to": "saved",
+            "label": "saved / onSaved(ticket)",
+            "status": "changed",
+            "changes": [
+              {
+                "file": "web/src/TicketForm.tsx",
+                "lines": [
+                  [
+                    49,
+                    50
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
