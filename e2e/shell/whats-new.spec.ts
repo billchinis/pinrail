@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
 import { core, settingsDialog } from "./helpers";
 
 /** Makes the app run as the given release by changing the version the core reports. */
@@ -73,6 +75,25 @@ test("a release with no notes shows nothing, and counts as seen", async ({ page 
   await expect(page.getByTestId("whats-new")).toHaveCount(0);
 });
 
+/** The newest release with notes, from the notes the app carries. */
+const newest = fs
+  .readdirSync(path.join(__dirname, "..", "..", "desktop", "app", "ui", "src", "whats-new"))
+  .flatMap((f) => (/^\d+\.\d+\.\d+\.json$/.test(f) ? [f.replace(/\.json$/, "")] : []))
+  .sort((a, b) => {
+    const [x, y] = [a, b].map((v) => v.split(".").map(Number));
+    return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+  })
+  .pop();
+/** The first card of the newest notes, which the dialog opens on. */
+const firstCard = (
+  JSON.parse(
+    fs.readFileSync(
+      path.join(__dirname, "..", "..", "desktop", "app", "ui", "src", "whats-new", `${newest}.json`),
+      "utf8",
+    ),
+  ) as { cards: { title: string }[] }
+).cards[0].title;
+
 test("the newest notes open again from ⌘K and from Settings › About, without changing what was seen", async ({
   page,
 }) => {
@@ -86,7 +107,7 @@ test("the newest notes open again from ⌘K and from Settings › About, without
   const palette = page.getByRole("dialog", { name: "Search" });
   await palette.getByRole("textbox").fill("What's new");
   await palette.getByRole("option", { name: /What's new in Pinrail/ }).click();
-  await expect(dialog).toContainText("New in 0.3.0");
+  await expect(dialog).toContainText(`New in ${newest}`);
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 
@@ -97,7 +118,7 @@ test("the newest notes open again from ⌘K and from Settings › About, without
     .click();
   await settingsDialog(page).getByRole("button", { name: "What's new" }).click();
   await expect(settingsDialog(page)).toHaveCount(0);
-  await expect(dialog.getByTestId("whats-new-card")).toHaveText("Reviews open beside the inbox");
+  await expect(dialog.getByTestId("whats-new-card")).toHaveText(firstCard);
   await dialog.getByRole("button", { name: "Close" }).click();
 
   expect(await seenNow(page)).toBe("999.0.0");

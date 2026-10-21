@@ -1,5 +1,19 @@
 {
   "title": "Dedup tickets on save",
+  "attachments": {
+    "form-before.png": {
+      "path": "../samples/images/form-before.png",
+      "media_type": "image/png"
+    },
+    "form-after.png": {
+      "path": "../samples/images/form-after.png",
+      "media_type": "image/png"
+    },
+    "form-saving.mp4": {
+      "path": "../samples/images/form-saving.mp4",
+      "media_type": "video/mp4"
+    }
+  },
   "payload": {
     "change": {
       "ref": "#128",

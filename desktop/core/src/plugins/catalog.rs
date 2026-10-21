@@ -339,6 +339,7 @@ mod tests {
                 "SKILL.md",
                 "references/diagrams.md",
                 "references/screenshots.md",
+                "scripts/check.mjs",
                 "scripts/files.mjs"
             ]
         );
