@@ -611,9 +611,10 @@ export function ReviewView({ id, inPanel = false, linkTo = pageOf, onEnded, onCl
         : undefined,
     [plugin],
   );
-  // in the side panel, the inbox shows its own bar and title
+  // in the side panel, the inbox shows its own bar and title: the panel
+  // gives only its plugin, whose keys the shortcuts dialog lists
   const topbar = useMemo(
-    () => (review && !inPanel ? { crumb, plugin: forPlugin } : null),
+    () => (review ? (inPanel ? { plugin: forPlugin } : { crumb, plugin: forPlugin }) : null),
     [review, crumb, forPlugin, inPanel],
   );
   useTopBar(topbar);

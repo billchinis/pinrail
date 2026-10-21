@@ -52,6 +52,8 @@ The `pinrail` command ships inside the app and carries the app's version.
   runs over the review open beside it.
 - Discarding the review open in the side panel opens the next one, as a
   decision does, whether from the review or from its row in the inbox.
+- The keyboard shortcuts dialog lists the keys of the plugin open in the
+  side panel, as it does for a review open on its own page.
 
 ## [0.3.0]
 

@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { clearInbox, core, createReview, linkPlugin, layout } from "./helpers";
+import { clearInbox, core, createReview, linkPlugin, layout, openReviewsIn } from "./helpers";
 import { scratch } from "../helpers/scratch";
 
 const root = path.resolve(__dirname, "..", "..");
@@ -223,3 +223,27 @@ test("an agent waiting in the CLI wakes with what the person decided in the app"
   expect(await exited, stderr).toBe(0);
   expect(JSON.parse(stdout).decision.data).toEqual({ ok: true });
 });
+
+// the shortcuts dialog's tests choose where reviews open: back to the side
+// panel, the default, for the tests that follow
+test.afterAll(({ request }) => openReviewsIn(request, "panel"));
+
+for (const where of ["panel", "page"] as const)
+  test(`the shortcuts dialog lists the open view's keys, ${where === "panel" ? "beside the inbox" : "on its own page"}`, async ({
+    page,
+  }) => {
+    await openReviewsIn(page.request, where);
+    const { id } = await createReview(page.request, { title: "Probe keys", plugin: "probe", payload: {} });
+    if (where === "panel") {
+      await page.goto("/#/");
+      await page.getByTestId("review-row").filter({ hasText: "Probe keys" }).click();
+      await expect(page.getByTestId("review-panel")).toBeVisible();
+    } else {
+      await page.goto(`/#/reviews/${id}`);
+    }
+    await expect(page.frameLocator("#plugin-frame").locator("#keys")).toBeVisible();
+    await page.getByRole("button", { name: "Keyboard shortcuts" }).click();
+    const dialog = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+    await expect(dialog.getByRole("heading", { name: "In Probe" })).toBeVisible();
+    await expect(dialog).toContainText("Fold");
+  });
