@@ -20,5 +20,9 @@ Decided by Maya at 2026-10-20 12:00
    The spinner hides the button's label.
 6. **Transition** *failed / setSaving(false)* in the state diagram *The Save button*
    Show why the save failed.
+7. **Recording** *Saving, recorded* of *Ticket form*, at 0:01 (1.0 s), the whole frame
+   The spinner starts late.
+8. **Recording** *Saving, recorded* of *Ticket form*, at 0:02 (2.04 s), the area at 55% across and 75% down, 30% × 15% of the frame (192×56 px at 352, 279 in the 640×372 video)
+   The label is cut off.
 
 Reviewed: API client; createTicket (Ticket form → API client); **Transition** *press Save / ignored* in the state diagram *The Save button*

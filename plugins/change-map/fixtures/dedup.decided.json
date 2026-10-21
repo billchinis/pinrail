@@ -52,6 +52,12 @@
             "after": {
               "$attachment": "form-after.png"
             }
+          },
+          {
+            "title": "Saving, recorded",
+            "video": {
+              "$attachment": "form-saving.mp4"
+            }
           }
         ]
       },
@@ -831,6 +837,44 @@
             "item": "t4"
           },
           "body": "Show why the save failed."
+        },
+        {
+          "target": {
+            "screen": {
+              "node": "ticket-form",
+              "index": 1,
+              "image": "video"
+            },
+            "time": 1.0
+          },
+          "body": "The spinner starts late."
+        },
+        {
+          "target": {
+            "screen": {
+              "node": "ticket-form",
+              "index": 1,
+              "image": "video"
+            },
+            "time": 2.04,
+            "region": {
+              "x": 0.55,
+              "y": 0.75,
+              "width": 0.3,
+              "height": 0.15
+            },
+            "pixels": {
+              "x": 352,
+              "y": 279,
+              "width": 192,
+              "height": 56
+            },
+            "image_size": {
+              "width": 640,
+              "height": 372
+            }
+          },
+          "body": "The label is cut off."
         }
       ],
       "reviewed": [

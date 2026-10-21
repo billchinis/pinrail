@@ -11,6 +11,7 @@ import {
   ChevronUp,
   ExternalLink,
   FileCode,
+  Film,
   GitBranch,
   GitFork,
   Image as ImageIcon,
@@ -49,7 +50,7 @@ import {
   type Selection,
   type Target,
 } from "./types";
-import { screenComments } from "./ScreenViewer";
+import { clock, screenComments } from "./ScreenViewer";
 import { routine, type Unmapped } from "./lines";
 import { CommentItem } from "./CommentItem";
 import { Compose } from "./Compose";
@@ -87,7 +88,8 @@ export type PanelProps = {
   current: FileChange | null;
   /** the selected part's screen in the drawer, marked in its screenshots */
   screen: number | null;
-  openScreen(index: number): void;
+  /** opens a part's screen, a recording at a moment when given */
+  openScreen(index: number, time?: number): void;
   /** opens a file's diff, at a line when one is given */
   openFile(path: string, change?: FileChange, at?: LineTarget): void;
   openLink(url: string): void;
@@ -713,17 +715,37 @@ export function Comments({
                     className="cm-line-ref cm-screen-ref"
                     onClick={(e) => {
                       e.stopPropagation();
-                      openScreen(index);
+                      openScreen(index, c.target.time);
                     }}
-                    aria-label="Show the screenshot with this area"
-                    title="Show the screenshot with this area"
+                    aria-label={
+                      c.target.screen.image === "video"
+                        ? "Show the recording at this moment"
+                        : "Show the screenshot with this area"
+                    }
+                    title={
+                      c.target.screen.image === "video"
+                        ? "Show the recording at this moment"
+                        : "Show the screenshot with this area"
+                    }
                   >
                     {/* the number of the area's box on the screenshot */}
                     <span className="cm-area-n">{n + 1}</span>
-                    <ImageIcon aria-hidden="true" />
-                    <span>
-                      Screenshot · {sc.title ?? part.title} · {c.target.screen.image === "before" ? "Before" : "After"}
-                    </span>
+                    {c.target.screen.image === "video" ? (
+                      <>
+                        <Film aria-hidden="true" />
+                        <span>
+                          Recording · {sc.title ?? part.title} · {clock(c.target.time ?? 0)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon aria-hidden="true" />
+                        <span>
+                          Screenshot · {sc.title ?? part.title} ·{" "}
+                          {c.target.screen.image === "before" ? "Before" : "After"}
+                        </span>
+                      </>
+                    )}
                   </button>
                 }
               />

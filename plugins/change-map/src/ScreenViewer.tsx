@@ -14,6 +14,7 @@ import {
   Columns2,
   Hand,
   Image as ImageIcon,
+  MessageSquarePlus,
   Minus,
   Pause,
   Play,
@@ -76,6 +77,7 @@ export function ScreenViewer({
   onClose,
   mode,
   setMode,
+  seek = null,
 }: {
   part: Part;
   index: number;
@@ -90,6 +92,8 @@ export function ScreenViewer({
   /** the comparison the person chose last, which the screen_mode setting keeps */
   mode: Mode;
   setMode(mode: Mode): void;
+  /** a moment of the recording to show, paused, counted so the same moment again goes there again */
+  seek?: { time: number; n: number } | null;
 }) {
   const screens = part.screens ?? [];
   const screen = screens[index];
@@ -103,12 +107,61 @@ export function ScreenViewer({
     return a ? images.get(a.$attachment) : undefined;
   };
   const recording = !!screen?.video;
-  // the recording's element, which the play bar drives
+  // the recording's element, which the play bar drives, and where it is
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+  const [clip, setClip] = useState({ time: 0, length: 0, playing: false });
+  useEffect(() => {
+    if (!video) return;
+    const sync = () =>
+      setClip({
+        time: video.currentTime,
+        length: Number.isFinite(video.duration) ? video.duration : 0,
+        playing: !video.paused && !video.ended,
+      });
+    sync();
+    const events = ["play", "pause", "ended", "timeupdate", "seeked", "loadedmetadata", "durationchange"];
+    for (const e of events) video.addEventListener(e, sync);
+    return () => {
+      for (const e of events) video.removeEventListener(e, sync);
+    };
+  }, [video]);
+  // a moment the panel asked for: the recording paused there once it loads
+  useEffect(() => {
+    if (!video || !seek) return;
+    const go = () => {
+      video.pause();
+      video.currentTime = seek.time;
+    };
+    if (video.readyState >= 1) go();
+    else video.addEventListener("loadedmetadata", go, { once: true });
+    return () => video.removeEventListener("loadedmetadata", go);
+  }, [video, seek]);
+  /** Pauses the recording and opens a comment on its whole frame. */
+  const commentOnFrame = () => {
+    if (!video) return;
+    video.pause();
+    const frame = video.getBoundingClientRect();
+    setDraft({
+      image: "video",
+      region: { x: 0.5, y: 0.05, width: 0, height: 0 },
+      frame,
+      time: video.currentTime,
+      whole: true,
+    });
+    setText("");
+  };
   const mine = screenComments(comments, part.id, index);
   // the area being commented on, until the comment is added or cancelled;
   // `frame` is where the image was on the page when it was marked
-  const [draft, setDraft] = useState<{ image: Image; region: Region; frame: DOMRect } | null>(null);
+  // on a recording, `time` is its moment, and `whole` a comment on the whole
+  // frame, whose region only places the dialog
+  const [draft, setDraft] = useState<{
+    image: Media;
+    region: Region;
+    frame: DOMRect;
+    time?: number;
+    whole?: boolean;
+  } | null>(null);
   const [text, setText] = useState("");
   const [lit, setLit] = useState<number | null>(null);
   // the view the stages share, the hand tool, and Space held to pan
@@ -240,10 +293,19 @@ export function ScreenViewer({
     // marks up the file it sent
     const size = sizes.current.get(draft.image);
     const r = draft.region;
+    // a recording's moment, to a hundredth of a second
+    const time = draft.time === undefined ? {} : { time: Math.round(draft.time * 100) / 100 };
+    if (draft.whole) {
+      addComment({ screen: { node: part.id, index, image: draft.image }, ...time }, text.trim());
+      setDraft(null);
+      setText("");
+      return;
+    }
     addComment(
       {
         screen: { node: part.id, index, image: draft.image },
         region: r,
+        ...time,
         ...(size?.w && size.h
           ? {
               pixels: {
@@ -275,19 +337,25 @@ export function ScreenViewer({
         alt={`${screen?.title ?? part.title}, ${image === "video" ? "recording" : image}`}
         view={view}
         setView={setView}
-        // a recording takes no comments on its areas yet: a drag pans it
-        panning={readonly || hand || space || image === "video"}
+        panning={readonly || hand || space}
         onSize={(size) => onSize(image, size)}
         layers={layers.current}
         zoomAt={(k, cx, cy) => zoomAt(k, image, cx, cy)}
         boxes={mine
-          .map((c, n) => ({ n: n + 1, image: c.target.screen.image, region: c.target.region }))
-          .filter((b) => b.image === image)}
-        draft={draft?.image === image ? draft.region : null}
+          .map((c, n) => ({ n: n + 1, image: c.target.screen.image, region: c.target.region, time: c.target.time }))
+          // on a recording, the areas of the frame at the playhead
+          .filter(
+            (b): b is typeof b & { region: Region } =>
+              b.image === image &&
+              !!b.region &&
+              (image !== "video" || (b.time !== undefined && Math.abs(b.time - clip.time) < 0.25)),
+          )}
+        draft={draft?.image === image && !draft.whole ? draft.region : null}
         lit={lit}
         onMark={(region, frame) => {
-          if (image === "video") return;
-          setDraft({ image, region, frame });
+          // on a recording, the frame at the playhead, which holds still
+          if (image === "video") video?.pause();
+          setDraft({ image, region, frame, ...(image === "video" ? { time: video?.currentTime ?? 0 } : {}) });
           setText("");
         }}
         onLight={setLit}
@@ -440,7 +508,14 @@ export function ScreenViewer({
         {recording ? (
           <>
             <div className="cm-stages cm-single">{stage("video")}</div>
-            <PlayBar video={video} />
+            <PlayBar
+              video={video}
+              {...clip}
+              marks={mine.flatMap((c) =>
+                c.target.screen.image === "video" && c.target.time !== undefined ? [c.target.time] : [],
+              )}
+              onComment={readonly ? undefined : commentOnFrame}
+            />
           </>
         ) : compare === "wipe" ? (
           <div className="cm-wipe-wrap">
@@ -457,15 +532,27 @@ export function ScreenViewer({
             className="cm-pop"
             ref={dialog}
             role="dialog"
-            aria-label={`Comment on an area of the ${draft.image} image`}
+            aria-label={
+              draft.image === "video"
+                ? `Comment on the recording at ${clock(draft.time ?? 0)}`
+                : `Comment on an area of the ${draft.image} image`
+            }
             style={place ? { left: place.left, top: place.top, width: place.width } : { visibility: "hidden" }}
           >
             <div className="cm-pop-head">
-              <b>Area</b>
-              <span>{draft.image === "before" ? "Before" : "After"}</span>
-              <span className="cm-pop-where">
-                {pct(draft.region.x)}, {pct(draft.region.y)} · {pct(draft.region.width)} × {pct(draft.region.height)}
+              <b>{draft.whole ? "Frame" : "Area"}</b>
+              <span>
+                {draft.image === "before"
+                  ? "Before"
+                  : draft.image === "after"
+                    ? "After"
+                    : `At ${clock(draft.time ?? 0)}`}
               </span>
+              {draft.whole ? null : (
+                <span className="cm-pop-where">
+                  {pct(draft.region.x)}, {pct(draft.region.y)} · {pct(draft.region.width)} × {pct(draft.region.height)}
+                </span>
+              )}
             </div>
             <Compose
               id="area-comment"
@@ -483,9 +570,11 @@ export function ScreenViewer({
       </div>
       {compare !== "wipe" ? (
         <div className="pinrail-faint cm-shots-hint">
-          {readonly || hand || recording
+          {readonly || hand
             ? "Drag to pan · scroll to zoom"
-            : "Drag a box or click a spot to comment · scroll to zoom · Space and drag to pan"}
+            : recording
+              ? "Drag a box to comment on an area of this frame · scroll to zoom · Space and drag to pan"
+              : "Drag a box or click a spot to comment · scroll to zoom · Space and drag to pan"}
         </div>
       ) : null}
     </div>
@@ -495,30 +584,38 @@ export function ScreenViewer({
 /** One image on a stage: moved and scaled by the shared view, with the
  *  areas drawn over it in stage pixels, so their lines stay sharp. */
 /** The time of a moment in a recording, as minutes and seconds. */
-const clock = (seconds: number) => {
+export const clock = (seconds: number) => {
   const s = Math.floor(seconds);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-/** Plays and pauses a recording, says where it is, and moves it to a moment. */
-function PlayBar({ video }: { video: HTMLVideoElement | null }) {
-  const [playing, setPlaying] = useState(false);
-  const [time, setTime] = useState(0);
-  const [length, setLength] = useState(0);
-  useEffect(() => {
+/** Plays and pauses a recording, says where it is, moves it to a moment,
+ *  marks the moments with comments, and comments on the frame shown. */
+function PlayBar({
+  video,
+  time,
+  length,
+  playing,
+  marks,
+  onComment,
+}: {
+  video: HTMLVideoElement | null;
+  time: number;
+  length: number;
+  playing: boolean;
+  /** the moments of the recording's comments, in seconds */
+  marks: number[];
+  onComment?: () => void;
+}) {
+  const go = (t: number) => {
     if (!video) return;
-    const sync = () => {
-      setPlaying(!video.paused && !video.ended);
-      setTime(video.currentTime);
-      setLength(Number.isFinite(video.duration) ? video.duration : 0);
-    };
-    sync();
-    const events = ["play", "pause", "ended", "timeupdate", "seeked", "loadedmetadata", "durationchange"];
-    for (const e of events) video.addEventListener(e, sync);
-    return () => {
-      for (const e of events) video.removeEventListener(e, sync);
-    };
-  }, [video]);
+    video.pause();
+    video.currentTime = t;
+  };
+  const scrub = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (scrub.current) scrub.current.value = String(time);
+  }, [time, length]);
   return (
     <div className="cm-playbar">
       <button
@@ -531,23 +628,50 @@ function PlayBar({ video }: { video: HTMLVideoElement | null }) {
       >
         {playing ? <Pause /> : <Play />}
       </button>
-      <input
-        type="range"
-        className="cm-scrub"
-        aria-label="Position in the recording"
-        min={0}
-        max={length || 0}
-        step={0.01}
-        value={time}
-        disabled={!video || !length}
-        onChange={(e) => {
-          video!.currentTime = Number(e.target.value);
-          setTime(video!.currentTime);
-        }}
-      />
+      <span className="cm-scrub-wrap">
+        {/* not controlled: its value follows the video in an effect, so that
+            React never puts back the value under a drag */}
+        <input
+          ref={scrub}
+          type="range"
+          className="cm-scrub"
+          aria-label="Position in the recording"
+          min={0}
+          max={length || 0}
+          step={0.01}
+          defaultValue={0}
+          disabled={!video || !length}
+          onInput={(e) => {
+            video!.currentTime = Number(e.currentTarget.value);
+          }}
+        />
+        {length
+          ? marks.map((m, i) => (
+              <button
+                key={i}
+                type="button"
+                className="cm-scrub-mark"
+                style={{ left: `${(Math.min(m, length) / length) * 100}%` }}
+                aria-label={`Go to the comment at ${clock(m)}`}
+                title={`A comment at ${clock(m)}`}
+                onClick={() => go(m)}
+              />
+            ))
+          : null}
+      </span>
       <span className="cm-video-time mono" data-testid="video-time">
         {clock(time)} / {clock(length)}
       </span>
+      {onComment ? (
+        <button
+          type="button"
+          className="pinrail-btn pinrail-btn-ghost"
+          onClick={onComment}
+          title="Comment on this frame, or drag a box on it for an area"
+        >
+          <MessageSquarePlus /> Comment on this frame
+        </button>
+      ) : null}
     </div>
   );
 }

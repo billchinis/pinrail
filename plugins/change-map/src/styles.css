@@ -1708,10 +1708,30 @@ body.cm-picking * {
   align-items: center;
   gap: 8px;
 }
+/* the scrubber, with a mark at each comment's moment over its track */
+.cm-scrub-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
 .cm-scrub {
   flex: 1;
   min-width: 0;
   accent-color: var(--pinrail-accent);
+}
+.cm-scrub-mark {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -12px 0 0 -4.5px;
+  padding: 0;
+  border: 1.5px solid var(--pinrail-bg);
+  border-radius: 50%;
+  background: var(--pinrail-info, var(--pinrail-accent));
+  cursor: pointer;
 }
 .cm-video-time {
   flex: none;

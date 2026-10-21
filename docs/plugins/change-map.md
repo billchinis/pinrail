@@ -56,7 +56,7 @@ Every participant, message, state and transition has a status, a summary and the
 
 ### Screenshots and recordings of interface changes
 
-A part of the interface, such as a form or a page, can carry screenshots, each with a before and an after. The part's card on the map shows the after as a thumbnail, and the side panel shows each screen in turn. A screen can also be a recording of the part in use, sent as an MP4, MOV or WebM file in place of the screenshots. The side panel shows its first frame, and the drawer plays it, with a scrubber and the time. A screenshot opens larger in the drawer:
+A part of the interface, such as a form or a page, can carry screenshots, each with a before and an after. The part's card on the map shows the after as a thumbnail, and the side panel shows each screen in turn. A screen can also be a recording of the part in use, sent as an MP4, MOV or WebM file in place of the screenshots. The side panel shows its first frame, and the drawer plays it, with a scrubber and the time. **Comment on this frame** comments on the frame at the playhead, and a box dragged on the video comments on an area of it. Each comment marks the scrubber at its moment, and its box shows when the playhead is there. A screenshot opens larger in the drawer:
 
 - **Side by side**, the before and the after at the same zoom and position, so a detail lines up across both.
 - **With a slider** over the two, which you drag to wipe from the before to the after.
@@ -130,7 +130,7 @@ When a change is complex, submit it for review with the `change-map` Pinrail plu
 | Field | What the agent does with it |
 |---|---|
 | `verdict` | `approve`: goes on, and reads any comments as notes. `request_changes`: applies the comments in a new version. |
-| `comments[].target` | What the comment is about: a part (`node`), an interaction (`edge`), lines of a file (`file`, `line`, `start_line` and `side`), an area of a screenshot (`screen` and `region`, in fractions of the image, with `pixels` and `image_size` giving the same area in the image's own pixels), or an entity of a diagram (`diagram` and `item`). |
+| `comments[].target` | What the comment is about: a part (`node`), an interaction (`edge`), lines of a file (`file`, `line`, `start_line` and `side`), an area of a screenshot (`screen` and `region`, in fractions of the image, with `pixels` and `image_size` giving the same area in the image's own pixels), a moment of a recording (`screen` with the image `video`, and `time` in seconds, with an area of its frame as for a screenshot when one is marked), or an entity of a diagram (`diagram` and `item`). |
 | `reviewed` | The parts, interactions and diagram entities the person marked as reviewed. |
 
 ## Reference

@@ -29,7 +29,7 @@
           "target": {
             "type": "object",
             "additionalProperties": false,
-            "description": "What a comment is on: a node, an edge, a line of a file or lines from start_line to line on the same side, an area of a screenshot, or an entity of an extra diagram.",
+            "description": "What a comment is on: a node, an edge, a line of a file or lines from start_line to line on the same side, an area of a screenshot, a moment of a recording or an area of its frame, or an entity of an extra diagram.",
             "oneOf": [
               {
                 "required": [
@@ -198,6 +198,123 @@
               },
               {
                 "required": [
+                  "screen",
+                  "time"
+                ],
+                "properties": {
+                  "screen": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "node",
+                      "index",
+                      "image"
+                    ],
+                    "description": "The recording: a node's screens[index], its video.",
+                    "properties": {
+                      "node": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "index": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "image": {
+                        "const": "video"
+                      }
+                    }
+                  },
+                  "region": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "x",
+                      "y",
+                      "width",
+                      "height"
+                    ],
+                    "description": "An area of the frame at that moment, as fractions of its width and height from its top-left corner. Without it, the comment is on the whole frame.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "width": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "height": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    }
+                  },
+                  "pixels": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "x",
+                      "y",
+                      "width",
+                      "height"
+                    ],
+                    "description": "The same area in the video's own pixels, from its top-left corner.",
+                    "properties": {
+                      "x": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "y": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "image_size": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "width",
+                      "height"
+                    ],
+                    "description": "The video's own size in pixels, which `pixels` is in.",
+                    "properties": {
+                      "width": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  },
+                  "time": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "The moment of the recording, in seconds from its start."
+                  }
+                }
+              },
+              {
+                "required": [
                   "diagram",
                   "item"
                 ],
@@ -225,7 +342,8 @@
               "diagram": {},
               "item": {},
               "pixels": {},
-              "image_size": {}
+              "image_size": {},
+              "time": {}
             }
           },
           "body": {

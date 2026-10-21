@@ -104,9 +104,12 @@ export type Target =
 /** An area of a screenshot, as fractions of the image's size. */
 export type Region = { x: number; y: number; width: number; height: number };
 /** An area of a node's screens[index], on its before or its after image. */
+/** A comment on a screen: on an area of a screenshot, or on a moment of a
+ *  recording, `time` in seconds, and an area of its frame if one is marked. */
 export type ScreenTarget = {
-  screen: { node: string; index: number; image: "before" | "after" };
-  region: Region;
+  screen: { node: string; index: number; image: "before" | "after" | "video" };
+  region?: Region;
+  time?: number;
   /** the same area in the image's own pixels, and the image's size */
   pixels?: Region;
   image_size?: { width: number; height: number };
@@ -240,7 +243,8 @@ export function keyOf(target: Target): string {
   if ("screen" in target) {
     const { node, index, image } = target.screen;
     const r = target.region;
-    return `screen:${node}:${index}:${image}:${r.x},${r.y},${r.width},${r.height}`;
+    const area = r ? `${r.x},${r.y},${r.width},${r.height}` : "";
+    return `screen:${node}:${index}:${image}:${target.time ?? ""}:${area}`;
   }
   return `line:${target.file}:${target.side ?? "new"}:${target.start_line ?? target.line}-${target.line}`;
 }

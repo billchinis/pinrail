@@ -79,6 +79,8 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
   const [selection, setSelection] = useState<Selection>(null);
   // the diagram on the canvas: the map, or one of the extra diagrams by its id
   const [tab, setTab] = useState<string | null>(null);
+  // a moment of a recording the panel asked to show
+  const [seek, setSeek] = useState<{ time: number; n: number } | null>(null);
   // a part to zoom the map in on, counted so that the same part again zooms again
   const [zoom, setZoom] = useState<{ node: string; n: number } | null>(null);
   const diagram = payload.diagrams?.find((d) => d.id === tab) ?? null;
@@ -584,6 +586,7 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               onClose={() => setFile(null)}
               mode={screenMode}
               setMode={setScreenMode}
+              seek={seek}
             />
           ) : file ? (
             <DiffViewer
@@ -646,7 +649,10 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               screen={file?.screen ?? null}
               current={file?.path ? { file: file.path, lines: file.change?.lines } : null}
               openFile={(path, change, at) => setFile({ path, change, at })}
-              openScreen={(i) => setFile({ path: null, screen: i })}
+              openScreen={(i, time) => {
+                setFile({ path: null, screen: i });
+                if (time !== undefined) setSeek((s) => ({ time, n: (s?.n ?? 0) + 1 }));
+              }}
               openLink={(url) => plugin.open(url)}
               openDiagram={(id) => setTab(id)}
               addComment={addComment}

@@ -66,3 +66,8 @@ gives the area in the image's own pixels, as `pixels`, with the size of the
 image the view showed as `image_size`, such as
 `{"pixels": {"x": 619, "y": 432, "width": 310, "height": 96}, "image_size": {"width": 1032, "height": 600}}`.
 Use those to crop or mark up the file you sent.
+
+A comment on a recording has `"image": "video"` and the moment it is about, `time`, in seconds from the start, such as
+`{"screen": {"node": "ticket-form", "index": 1, "image": "video"}, "time": 2.04}`.
+It has a `region`, `pixels` and `image_size` as above when it is on an area
+of the frame at that moment, and none when it is on the whole frame.

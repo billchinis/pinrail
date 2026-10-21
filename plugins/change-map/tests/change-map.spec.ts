@@ -711,8 +711,68 @@ test("a recording sits with a part's screenshots, and plays in the drawer", asyn
   await viewer.getByRole("slider", { name: "Position in the recording" }).fill("2");
   await expect.poll(() => video.evaluate((v: HTMLVideoElement) => Math.round(v.currentTime))).toBe(2);
   await expect(viewer.getByTestId("video-time")).toHaveText("0:02 / 0:02");
-  // no comments on a recording's frames yet: the hint says what a drag does
-  await expect(viewer.locator(".cm-shots-hint")).toHaveText("Drag to pan · scroll to zoom");
+  // the hint says what a drag on a recording does
+  await expect(viewer.locator(".cm-shots-hint")).toContainText("Drag a box to comment on an area of this frame");
+});
+
+test("a comment on a recording's frame goes back with its moment, and its area when one is marked", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 860 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await f.locator('[data-node="ticket-form"]').click();
+  const panel = f.getByTestId("part-detail");
+  await panel.getByRole("button", { name: "Next screen" }).click();
+  await panel.locator(".cm-screen").click();
+  const viewer = f.getByTestId("screen-viewer");
+  const video = viewer.locator("video");
+  const scrub = viewer.getByRole("slider", { name: "Position in the recording" });
+  const at = () => video.evaluate((v: HTMLVideoElement) => v.currentTime);
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
+
+  // the whole frame, at 1 second
+  await scrub.fill("1");
+  await viewer.getByRole("button", { name: "Comment on this frame" }).click();
+  const dialog = f.getByRole("dialog", { name: /Comment on the recording at 0:01/ });
+  await dialog.getByRole("textbox").fill("The spinner starts late.");
+  await dialog.getByRole("textbox").press("Enter");
+
+  // an area of the frame, at 2 seconds: the drag pauses the video
+  await scrub.fill("2");
+  const box = (await video.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.75);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.9, { steps: 5 });
+  await page.mouse.up();
+  await page.keyboard.type("The label is cut off.");
+  await page.keyboard.press("Enter");
+  // its box shows at its moment only, and each comment marks the scrubber
+  await expect(viewer.getByTestId("area")).toHaveCount(1);
+  await expect(viewer.locator(".cm-scrub-mark")).toHaveCount(2);
+  await scrub.fill("0");
+  await expect(viewer.getByTestId("area")).toHaveCount(0);
+  await viewer.locator(".cm-scrub-mark").nth(1).click();
+  await expect.poll(at).toBeCloseTo(2, 1);
+  await expect(viewer.getByTestId("area")).toHaveCount(1);
+
+  // in the panel, each with its moment, which opens the recording there
+  const heads = panel.getByRole("button", { name: "Show the recording at this moment" });
+  await expect(heads).toHaveCount(2);
+  await expect(heads.nth(0)).toContainText("Recording · Saving, recorded · 0:01");
+  await scrub.fill("0");
+  await heads.nth(0).click();
+  await expect.poll(at).toBeCloseTo(1, 1);
+
+  const result = (await plugin.handOver()) as {
+    decision: { data: { comments: { target: Record<string, unknown> }[] } };
+  };
+  const [whole, area] = result.decision.data.comments.map((c) => c.target);
+  expect(whole).toEqual({ screen: { node: "ticket-form", index: 1, image: "video" }, time: 1 });
+  expect(area.screen).toEqual({ node: "ticket-form", index: 1, image: "video" });
+  expect(area.time).toBe(2);
+  expect((area.region as Record<string, number>).x).toBeCloseTo(0.55, 1);
+  expect(area.image_size).toEqual({ width: 640, height: 372 });
 });
 
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
