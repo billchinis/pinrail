@@ -480,6 +480,42 @@ test("the header counts what is reviewed, and U goes to the next part or interac
   await expect(progress).toHaveText("All 10 reviewed");
 });
 
+test("the overview's parts show a reviewed part by a check on its icon, and its comments beside its name", async ({
+  page,
+}) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await f.locator('[data-node="tickets-endpoint"]').click();
+  await page.keyboard.press("r");
+  await f.getByPlaceholder("Add a comment").fill("Return the ticket's id with the 409.");
+  await f.getByPlaceholder("Add a comment").press("Enter");
+  await page.keyboard.press("Escape");
+  await f.getByRole("button", { name: "Overview" }).click();
+  const row = f.getByTestId("overview").getByRole("button", { name: /^POST \/tickets/ });
+  // the check sits on the icon's corner
+  const icon = (await row.locator(".cm-row-icon").boundingBox())!;
+  const check = (await row.locator(".cm-row-icon .cm-icon-reviewed").boundingBox())!;
+  expect(check.x).toBeGreaterThan(icon.x);
+  expect(check.x).toBeLessThan(icon.x + icon.width);
+  expect(check.y).toBeGreaterThan(icon.y);
+  await expect(row).toHaveAttribute("aria-label", /reviewed/);
+  // the comments beside the name, before the status at the right
+  const commented = row.locator(".cm-mark-comment");
+  await expect(commented).toHaveText("1");
+  const nameEnd = await row.locator(".cm-row-title").evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    return range.getBoundingClientRect().right;
+  });
+  const mark = (await commented.boundingBox())!;
+  expect(mark.x - nameEnd).toBeLessThan(12);
+  expect(mark.x + mark.width).toBeLessThan((await row.locator(".cm-status").boundingBox())!.x);
+  // a part not reviewed has no check, and no mark beside its name
+  const other = f.getByTestId("overview").getByRole("button", { name: /^API client/ });
+  await expect(other.locator(".cm-icon-reviewed")).toHaveCount(0);
+  await expect(other.locator(".cm-mark-reviewed")).toHaveCount(0);
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

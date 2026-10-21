@@ -669,6 +669,38 @@ body.cm-resizing-panel * {
   text-align: left;
   font-size: 12px;
 }
+/* a part's icon in the overview, with a check on its corner once reviewed */
+.cm-row-icon {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.cm-icon-reviewed {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: inline-grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--pinrail-success);
+  box-shadow: 0 0 0 1.5px var(--pinrail-bg);
+  color: var(--pinrail-bg);
+}
+.cm-app .cm-icon-reviewed svg.lucide {
+  width: 8px;
+  height: 8px;
+  stroke-width: 3.5;
+}
+/* the overview's parts and diagrams: the name and its marks together, the
+   status or the kind at the right edge */
+.cm-marked-rows .cm-row-title {
+  flex: 0 1 auto;
+}
+.cm-marked-rows .cm-row-end {
+  margin-left: auto;
+}
 .cm-file-name {
   flex: 1;
   min-width: 0;

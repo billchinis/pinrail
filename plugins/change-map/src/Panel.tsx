@@ -136,6 +136,7 @@ function Overview(props: PanelProps) {
   const changed = payload.nodes.filter((n) => nodeStatus(n) !== "context");
   // the comments on each part, its lines and its screenshots, as the map counts them
   const counted = (id: string) => props.marks.get(id)?.comments ?? 0;
+  const isReviewed = (id: string) => props.marks.get(id)?.reviewed ?? false;
   return (
     <div className="cm-detail" data-testid="overview">
       {change?.source || change?.ref ? (
@@ -176,15 +177,29 @@ function Overview(props: PanelProps) {
         </p>
       ) : null}
       <h3 className="pinrail-eyebrow">Parts changed</h3>
-      <ul className="cm-parts">
+      <ul className="cm-parts cm-marked-rows">
         {changed.map((n) => {
           const Icon = kindIcon[n.kind ?? "module"];
           const status = nodeStatus(n);
           return (
             <li key={n.id}>
-              <button type="button" className="cm-row" onClick={() => zoomTo(n.id)}>
-                <Icon />
+              <button
+                type="button"
+                className="cm-row"
+                onClick={() => zoomTo(n.id)}
+                aria-label={`${n.title}, ${statusLabel[status]}${isReviewed(n.id) ? ", reviewed" : ""}`}
+              >
+                {/* a reviewed part has a check on its icon's corner */}
+                <span className="cm-row-icon">
+                  <Icon />
+                  {isReviewed(n.id) ? (
+                    <span className="cm-icon-reviewed" title="Reviewed">
+                      <Check />
+                    </span>
+                  ) : null}
+                </span>
                 <span className="cm-row-title">{n.title}</span>
+                {/* the comments beside the name; the status keeps its column */}
                 {counted(n.id) ? (
                   <span
                     className="cm-mark cm-mark-comment"
@@ -194,7 +209,7 @@ function Overview(props: PanelProps) {
                     {counted(n.id)}
                   </span>
                 ) : null}
-                <span className={`cm-status cm-status-${status}`}>{statusLabel[status]}</span>
+                <span className={`cm-status cm-status-${status} cm-row-end`}>{statusLabel[status]}</span>
               </button>
             </li>
           );
@@ -244,7 +259,7 @@ function DiagramList({
   comments: Comment[];
 }) {
   return (
-    <ul className="cm-parts">
+    <ul className="cm-parts cm-marked-rows">
       {diagrams.map((d) => {
         const Icon = diagramIcon(d);
         const count = diagramComments(payload, d, comments);
@@ -259,7 +274,7 @@ function DiagramList({
                   {count}
                 </span>
               ) : null}
-              <span className="pinrail-faint">{diagramKind(d)}</span>
+              <span className="pinrail-faint cm-row-end">{diagramKind(d)}</span>
             </button>
           </li>
         );
