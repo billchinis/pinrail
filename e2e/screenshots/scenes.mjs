@@ -6,6 +6,7 @@
 // `site: true` marks the shots the landing pages use, in the light theme.
 
 import { execFileSync, spawn } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
@@ -64,6 +65,37 @@ async function note(f, id, text) {
 async function closeDiff(f) {
   const hide = f.getByRole("button", { name: "Hide the diff" });
   if (await hide.count()) await hide.click();
+}
+
+/** The blog post's sample change, submitted once per run as an agent would,
+ *  with its screenshots. Returns the review's id. */
+let blogReviewId = null;
+async function blogReview(app) {
+  if (blogReviewId) return blogReviewId;
+  const dir = path.join(app.root, "agent-docs", "blog-code-reviews", "sample");
+  const sample = JSON.parse(fs.readFileSync(path.join(dir, "report-exports.json"), "utf8"));
+  const attachments = {};
+  for (const [name, entry] of Object.entries(sample.attachments)) {
+    const bytes = fs.readFileSync(path.join(dir, entry.path));
+    const sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+    const res = await fetch(`${app.core}/api/v1/attachments/${sha256}`, {
+      method: "PUT",
+      headers: { "content-type": "application/octet-stream" },
+      body: bytes,
+    });
+    if (!res.ok) throw new Error(`uploading ${name}: ${res.status}`);
+    attachments[name] = { sha256, size: bytes.length, media_type: entry.media_type };
+  }
+  const review = await app.api("POST", "/api/v1/reviews", {
+    plugin: "change-map",
+    title: sample.title,
+    origin: { repo: "acme/helpdesk", workflow: "pull-request", ref: "131" },
+    requested_by: "claude",
+    payload: sample.payload,
+    attachments,
+  });
+  blogReviewId = review.id;
+  return blogReviewId;
 }
 
 /** A What's new picture is the whole window at this size, the shape of the dialog's picture. */
@@ -755,6 +787,60 @@ export const scenes = [
       } finally {
         shell.kill();
       }
+    },
+  },
+  {
+    // the blog post "Review the architecture first, then the diff": its sample
+    // change of 39 files
+    // in the app, with the removed endpoint selected and commented. The
+    // review is created here, not seeded from fixtures/, so the docs' shots
+    // stay as they are. It runs only with --out, since no docs page shows
+    // it and the post keeps its own copy, and the sample it reads is in
+    // agent-docs, which is not committed:
+    //   mise run screenshots -- --only blog- --no-build \
+    //     --out "$PWD/agent-docs/blog-code-reviews/app-shots"
+    name: "blog-change-map",
+    async run({ page, app, shot }) {
+      if (!process.argv.includes("--out")) return;
+      const id = await blogReview(app);
+      await page.setViewportSize({ width: 1600, height: 920 });
+      const f = await openReview(page, app, id);
+      await f.locator(".cm-part").first().waitFor();
+      await closeDiff(f);
+      await f.locator('[data-node="csv-endpoint"]').click();
+      await f
+        .getByPlaceholder("Add a comment")
+        .fill(
+          "Keep this endpoint for one more release, with a Deprecation header. The finance team's nightly script still calls it.",
+        );
+      await f.getByPlaceholder("Add a comment").press("Enter");
+      await settle(page, 700);
+      await shot("blog-change-map");
+    },
+  },
+  {
+    // the same post's closing shot: the change map in Settings › Plugins,
+    // installed from the app's official plugins, with its details open and
+    // its skill turned on
+    name: "blog-plugins",
+    async run({ page, app, shot }) {
+      if (!process.argv.includes("--out")) return;
+      await page.setViewportSize({ width: 1400, height: 860 });
+      await page.goto(`${app.ui}/#/`);
+      await page.getByTestId("inbox-group").first().waitFor();
+      await page.keyboard.press("Meta+,");
+      await settingsSection(page, "Plugins").click();
+      await page.getByRole("button", { name: "Details of change-map" }).click();
+      // its skill turned on: the row's mark shows it, and so does its switch
+      const skill = page.getByRole("switch", { name: "Skill of change-map" });
+      if ((await skill.getAttribute("aria-checked")) !== "true") await skill.click();
+      await page.getByTestId("plugin-has-skill").getByText("skill").waitFor();
+      await page.getByRole("button", { name: "Send a sample" }).scrollIntoViewIfNeeded();
+      // away from the button, so that its tooltip is closed
+      await page.mouse.move(5, 600);
+      await page.waitForLoadState("networkidle");
+      await settle(page, 500);
+      await shot("blog-plugins");
     },
   },
   ...[

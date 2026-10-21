@@ -1,0 +1,73 @@
+---
+// Tabs over the blocks in its slot, one tab for each label, in order: the
+// same thing in two forms, such as a decision as JSON and as Markdown.
+// Without scripts, every block shows, one under the other.
+interface Props {
+  labels: string[];
+}
+const { labels } = Astro.props;
+---
+
+<div class="tabs" data-tabs>
+  <div class="tabs-list" role="tablist">
+    {
+      labels.map((label, i) => (
+        <button type="button" role="tab" aria-selected={i === 0 ? "true" : "false"} data-tab={i}>
+          {label}
+        </button>
+      ))
+    }
+  </div>
+  <div class="tabs-panels">
+    <slot />
+  </div>
+</div>
+
+<script>
+  for (const tabs of document.querySelectorAll<HTMLElement>("[data-tabs]")) {
+    const buttons = [...tabs.querySelectorAll<HTMLButtonElement>("[role=tab]")];
+    const panels = [...(tabs.querySelector(".tabs-panels")?.children ?? [])] as HTMLElement[];
+    const show = (n: number) => {
+      buttons.forEach((b, i) => b.setAttribute("aria-selected", String(i === n)));
+      panels.forEach((p, i) => (p.hidden = i !== n));
+    };
+    buttons.forEach((b, i) => b.addEventListener("click", () => show(i)));
+    show(0);
+  }
+</script>
+
+<style>
+  .tabs {
+    margin-top: 1.5em;
+  }
+  .tabs-list {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .tabs-list button {
+    margin-bottom: -1px;
+    padding: 0.45rem 0.8rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--faint);
+    font: 600 0.78rem/1 var(--mono);
+    cursor: pointer;
+  }
+  .tabs-list button:hover {
+    color: var(--ink);
+  }
+  .tabs-list button[aria-selected="true"] {
+    border-bottom-color: var(--pen);
+    color: var(--ink);
+  }
+  /* the code block close under its tab: the prose's space above a figure
+     would reach its frame */
+  .tabs-panels > :global(.expressive-code) {
+    margin-top: 0.6em;
+  }
+  .tabs-panels :global(.expressive-code figure.frame) {
+    margin-top: 0;
+  }
+</style>

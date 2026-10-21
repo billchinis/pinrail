@@ -48,9 +48,10 @@ export default defineConfig({
       title: "Pinrail",
       description: "The inbox where your agents ask before they act.",
       // a link to a page or heading that does not exist fails the build, in
-      // the docs and in blog posts; the landing and download pages are the
-      // site's own, and the docs name the local server's address on purpose
-      plugins: [starlightLinksValidator({ exclude: ["/", "/download/"], errorOnLocalLinks: false })],
+      // the docs and in blog posts; the landing and download pages and the
+      // blog's posts are the site's own pages, which it cannot see into, and
+      // the docs name the local server's address on purpose
+      plugins: [starlightLinksValidator({ exclude: ["/", "/download/", "/blog/**"], errorOnLocalLinks: false })],
       customCss: ["./src/styles/docs.css", "./src/styles/terminal.css"],
       // the docs live beside the code, so Starlight's asides and heading links
       // must reach them there; blog posts get the same asides (:::note)

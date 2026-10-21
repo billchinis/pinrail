@@ -1,0 +1,287 @@
+---
+title: Review the architecture first, then the diff
+dek: An agent changed 39 files across four parts of a system. I wanted to review the choices it made, not scroll through them in alphabetical order.
+description: Why a file-by-file diff is the wrong starting point for reviewing a large change made by an agent, and how the change map plugin for Pinrail reviews the architecture first, with each part, interaction and diagram linked to its code.
+date: "2026-10-20"
+kind: Essay
+minutes: 11
+---
+
+import Shot from "../../../components/blog/Shot.astro";
+import Tabs from "../../../components/blog/Tabs.astro";
+import Clip from "./Clip.astro";
+import map from "./map.png";
+import inTheApp from "./in-the-app.png";
+import diff from "./diff.png";
+import plugins from "./plugins.png";
+import sequence from "./sequence.png";
+import files from "./files.png";
+
+<p class="lead">An agent finishes a change. It touched 39 files across a web app, an API, a new background job and the database, and the tests pass. Before it opens a pull request, it asks me to review it. Where do I start?</p>
+
+<Clip
+  n={1}
+  name="change-map-overview"
+  controls
+  alt="A review of a 39-file change in the change map: the map of the change, a comment on a removed endpoint, an interaction's code in the diff drawer with a comment on ten lines, a comment on an area of a screenshot, a sequence diagram, a state diagram with a comment on a transition, a file of the change lighting up the part that touches it with its lines off the map marked, the count of what is reviewed, and the verdict."
+  caption="A review of the example change in this post, from the map to the verdict. 81 seconds, narrated, with captions."
+/>
+
+## Why I still read the change
+
+It is tempting to judge only the result: the tests pass, the feature works when I click through it, so I approve. I do not think that is enough.
+
+I own the system. If the new export job holds a database connection for ten minutes and the pool runs out at night, I am the one who gets paged, and "the agent wrote it" is not an answer anyone accepts.
+
+The agent's structural choices compound. Whether exports run in the request or in a job, whether the file is served by the API or straight from the bucket, what state a failed attempt leaves behind: each of these is cheap to change in review and expensive to change once ten more changes build on it. An agent builds on whatever it finds.
+
+Review is also how I keep a working model of my own code. <mark>If I approve changes I have not understood, within a few months I am maintaining a system I no longer know.</mark> I can ask an agent to explain it, but then I am trusting the same kind of account I chose not to check.
+
+So I want to understand the change. The question is how to do that for every change an agent makes, several times a day.
+
+## What a diff does not show
+
+The usual tool is the pull request diff. For this change, that is 39 files in alphabetical order, from `CHANGELOG.md` and `config/config.exs` down to `web/src/routes.tsx`.
+
+<Shot
+  n={2}
+  src={diff}
+  alt="The same change as a diff: the 39 files in a tree in alphabetical order, starting with CHANGELOG.md and config.exs, and the diff of CHANGELOG.md beside it."
+  caption="The same change as a diff, file by file in alphabetical order. Pinrail offers this view too, as its code review plugin, and for a smaller change it is still the one to use."
+>
+  <Fragment slot="caption">The same change as a diff, file by file in alphabetical order. Pinrail offers this view too, as its <a href="/docs/plugins/code-review/">code review plugin</a>, and for a smaller change it is still the one to use.</Fragment>
+</Shot>
+
+A diff is very good at what it was made for: showing exactly which lines changed. For a change that spans several parts of a system, it leaves most of the work to the reviewer.
+
+- **It shows lines, not the shape of the change.** The main decision here is that a job builds the file instead of the request. It is spread over a deleted controller, a new module, a worker and a config file, and no hunk states it.
+- **The order is the alphabet's.** I read the worker before I have seen what enqueues it, and the migration last.
+- **I rebuild the architecture in my head.** That model is the most useful thing a review produces, and the tool throws it away. The next reviewer, or I next week, starts from nothing.
+- **Interactions, order and lifecycle are not on any line.** In this change, a failed export stays `running` between attempts, and no single line says so.
+- **The interface is somewhere else.** When the code changes what users see, the review should show what changed on screen, next to the code that changed it.
+- **Comments are prose about a location.** "The retry in the worker should reset the status" leaves the agent to work out which retry and which status.
+
+None of this is new with agents. A colleague's 39-file pull request has always been hard to review. **What changed is how often it happens.**
+
+## Start with the architecture
+
+When a colleague explains a large change well, they do not start with files. They draw the parts that changed, with arrows for what calls what, walk through what happens when a user presses the button, and draw the states of anything with a status. Only then do we open the code, and by then I know what each file is for.
+
+An agent is well placed to produce that walkthrough. It has just made the change, it knows which lines implement which part, and a structured description of it costs it little. The risk is a description that is wrong, or kinder to the change than the code is. <mark>So every card and every arrow must point to the lines behind it, the diff must stay one click away, and nothing the description leaves out may disappear.</mark>
+
+The change map is that review, built as a plugin for [Pinrail](/). The agent submits its map with `pinrail submit` and waits; I review it in a view made for the map, and my decision goes back to the agent as structured data. [We deserve a better agent-human interaction](/blog/we-deserve-a-better-agent-human-interaction/) explains why every kind of review in Pinrail gets a view of its own.
+
+## How the change map works
+
+The example throughout is a made-up helpdesk app whose CSV export moves from the request into a background job: 39 files across a React front end, a Phoenix API, an Oban worker and S3.
+
+### The map
+
+The agent describes the parts the change touches, groups them into lanes, and connects them with the interactions between them. Each card's header names the part's kind and its status, new, changed or removed, and a bar under its name shows how many lines it adds and removes, so the large parts stand out before I open anything. Each interaction is labelled with what it does and how many files implement it. **A label without a count has no code behind it.**
+
+<Shot
+  n={3}
+  src={map}
+  alt="The change map of the example change: five lanes (Web app, API, Jobs, Services, Data) with sixteen parts and the labelled interactions between them. Each card has a header with its kind and status, the removed endpoint GET /reports/:id/csv in red, new parts in green and changed parts in amber, and a bar with the lines it adds and removes. Each interaction's label counts its files."
+  caption="The map of the change. The request path runs from left to right, and the job sits below the API it is started from. Exports, with 171 new lines, is the largest part."
+/>
+
+Before opening a file, I can see the shape: the report page calls a new endpoint, which queues a job, which streams rows from `Reports` into `Storage`, and the old CSV endpoint is gone. That red card is my first comment. In the diff, it is a deleted controller among 39 files. On the map, it is a public endpoint about to disappear, and I happen to know a nightly script still calls it.
+
+<Shot
+  n={4}
+  src={inTheApp}
+  alt="The change map open in the Pinrail app: the inbox on the left, the map in the middle with the removed endpoint selected, and the side panel with its summary, its two deleted files, its interactions and a comment asking to keep the endpoint for one more release."
+  caption="The review in the Pinrail app. Selecting a part shows the agent's summary of it, its files, its interactions and its comments."
+/>
+
+### Parts, interactions and their code
+
+Selecting a part or an interaction shows the agent's summary, its files and line ranges, and the diagrams it appears in. The diff drawer under the map follows the selection, at the lines that implement it.
+
+<Clip
+  n={5}
+  name="clip-select"
+  alt="Selecting Storage on the map opens storage.ex in the diff drawer at its lines. Selecting Reports opens reports.ex, and selecting the stream_rows interaction opens the worker at the lines that call it."
+  caption="With the drawer open, each selection opens its own lines: the Storage module, the Reports module, then the interaction between the worker and Reports."
+/>
+
+<mark>I still read the code, but in the order of the architecture</mark>, and I know what each hunk is meant to do before I read it. When a hunk does not match the summary on its card, that mismatch is usually the comment.
+
+### What the map leaves out
+
+A map is the agent's account of the change, and an account can leave things out. The view counts the changed lines the map covers, 825 of 922 here, and marks the rest with an amber edge in the drawer. Choosing a file in the overview lights up whatever touches it.
+
+<Shot
+  n={6}
+  src={files}
+  alt="The change map with lib/helpdesk/reports/csv.ex chosen in the files at the bottom of the side panel. The map is zoomed on the Reports part, the only part that touches the file, with the rest dimmed. The drawer shows the file's diff with an amber edge on the lines no part covers, and its header says 11 not on the map. The overview says 825 of 922 changed lines are on the map."
+  caption="A file chosen in the overview. Reports is the only part that touches it, and 11 of its changed lines are on no part, which the amber edges mark."
+/>
+
+Most uncovered lines are noise, such as documentation, fixtures or a config entry. The few that are not usually belong to a part the agent drew too narrowly, and that is where I look first. The agent's skill runs the same check before it submits.
+
+### Comments where they belong
+
+A comment goes on a part, an interaction, a line or a range of lines. <mark>Review is no longer confined to lines: I can comment on a part of the architecture, or on how two parts relate, as precisely as on a line of code.</mark> Badges on the cards, the tabs and the files show where the discussion is.
+
+<Clip
+  n={7}
+  name="clip-range"
+  alt="Dragging down the diff's gutter from line 40 to line 49 of export_worker.ex selects the Repo.transaction block, and a comment is written on the range."
+  caption="A comment on a range of lines. The transaction that Repo.stream needs keeps a database connection checked out for the whole upload."
+/>
+
+### Screenshots and recordings
+
+When a change touches the interface, the agent can attach screenshots of each screen before and after, or a recording when the change is about behaviour over time. I comment on them directly: on an area of a screenshot, or on a frame of the recording.
+
+<Clip
+  n={8}
+  name="clip-screens"
+  alt="The report page's screenshots open in the drawer, before and after side by side. The view switches to the after alone and back, and a box is dragged over the new toast in the after to comment on it."
+  caption="The report page before and after pressing Export CSV. The comment is on the toast that the change adds."
+/>
+
+<Clip
+  n={9}
+  name="clip-recording"
+  alt="The report page's recording plays in the drawer until the toast appears after pressing Export CSV. It is paused, a box is dragged over the toast, and a comment is written on it. The comment shows in the side panel with its moment."
+  caption="A recording of pressing Export CSV, paused when the toast appears, with a comment on the toast in that frame."
+/>
+
+### Sequence and state diagrams
+
+When the order of calls matters, the agent may add a sequence diagram, and every message links to the lines that send it.
+
+<Shot
+  n={10}
+  src={sequence}
+  alt="The sequence diagram Writing the file: ExportWorker marks the export running, streams rows from Reports in a loop of 2,000 rows while uploading parts to S3 through Storage, then either marks the export ready and emails the person, or returns an error for Oban to retry, or marks it failed on the last attempt. The retry message is selected, and the panel says the export stays running until the next attempt."
+  caption="How the worker writes the file. The selected message is the retry, and its summary says what the diff only implies."
+/>
+
+When the change adds a lifecycle, the agent may add a state diagram. Here it shows the bug from earlier at a glance: a failed attempt goes from `running` back to `running`, so the Exports page shows a spinner while Oban waits to retry.
+
+<Clip
+  n={11}
+  name="clip-state"
+  alt="The state diagram of an export: queued, running, ready, failed and expired. Selecting the running state and then the transition from running back to running shows its code, and a comment is written on the transition."
+  caption="The lifecycle of an export, with a comment on the transition that a failed attempt takes."
+/>
+
+A participant or a message that stands for a part or an interaction of the map is the same entity, with the same files, comments and reviewed mark, so nothing is reviewed twice.
+
+<Clip
+  n={12}
+  name="clip-linked"
+  alt="In the sequence diagram Starting an export, the ExportWorker participant is selected and marked as reviewed. Back on the map, the ExportWorker card shows the reviewed mark."
+  caption="ExportWorker marked as reviewed in a sequence diagram is marked on the map too."
+/>
+
+### Reviewed marks and the verdict
+
+As I read, I mark each part as reviewed, and on a large change the header's count is how I know what is left. The marks go back with the decision, so the agent knows what I examined and what I took on trust.
+
+Then I approve or request changes. Approving with comments turns them into notes rather than requests.
+
+### What the agent gets back
+
+Every comment comes back with its target: a part, an interaction, lines of a file, an area of a screenshot, a moment of a recording, or an entity of a diagram. With `--json`, the agent gets the decision as JSON, checked against the plugin's schema. Without it, the agent reads Markdown, with each target named the way its own payload names it.
+
+<Tabs labels={["pinrail wait --json", "pinrail wait"]}>
+
+```json wrap
+{
+  "verdict": "request_changes",
+  "comments": [
+    {
+      "target": { "node": "csv-endpoint" },
+      "body": "Keep this endpoint for one more release, with a Deprecation header. The finance team's nightly script still calls it."
+    },
+    {
+      "target": { "file": "lib/helpdesk/workers/export_worker.ex", "side": "new", "start_line": 40, "line": 49 },
+      "body": "This holds a database connection for the whole upload, up to ten minutes. Read the rows in keyset pages instead."
+    },
+    {
+      "target": {
+        "screen": { "node": "reports-page", "index": 0, "image": "after" },
+        "region": { "x": 0.622, "y": 0.773, "width": 0.365, "height": 0.205 }
+      },
+      "body": "Link to this export, not to the whole list."
+    },
+    {
+      "target": { "diagram": "lifecycle", "item": "t3" },
+      "body": "Set it back to queued between attempts, or the page shows a spinner for the whole backoff."
+    }
+  ],
+  "reviewed": ["exports-context"]
+}
+```
+
+```md wrap
+**Changes requested**: Move report exports to a background job
+
+## Comments
+
+1. **Part** *GET /reports/:id/csv*
+   Keep this endpoint for one more release, with a Deprecation header. The finance team's nightly script still calls it.
+2. `lib/helpdesk/workers/export_worker.ex:40–49`
+   This holds a database connection for the whole upload, up to ten minutes. Read the rows in keyset pages instead.
+3. **Screenshot** *After pressing Export CSV* of *Report page*, after, the area at 62% across and 77% down, 37% × 21% of the image
+   Link to this export, not to the whole list.
+4. **Transition** *upload fails, attempts left / retry* in the state diagram *An export's status*
+   Set it back to queued between attempts, or the page shows a spinner for the whole backoff.
+
+Reviewed: Exports
+```
+
+</Tabs>
+
+The agent does not have to guess what "the retry" or "the toast" means. It applies the comments and submits the next round with `--revises`.
+
+### Telling an agent to use it
+
+One line, in whatever file the agent already follows:
+
+```md title="AGENTS.md" wrap
+When a change is complex, submit it for review with the `change-map` Pinrail plugin.
+Otherwise, use the `code-review` plugin.
+```
+
+The rest ships with the plugin, as a skill Pinrail installs for the agent: how to find the parts and interactions of a change, pick the line ranges, capture the interface, decide when a diagram helps, check what the map leaves out, and act on my decision. Pinrail validates the payload before it reaches my inbox, so a malformed map goes back to the agent, not to me.
+
+## Other tools that draw a change
+
+Drawing a change is not a new idea, and several tools now do it for agents' work:
+
+- [Archify](https://github.com/tt-a1i/archify) has the agent write a typed JSON map of a system and renders it as an HTML diagram, with nodes linked to files and line ranges and a before-and-after comparison of two snapshots. It documents a system and how it changed, rather than collecting a decision on it.
+- [Graphify](https://github.com/Graphify-Labs/graphify) builds a knowledge graph of a codebase for agents to query, and uses it to rank a queue of pull requests and flag the ones that touch the same parts. It helps the agent and the queue rather than the reading of one change.
+- [PR Lens](https://prlens.dev/) draws each pull request as architecture and data-flow diagrams, posted as a comment on the pull request and updated on every push.
+- Review bots such as CodeRabbit and Greptile also build a graph of the codebase, but they use it to write their own comments, which is a different job.
+
+<mark>In these tools the diagram is a picture of the change. In the change map it is where the review happens.</mark> Every comment, reviewed mark and verdict is attached to a part, an interaction, a line, an area of a screenshot or an entity of a diagram, and goes back to the agent as structured data that it applies in the next round. The map is also checked against the diff, so every changed line it leaves out is marked.
+
+## What changed, and what is missing
+
+The main difference is the order in which I review. I look at the shape of the change first, decide which parts deserve a close reading, and read their code in the order the system runs it. In the example, each of the three structural problems shows on the map or in a diagram before I read most of the diff: the removed endpoint, the long transaction and the stale status. The diff is where I confirm them. My comments are shorter too, because each one is attached to what it is about.
+
+### Caveats
+
+- **The map is still the agent's account.** The view marks every changed line the map leaves out, but it cannot check that a summary describes its code correctly. Reading the code of the parts that matter is still my job.
+- **Writing a map is extra work for the agent.** For a three-file fix, it costs more than it saves. Tell the agent to use a diff for such changes, as in the instruction above: the right view for the job.
+- **A new round does not show the last one.** A revision does not yet show my earlier comments beside the parts they were on, or what changed in the map between rounds.
+- **The layout is automatic.** A change with many crossing interactions can still produce a busy map. Lanes that follow the direction of the calls help.
+
+## Try it
+
+The change map is one of the official plugins that come with Pinrail. Install it in *Settings › Plugins*, and press **Send a sample** in its details to open a smaller change than this one.
+
+<Shot
+  n={13}
+  src={plugins}
+  alt="Settings › Plugins in the Pinrail app, with the change map installed and its details open: a skill mark beside its status, its version, its source among Pinrail's plugins, its skill switch turned on, and the Send a sample button."
+  caption="The change map in Settings › Plugins. Its skill is off until you turn it on, and Send a sample opens a review to try it."
+/>
+
+The plugin is open source, in the [Pinrail repository](https://github.com/forgeplane/pinrail/tree/main/plugins/change-map): a manifest, two JSON schemas, a Markdown template and a React view. If your reviews need a different view, for a migration, an infrastructure plan or anything else, an agent can build one with you. [Build the review view your work needs](/blog/build-the-review-view-your-work-needs/) follows one from the first request to a real review, and [Writing a plugin](/docs/building/writing/) covers every part in detail.
