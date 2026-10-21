@@ -21,7 +21,9 @@ import {
   changesOf,
   namedAsCode,
   diagramComments,
+  edgeStatus,
   markOf,
+  nodeStatus,
   narrowest,
   ownItems,
   sameSelection,
@@ -264,6 +266,29 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
   }, [payload, plugin]);
 
   const reviewed = useMemo(() => new Set(draft.reviewed), [draft.reviewed]);
+  // what there is to review: the parts and the interactions the change
+  // adds, changes or removes, the parts first, in the order N walks them
+  const toReview = useMemo<NonNullable<Selection>[]>(
+    () => [
+      ...payload.nodes.filter((n) => nodeStatus(n) !== "context").map((n) => ({ node: n.id })),
+      ...(payload.edges ?? []).filter((e) => edgeStatus(e) !== "unchanged").map((e) => ({ edge: e.id })),
+    ],
+    [payload],
+  );
+  const done = toReview.filter((s) => reviewed.has(markOf(s))).length;
+  /** Selects the next part or interaction not yet reviewed, after the
+   *  selection, on the map. */
+  const nextToReview = () => {
+    const at = toReview.findIndex((s) => sameSelection(s, selection));
+    const order = [...toReview.slice(at + 1), ...toReview.slice(0, at + 1)];
+    const next = order.find((s) => !reviewed.has(markOf(s)));
+    if (!next) return;
+    select(next);
+    setTab(null);
+    if ("node" in next) setZoom((z) => ({ node: next.node, n: (z?.n ?? 0) + 1 }));
+  };
+  const nextRef = useRef(nextToReview);
+  nextRef.current = nextToReview;
   /** The badges. `marks` counts a line comment on every part and
    *  interaction whose files cover it, for the overview's list of parts.
    *  `canvasMarks` counts it once, on the entity of the diagram on screen
@@ -372,6 +397,8 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
         toggleReviewed(id);
       } else if (e.key === "f") {
         setFit((n) => n + 1);
+      } else if (e.key === "u") {
+        nextRef.current();
       } else return;
       e.preventDefault();
     };
@@ -399,6 +426,21 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
           <span className="cm-status cm-status-removed">removed</span>
           <span className="cm-status cm-status-context">unchanged</span>
         </div>
+        {toReview.length ? (
+          <button
+            type="button"
+            className="pinrail-btn pinrail-btn-ghost cm-progress"
+            data-testid="progress"
+            onClick={nextToReview}
+            disabled={done === toReview.length}
+            title="Go to the next part or interaction to review (U)"
+          >
+            {done === toReview.length ? `All ${done} reviewed` : `${done} of ${toReview.length} reviewed`}
+            <span className="cm-progress-bar" aria-hidden="true">
+              <span style={{ width: `${(done / toReview.length) * 100}%` }} />
+            </span>
+          </button>
+        ) : null}
         <span className="cm-spacer" />
         <button
           type="button"

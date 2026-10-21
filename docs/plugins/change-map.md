@@ -69,11 +69,11 @@ You zoom with the scroll wheel or to the actual pixels, pan with the hand tool o
 ### Comments and reviewed marks
 
 - **Comments** go on a part, on an interaction, on a line or a range of lines in the drawer, on an area of a screenshot, and on an entity of a diagram. The field stays at the bottom of the side panel. Badges on the map, the tabs and the files count the comments.
-- **Reviewed marks** are set on each part, interaction or entity you have read, and go back to the agent.
+- **Reviewed marks** are set on each part, interaction or entity you have read, and go back to the agent. The header counts the parts and interactions the change adds, changes or removes that you have reviewed, and clicking the count goes to the next one left.
 
 You choose **Approve** or **Request changes** in the header. Until you choose, comments ask for changes, and a review with none approves. With comments and **Approve**, the hand-over says *Approve with comments*.
 
-The keys are N and P to move between parts, Enter to open the selection's first file, C to comment on it, R to mark it reviewed and F to fit the diagram to the view. Esc closes the drawer.
+The keys are N and P to move between parts, Enter to open the selection's first file, C to comment on it, R to mark it reviewed, U to go to the next part or interaction left to review and F to fit the diagram to the view. Esc closes the drawer.
 
 To see it before any agent asks with it, send its sample: `pinrail submit change-map --sample`, or **Send a sample** in its details in *Settings › Plugins*.
 

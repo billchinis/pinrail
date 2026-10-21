@@ -451,6 +451,35 @@ test("the drawer marks the changed lines that nothing on the map covers", async 
   await expect(diff.getByTestId("unmapped-count")).toHaveCount(0);
 });
 
+test("the header counts what is reviewed, and U goes to the next part or interaction left to review", async ({
+  page,
+}) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const progress = f.getByTestId("progress");
+  // 5 parts and 5 interactions; the context part and the unchanged interaction do not count
+  await expect(progress).toHaveText("0 of 10 reviewed");
+  await f.locator('[data-node="ticket-form"]').click();
+  await page.keyboard.press("r");
+  await expect(progress).toHaveText("1 of 10 reviewed");
+  // U: the first part not reviewed, after the parts the interactions
+  await page.keyboard.press("u");
+  await expect(f.locator('[data-node="api-client"]')).toHaveAttribute("aria-pressed", "true");
+  for (const id of ["api-client", "tickets-endpoint", "tickets-context", "tickets-table"]) {
+    await f.locator(`[data-node="${id}"]`).click();
+    await page.keyboard.press("r");
+  }
+  await expect(progress).toHaveText("5 of 10 reviewed");
+  // clicking the count does what U does: the first interaction left
+  await progress.click();
+  await expect(f.locator('.cm-link-label[data-edge="save"]')).toHaveAttribute("aria-pressed", "true");
+  for (const id of ["save", "post", "create", "lookup", "insert"]) {
+    await f.locator(`.cm-link-label[data-edge="${id}"]`).dispatchEvent("click");
+    await page.keyboard.press("r");
+  }
+  await expect(progress).toHaveText("All 10 reviewed");
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;
@@ -475,7 +504,7 @@ test("the app's forwarded keys work as the view's own: C comments, R marks revie
   await f.locator('[data-node="tickets-endpoint"]').click();
   // the app has the keyboard, and forwards the plugin's keys
   await plugin.sendKey("r");
-  await expect(f.getByRole("button", { name: "Reviewed" })).toHaveAttribute("aria-pressed", "true");
+  await expect(f.getByRole("button", { name: "Reviewed", exact: true })).toHaveAttribute("aria-pressed", "true");
   await plugin.sendKey("c");
   await expect(f.getByPlaceholder("Add a comment")).toBeFocused();
   await page.keyboard.type("Return the ticket's id with the 409.");

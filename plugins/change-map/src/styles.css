@@ -41,6 +41,32 @@ body,
   background: var(--pinrail-bg-panel);
   flex-wrap: wrap;
 }
+/* how much is reviewed: the count and a thin bar, a button to the next */
+.cm-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--pinrail-dim);
+}
+.cm-progress:disabled {
+  opacity: 1;
+  color: var(--pinrail-success);
+  cursor: default;
+}
+.cm-progress-bar {
+  display: inline-block;
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--pinrail-border);
+}
+.cm-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--pinrail-success);
+}
 .cm-spacer {
   flex: 1;
 }
