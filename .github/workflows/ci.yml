@@ -35,9 +35,10 @@ on:
   workflow_call:
 
 # a pull request's newer push cancels its older run; every push to main
-# keeps its own, since main's runs save the cache everyone restores
+# keeps its own, in a group of its own commit, since one group per branch
+# would hold only one waiting run and cancel it when a newer push came
 concurrency:
-  group: ci-${{ github.event_name }}-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # read-only, unless a job asks for more
