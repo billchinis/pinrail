@@ -148,3 +148,27 @@ test("the row under the pointer keeps its outline off the open row beside it", a
     expect(focused.y + focused.height + reach, layout).toBeLessThanOrEqual(open.y);
   }
 });
+
+for (const from of ["the review", "its row in the inbox"])
+  test(`discarding the open review from ${from} opens the next one, as a hand-over does`, async ({ page }) => {
+    await clearInbox(page.request);
+    // newest first in the list: Three, Two, One
+    for (const title of ["Discard one", "Discard two", "Discard three"])
+      await createReview(page.request, { title, origin: { repo: "acme/api" } });
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await page.goto("/#/");
+    await page.getByRole("radio", { name: "One list" }).click();
+    const rows = page.getByTestId("review-row");
+    await rows.filter({ hasText: "Discard two" }).click();
+    const panel = page.getByTestId("review-panel");
+    await expect(panel.getByTestId("review-title")).toHaveText("Discard two");
+    if (from === "the review") await panel.getByRole("button", { name: "Discard this review" }).click();
+    else await rows.filter({ hasText: "Discard two" }).getByRole("button", { name: "Discard Discard two" }).click();
+    const dialog = page.getByRole("dialog", { name: "Discard this review?" });
+    await dialog.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    // the review after it in the list, open in the panel, and the discarded one gone
+    await expect(panel.getByTestId("review-title")).toHaveText("Discard one");
+    await expect(rows.filter({ hasText: "Discard two" })).toHaveCount(0);
+    await expect(rows.filter({ hasText: "Discard one" })).toHaveClass(/is-open/);
+  });

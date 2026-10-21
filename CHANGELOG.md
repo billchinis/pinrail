@@ -50,6 +50,8 @@ The `pinrail` command ships inside the app and carries the app's version.
   longer run into its plugin's name.
 - In the inbox, the outline of the review under the pointer no longer
   runs over the review open beside it.
+- Discarding the review open in the side panel opens the next one, as a
+  decision does, whether from the review or from its row in the inbox.
 
 ## [0.3.0]
 

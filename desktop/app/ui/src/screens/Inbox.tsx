@@ -202,11 +202,17 @@ export function Inbox() {
   // the rows in display order, which the side panel follows
   const orderedRef = useRef(ordered);
   orderedRef.current = ordered;
+  // where the open review was in the list when last seen there: once it has
+  // ended, the list may have dropped it before the panel moves on
+  const openAt = useRef(-1);
+  const seenAt = ordered.findIndex((r) => r.id === openId);
+  if (seenAt >= 0) openAt.current = seenAt;
   /** The review after the one that just ended, or before it at the end of the list. */
   const openNext = useCallback(() => {
     const list = orderedRef.current;
     const at = list.findIndex((r) => r.id === openId);
-    const next = at < 0 ? list[0] : (list[at + 1] ?? list[at - 1]);
+    // still listed: the one after it; gone: the one now in its place
+    const next = at >= 0 ? (list[at + 1] ?? list[at - 1]) : (list[openAt.current] ?? list[list.length - 1]);
     openInPanel(next && next.id !== openId ? next.id : null, { replace: true });
   }, [openId, openInPanel]);
   const closePanel = useCallback(() => openInPanel(null), [openInPanel]);
@@ -499,7 +505,15 @@ export function Inbox() {
         )}
         <Pager label="Inbox" page={current} size={size} total={ordered.length} onPage={setPage} onSize={setSize} />
         {discarding ? (
-          <DiscardDialog review={discarding} onClose={() => setDiscarding(null)} onDone={() => setDiscarding(null)} />
+          <DiscardDialog
+            review={discarding}
+            onClose={() => setDiscarding(null)}
+            onDone={(done) => {
+              setDiscarding(null);
+              // the review open in the panel: on to the next, as after a hand-over
+              if (done.id === openId) openNext();
+            }}
+          />
         ) : null}
         <footer className="inbox-footer">
           {openId ? (
