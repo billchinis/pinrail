@@ -142,7 +142,6 @@
 @media (max-width: 800px) {
   .c-shot {
     width: calc(100vw - 32px);
-    margin-top: 48px;
   }
 }
 
@@ -342,12 +341,6 @@
   }
   .c-lede {
     font-size: 18px;
-  }
-  .shot-note {
-    display: none;
-  }
-  .c-shot {
-    margin-top: 40px;
   }
   .c-section {
     padding: 72px 16px 10px;
