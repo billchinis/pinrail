@@ -157,7 +157,7 @@ export const scenes = [
     },
   },
   {
-    // the change map's details in Settings › Plugins: its skill reaches the agents
+    // the change map's details in Settings › Plugins, with its skill turned on
     name: "plugin-skills",
     async run({ page, app, shot }) {
       await card(page);
@@ -166,6 +166,9 @@ export const scenes = [
       await page.keyboard.press("Meta+,");
       await settingsSection(page, "Plugins").click();
       await page.getByRole("button", { name: "Details of change-map" }).click();
+      const skill = page.getByRole("switch", { name: "Skill of change-map" });
+      if ((await skill.getAttribute("aria-checked")) !== "true") await skill.click();
+      await page.getByTestId("plugin-skill").getByText("In your agents' pinrail skill").waitFor();
       await page.getByTestId("plugin-skill").scrollIntoViewIfNeeded();
       await page.waitForLoadState("networkidle");
       await settle(page, 500);
