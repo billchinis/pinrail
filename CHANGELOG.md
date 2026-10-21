@@ -9,7 +9,7 @@ wait for a release, and takes the version's name when it is tagged.
 
 The `pinrail` command ships inside the app and carries the app's version.
 
-## [Unreleased]
+## [0.4.0]
 
 ### Added
 
@@ -27,7 +27,8 @@ The `pinrail` command ships inside the app and carries the app's version.
 - The change map plugin, `change-map`, among the official plugins. It
   shows a code change, such as a pull request, as a diagram of the parts
   it touches and how they interact, with each part's diff, screenshots
-  before and after, and optional sequence and state diagrams. Comments go
+  before and after or recordings of the interface, and optional sequence
+  and state diagrams. Comments go
   on any of them. Its skill tells your agents how to build a map from a
   change. Install it in Settings › Plugins.
 - The history opens a review in a panel beside the list, as the inbox
@@ -54,6 +55,15 @@ The `pinrail` command ships inside the app and carries the app's version.
   decision does, whether from the review or from its row in the inbox.
 - The keyboard shortcuts dialog lists the keys of the plugin open in the
   side panel, as it does for a review open on its own page.
+- Dictation fills text fields in plugin views built with React, so a
+  button that waits for text, such as Add comment, is enabled as you
+  dictate.
+
+### Security
+
+- Updated rustls-webpki and webpki-roots, which could trust certificates
+  from the distrusted emSign authorities, and markdown-it, which could
+  take quadratic time to parse some Markdown.
 
 ## [0.3.0]
 
@@ -194,6 +204,7 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 Initial version of Pinrail.
 
+[0.4.0]: https://github.com/forgeplane/pinrail/releases/tag/v0.4.0
 [0.3.0]: https://github.com/forgeplane/pinrail/releases/tag/v0.3.0
 [0.2.0]: https://github.com/forgeplane/pinrail/releases/tag/v0.2.0
 [0.1.3]: https://github.com/forgeplane/pinrail/releases/tag/v0.1.3
