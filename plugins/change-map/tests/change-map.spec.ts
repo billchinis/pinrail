@@ -651,6 +651,17 @@ test("the filter of the overview's files has a search icon, and a lit part no ri
   expect(await part.evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
 });
 
+test("the overview lists the files nothing on the map names, and opens one in the drawer", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const overview = f.getByTestId("overview");
+  await expect(overview.getByRole("heading", { name: "Other files" })).toBeVisible();
+  const other = overview.locator(".cm-file", { hasText: "CHANGELOG.md" });
+  await expect(other).toContainText("+2");
+  await other.click();
+  await expect(f.getByTestId("diff").locator(".cm-diff-path")).toHaveText("CHANGELOG.md");
+});
+
 test("the overview's files say how many of their lines are off the map", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: narrowed() });
   const files = await openFiles(plugin.frame);

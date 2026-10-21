@@ -234,8 +234,19 @@ function Overview(props: PanelProps) {
           />
         </>
       ) : null}
-      {/* comments on the lines of files no part or interaction names */}
-      {others.length ? <LineComments {...props} changes={others.map((f) => ({ file: f.path }))} /> : null}
+      {others.length ? (
+        <>
+          <h3 className="pinrail-eyebrow">Other files</h3>
+          <Files
+            files={others.map((f) => ({ file: f.path }))}
+            payload={payload}
+            openFile={props.openFile}
+            comments={comments}
+            current={props.current}
+          />
+          <LineComments {...props} changes={others.map((f) => ({ file: f.path }))} />
+        </>
+      ) : null}
       {props.footer ? createPortal(<FileFinder {...props} claimed={claimed} />, props.footer) : null}
     </div>
   );

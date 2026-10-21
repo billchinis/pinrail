@@ -108,7 +108,7 @@ When a change is complex, submit it for review with the `change-map` Pinrail plu
 
 - `nodes` are the parts of the change. A part's `kind` sets its icon, its `status` its colour, and its `changes` the files and line ranges that implement it.
 - `edges` are the interactions between parts, such as calls, events or imports.
-- `files` holds the unified diff of each changed file. A code file that no part or interaction names is marked as not on the map in the panel's list of files.
+- `files` holds the unified diff of each changed file. A file that no part or interaction names is listed in the panel as one of the other files.
 - `screens` hold screenshots of an interface part, each sent with `--attach` and named as `{"$attachment": "<name>"}`.
 - `diagrams` are optional sequence and state diagrams, whose participants and messages can name a part with `node` and an interaction with `edge`.
 
