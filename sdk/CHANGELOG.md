@@ -4,7 +4,7 @@ The package's version is the SDK's, and its major is the protocol's:
 `1.x` speaks protocol 1, served by the app at `/sdk/v1`. A breaking
 change to the protocol is a new major and a new path.
 
-## [Unreleased]
+## [1.3.0]
 
 ### Added
 
@@ -17,13 +17,14 @@ change to the protocol is a new major and a new path.
   The dev shell copies to the browser's clipboard, and the test harness
   records each copy for `copied()`.
 
-## [Unreleased]
-
 ### Fixed
 
 - Dictated text now reaches fields that React controls, so a view's
   state follows the dictation, and a button that waits for text, such as
   Add comment, is enabled as you dictate.
+- The bundled Markdown parser is markdown-it 15.0.3, which fixes two
+  cases of quadratic-time parsing: inline HTML, and a link reference
+  definition over several lines.
 
 ## [1.2.0]
 
