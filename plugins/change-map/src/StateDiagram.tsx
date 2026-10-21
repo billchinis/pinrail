@@ -22,6 +22,7 @@ import { memo, useContext, useMemo, useRef } from "react";
 import {
   FilesMark,
   filesSaid,
+  litOf,
   fitOptions,
   Fitter,
   Follower,
@@ -57,7 +58,7 @@ const cardStatus = (s?: string) => (s === "unchanged" ? "context" : (s ?? "chang
 const lineStatus = (s?: string) => (s === "context" ? "unchanged" : (s ?? "changed"));
 
 const StateNode = memo(function StateNode({ data }: NodeProps<StateNodeType>) {
-  const { selection, select } = useContext(SharedContext);
+  const { selection, select, lit } = useContext(SharedContext);
   const { state, diagram, payload, across } = data;
   const mine = selectionOf(payload, diagram, state);
   const selected = sameSelection(mine, selection);
@@ -70,8 +71,8 @@ const StateNode = memo(function StateNode({ data }: NodeProps<StateNodeType>) {
       type="button"
       className={
         dot
-          ? `cm-state-dot cm-state-${state.kind}${selected ? " cm-selected" : ""}`
-          : `cm-part cm-state cm-${status}${selected ? " cm-selected" : ""}`
+          ? `cm-state-dot cm-state-${state.kind}${selected ? " cm-selected" : ""}${litOf(lit, mine)}`
+          : `cm-part cm-state cm-${status}${selected ? " cm-selected" : ""}${litOf(lit, mine)}`
       }
       onClick={() => select(mine)}
       aria-label={`${name}, ${statusLabel[status]}`}
@@ -100,7 +101,7 @@ const StateNode = memo(function StateNode({ data }: NodeProps<StateNodeType>) {
 });
 
 const TransitionEdge = memo(function TransitionEdge(props: EdgeProps<TransitionEdgeType>) {
-  const { selection, select } = useContext(SharedContext);
+  const { selection, select, lit } = useContext(SharedContext);
   const { transition, diagram, payload, route, loop } = props.data!;
   const mine = selectionOf(payload, diagram, transition);
   const selected = sameSelection(mine, selection);
@@ -117,13 +118,13 @@ const TransitionEdge = memo(function TransitionEdge(props: EdgeProps<TransitionE
         id={props.id}
         path={path}
         markerEnd={props.markerEnd}
-        className={`cm-link cm-link-${status}${selected ? " cm-selected" : ""}`}
+        className={`cm-link cm-link-${status}${selected ? " cm-selected" : ""}${litOf(lit, mine)}`}
         interactionWidth={18}
       />
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`cm-link-label cm-link-label-${status}${transition.label ? "" : " cm-link-label-bare"}${selected ? " cm-selected" : ""}`}
+          className={`cm-link-label cm-link-label-${status}${transition.label ? "" : " cm-link-label-bare"}${selected ? " cm-selected" : ""}${litOf(lit, mine)}`}
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
           onClick={() => select(mine)}
           aria-pressed={selected}
@@ -153,6 +154,7 @@ export function StateDiagram({
   onFit,
   select,
   inset,
+  lit = null,
   direction = "LR",
   setDirection,
 }: Shared & {
@@ -211,7 +213,7 @@ export function StateDiagram({
       if (sameSelection(selectionOf(payload, diagram.id, t), selection)) return [t.from, t.to];
     return [];
   }, [selection, diagram, payload]);
-  const shared = useMemo(() => ({ selection, marks, images, select }), [selection, marks, images, select]);
+  const shared = useMemo(() => ({ selection, marks, images, select, lit }), [selection, marks, images, select, lit]);
   return (
     <div className="cm-diagram" ref={frame} data-diagram={diagram.id}>
       <SharedContext.Provider value={shared}>

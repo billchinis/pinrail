@@ -693,6 +693,120 @@ body.cm-resizing-panel * {
   height: 8px;
   stroke-width: 3.5;
 }
+/* the overview's files, at the bottom of the panel, scrolling on their own */
+.cm-finder {
+  display: grid;
+  gap: 6px;
+  padding: 8px 0 2px;
+  border-top: 1px solid var(--pinrail-border);
+  background: var(--pinrail-bg-panel);
+}
+.cm-finder .pinrail-eyebrow {
+  margin: 0;
+}
+/* the bar that opens and closes it, naming the chosen file while closed */
+.cm-finder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--pinrail-dim);
+  cursor: pointer;
+  text-align: left;
+}
+.cm-finder-chosen {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  font-size: 11.5px;
+  color: var(--pinrail-accent);
+}
+.cm-app .cm-finder-toggle svg.lucide {
+  margin-left: auto;
+}
+/* With the drawer of files, the overview and the drawer each scroll on
+   their own, one above the other, rather than the panel scrolling whole with
+   the drawer's list beside its scrollbar. Open, the drawer takes up to 60%
+   of the panel, and its list scrolls within it. */
+.cm-panel:has(.cm-finder) {
+  overflow-y: hidden;
+}
+.cm-panel:has(.cm-finder) > .cm-panel-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+}
+.cm-panel:has(.cm-finder) > .cm-panel-foot {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  max-height: 60%;
+  min-height: 0;
+  padding-top: 0;
+  background: var(--pinrail-bg-panel);
+}
+.cm-finder-open {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+.cm-finder-list {
+  min-height: 0;
+  overflow-y: auto;
+}
+/* the filter, with a search icon inside it */
+.cm-finder-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cm-app .cm-finder-search svg.lucide {
+  position: absolute;
+  left: 8px;
+  color: var(--pinrail-faint);
+  pointer-events: none;
+}
+.cm-finder-filter {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 28px;
+}
+/* focused, the accent border alone: a text field counts as focused from
+   the keyboard even when clicked, which would always draw the ring */
+.cm-finder-filter:focus,
+.cm-finder-filter:focus-visible {
+  outline: none;
+}
+.cm-file-off {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--pinrail-warning);
+  white-space: nowrap;
+}
+.cm-finder-owners {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--pinrail-dim);
+}
+/* the parts and interactions that touch the chosen file, and the rest dimmed */
+.cm-dim {
+  opacity: 0.3;
+}
+.cm-app .react-flow__edge-path.cm-lit {
+  stroke: var(--pinrail-accent);
+  stroke-width: 2.5;
+}
+.cm-link-label.cm-lit {
+  border-color: var(--pinrail-accent);
+  color: var(--pinrail-accent);
+}
 /* the overview's parts and diagrams: the name and its marks together, the
    status or the kind at the right edge */
 .cm-marked-rows .cm-row-title {

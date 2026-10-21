@@ -10,6 +10,7 @@ import {
   Fitter,
   FilesMark,
   filesSaid,
+  litOf,
   Follower,
   Marked,
   SharedContext,
@@ -57,6 +58,7 @@ function messageStatus(payload: Payload, m: Message): string {
 const Head = memo(function Head({ data, width, height }: NodeProps<Node<HeadData, "head">>) {
   const { selection, select } = useContext(SharedContext);
   const { participant, diagram, payload } = data;
+  const { lit } = useContext(SharedContext);
   const mine = selectionOf(payload, diagram, participant);
   const selected = sameSelection(mine, selection);
   const status = headStatus(payload, participant);
@@ -65,7 +67,7 @@ const Head = memo(function Head({ data, width, height }: NodeProps<Node<HeadData
   return (
     <button
       type="button"
-      className={`cm-part cm-seq-head cm-${status}${selected ? " cm-selected" : ""}`}
+      className={`cm-part cm-seq-head cm-${status}${selected ? " cm-selected" : ""}${litOf(lit, mine)}`}
       style={{ width, height }}
       onClick={() => select(mine)}
       aria-label={`${participant.title}, ${statusLabel[status]}`}
@@ -112,7 +114,7 @@ function Tip({ x, y, toLeft, open }: { x: number; y: number; toLeft: boolean; op
 }
 
 const MessageRow = memo(function MessageRow({ data, width, height }: NodeProps<Node<MessageData, "message">>) {
-  const { selection, select } = useContext(SharedContext);
+  const { selection, select, lit } = useContext(SharedContext);
   const { message, diagram, payload, self, leftward } = data;
   const mine = selectionOf(payload, diagram, message);
   const selected = sameSelection(mine, selection);
@@ -127,7 +129,7 @@ const MessageRow = memo(function MessageRow({ data, width, height }: NodeProps<N
   return (
     <button
       type="button"
-      className={`cm-seq-message${self ? " cm-seq-self" : ""}${selected ? " cm-selected" : ""}`}
+      className={`cm-seq-message${self ? " cm-seq-self" : ""}${selected ? " cm-selected" : ""}${litOf(lit, mine)}`}
       style={{ width: w, height: h }}
       onClick={() => select(mine)}
       aria-pressed={selected}
@@ -169,6 +171,7 @@ export function SequenceDiagram({
   onFit,
   select,
   inset,
+  lit = null,
 }: Shared & { payload: Payload; diagram: ExtraDiagram; fit: number; onFit: () => void; inset: number }) {
   const frame = useRef<HTMLDivElement>(null);
   const placed = useMemo(() => sequenceLayout(diagram), [diagram]);
@@ -237,7 +240,7 @@ export function SequenceDiagram({
       if (sameSelection(selectionOf(payload, diagram.id, p), selection)) return [`h:${p.id}`];
     return [];
   }, [selection, diagram, payload]);
-  const shared = useMemo(() => ({ selection, marks, images, select }), [selection, marks, images, select]);
+  const shared = useMemo(() => ({ selection, marks, images, select, lit }), [selection, marks, images, select, lit]);
   return (
     <div className="cm-diagram" ref={frame} data-diagram={diagram.id}>
       <SharedContext.Provider value={shared}>

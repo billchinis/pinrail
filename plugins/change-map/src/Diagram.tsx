@@ -42,6 +42,7 @@ import { lineCount, type LineCount } from "./lines";
 import {
   changesOf,
   edgeStatus,
+  markOf,
   nodeStatus,
   type Link,
   type NodeKind,
@@ -59,7 +60,30 @@ export type Shared = {
   /** the address of each screenshot, by attachment name, once resolved */
   images: Map<string, string>;
   select(selection: Selection): void;
+  /** the parts and interactions that touch a file chosen in the overview,
+   *  shown while the rest of the map dims, or none */
+  lit?: Lit | null;
 };
+
+/** What touches a chosen file: parts, interactions, and the entities of
+ *  the diagrams with lines of their own in it, by `markOf`. */
+export type Lit = { nodes: Set<string>; edges: Set<string>; items: Set<string> };
+
+/** How a thing on a diagram shows while a file is chosen: lit when it
+ *  touches the file, or stands for a part or an interaction that does, and
+ *  dimmed when not. */
+export function litOf(lit: Shared["lit"], selection: Selection): string {
+  if (!lit || !selection) return "";
+  const on =
+    "node" in selection
+      ? lit.nodes.has(selection.node)
+      : "edge" in selection
+        ? lit.edges.has(selection.edge)
+        : lit.items.has(markOf(selection));
+  return on ? " cm-lit" : " cm-dim";
+}
+const litClass = (lit: Shared["lit"], kind: "nodes" | "edges", id: string) =>
+  litOf(lit, kind === "nodes" ? { node: id } : { edge: id });
 
 export const SharedContext = createContext<Shared>(null!);
 
@@ -148,7 +172,7 @@ export function Marked({ id, corner }: { id: string; corner?: boolean }) {
 }
 
 const PartNode = memo(function PartNode({ data }: NodeProps<PartNodeType>) {
-  const { selection, select, images } = useContext(SharedContext);
+  const { selection, select, images, lit } = useContext(SharedContext);
   const { part, style, lines } = data;
   const Icon = kindIcon[part.kind ?? "module"];
   const status = nodeStatus(part);
@@ -159,7 +183,7 @@ const PartNode = memo(function PartNode({ data }: NodeProps<PartNodeType>) {
   return (
     <button
       type="button"
-      className={`cm-part cm-part-${style} cm-${status}${selected ? " cm-selected" : ""}`}
+      className={`cm-part cm-part-${style} cm-${status}${selected ? " cm-selected" : ""}${litClass(lit, "nodes", part.id)}`}
       style={{ width: widthOf(part, style), height: heightOf(part, style) }}
       onClick={() => select({ node: part.id })}
       aria-label={`${part.title}, ${kindLabel[part.kind ?? "module"]}, ${statusLabel[status]}`}
@@ -238,7 +262,7 @@ const LaneNode = memo(function LaneNode({ data }: NodeProps<LaneNodeType>) {
 });
 
 const LinkEdge = memo(function LinkEdge(props: EdgeProps<LinkEdgeType>) {
-  const { selection, select } = useContext(SharedContext);
+  const { selection, select, lit } = useContext(SharedContext);
   const { link, route, files } = props.data!;
   const [path, labelX, labelY] = route ? [routePath(route.points), route.label.x, route.label.y] : getBezierPath(props);
   const status = edgeStatus(link);
@@ -250,13 +274,13 @@ const LinkEdge = memo(function LinkEdge(props: EdgeProps<LinkEdgeType>) {
         id={props.id}
         path={path}
         markerEnd={props.markerEnd}
-        className={`cm-link cm-link-${status} cm-link-${kind}${selected ? " cm-selected" : ""}`}
+        className={`cm-link cm-link-${status} cm-link-${kind}${selected ? " cm-selected" : ""}${litClass(lit, "edges", link.id)}`}
         interactionWidth={18}
       />
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`cm-link-label cm-link-label-${status}${selected ? " cm-selected" : ""}`}
+          className={`cm-link-label cm-link-label-${status}${selected ? " cm-selected" : ""}${litClass(lit, "edges", link.id)}`}
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
           onClick={() => select({ edge: link.id })}
           aria-pressed={selected}
@@ -469,6 +493,7 @@ export function Diagram({
   select,
   inset,
   zoom = null,
+  lit = null,
   cards = "compact",
   setCards,
 }: Shared & {
@@ -479,6 +504,8 @@ export function Diagram({
   inset: number;
   /** a part to zoom in on */
   zoom?: { node: string; n: number } | null;
+  /** what touches a file chosen in the overview */
+  lit?: Shared["lit"];
   /** how the parts are drawn, and how to change it from the map */
   cards?: CardStyle;
   setCards?: (style: CardStyle) => void;
@@ -538,7 +565,7 @@ export function Diagram({
     }
     return [];
   }, [selection, payload]);
-  const shared = useMemo(() => ({ selection, marks, images, select }), [selection, marks, images, select]);
+  const shared = useMemo(() => ({ selection, marks, images, select, lit }), [selection, marks, images, select, lit]);
 
   return (
     <div className="cm-diagram" ref={frame}>

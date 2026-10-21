@@ -516,6 +516,163 @@ test("the overview's parts show a reviewed part by a check on its icon, and its 
   await expect(other.locator(".cm-mark-reviewed")).toHaveCount(0);
 });
 
+/** Opens the overview's files, a drawer at the bottom of the panel. */
+const openFiles = async (f: import("@playwright/test").FrameLocator) => {
+  const toggle = f.getByTestId("files").getByRole("button", { name: /^Files/ });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  return f.getByTestId("files");
+};
+
+test("the overview's files are a drawer at the bottom of the panel, which filters as you type", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const files = f.getByTestId("files");
+  const panel = f.locator(".cm-panel");
+  const edge = (await panel.boundingBox())!.y + (await panel.boundingBox())!.height;
+  const bottom = async () => (await files.boundingBox())!.y + (await files.boundingBox())!.height;
+  // closed: a bar at the bottom, and the overview scrolls above it
+  await expect(files.getByRole("button", { name: /^Files · 7/ })).toHaveAttribute("aria-expanded", "false");
+  await expect(files.locator(".cm-file")).toHaveCount(0);
+  expect(Math.abs((await bottom()) - edge)).toBeLessThan(12);
+  await panel.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  expect(Math.abs((await bottom()) - edge)).toBeLessThan(12);
+  // open: the list, at the bottom, under the overview
+  await openFiles(f);
+  const rows = files.locator(".cm-file");
+  await expect(rows).toHaveCount(7);
+  expect(Math.abs((await bottom()) - edge)).toBeLessThan(12);
+  await expect(rows.filter({ hasText: "lib/helpdesk/tickets.ex" })).toContainText("+19");
+  // "tick" in four paths, and in the migration's name
+  await files.getByPlaceholder("Filter files").fill("tick");
+  await expect(rows).toHaveCount(5);
+  await files.getByPlaceholder("Filter files").fill("helpdesk/tickets");
+  await expect(rows).toHaveCount(2);
+  // closed again, the chosen file is named on the bar
+  await rows.first().click();
+  await files.getByRole("button", { name: /^Files/ }).click();
+  await expect(files.locator(".cm-file")).toHaveCount(0);
+  await expect(files.getByRole("button", { name: /^Files/ })).toContainText("lib/helpdesk/tickets.ex");
+  // not in a part's own details
+  await f.locator('[data-node="api-client"]').click();
+  await expect(f.getByTestId("files")).toHaveCount(0);
+});
+
+test("with a hundred files, the drawer and the overview above it scroll each on its own, under the header", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  const review = JSON.parse(fs.readFileSync(path.join(dir, "samples", "dedup-tickets.json"), "utf8"));
+  for (let i = 0; i < 100; i++)
+    review.payload.files.push({ path: `lib/helpdesk/more/file_${i}.ex`, status: "added", diff: "@@ -0,0 +1 @@\n+a\n" });
+  for (const entry of Object.values(review.attachments) as { path: string }[])
+    entry.path = path.join(dir, "samples", entry.path);
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cm-many-")), "review.json");
+  fs.writeFileSync(file, JSON.stringify(review));
+  const plugin = await mountPlugin(page, dir, { review: fixture(file) });
+  const f = plugin.frame;
+  const files = await openFiles(f);
+  await expect(files.locator(".cm-file")).toHaveCount(107);
+  const scrolls = (el: Element) => el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).overflowY !== "hidden";
+  // the list scrolls inside the drawer, which stays within the panel
+  const list = files.locator(".cm-finder-list");
+  expect(await list.evaluate(scrolls)).toBe(true);
+  const panel = (await f.locator(".cm-panel").boundingBox())!;
+  const drawer = (await files.boundingBox())!;
+  expect(drawer.y).toBeGreaterThan(panel.y + 40);
+  expect(drawer.y + drawer.height).toBeLessThanOrEqual(panel.y + panel.height + 1);
+  // the overview above it still scrolls
+  const top = f.locator(".cm-panel-body");
+  expect(await top.evaluate(scrolls)).toBe(true);
+  await top.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  // and nothing moved the view under the header
+  expect((await f.locator(".cm-header").boundingBox())!.y).toBe(0);
+  expect(await f.locator("body").evaluate(() => document.scrollingElement!.scrollTop)).toBe(0);
+});
+
+test("choosing a file in the overview opens it and shows on the map what touches it", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const files = await openFiles(f);
+  const file = files.locator(".cm-file", { hasText: "lib/helpdesk/tickets.ex" });
+  await file.click();
+  await expect(f.getByTestId("diff").locator(".cm-diff-path")).toHaveText("lib/helpdesk/tickets.ex");
+  // the part and the interactions that name it, and nothing else
+  await expect(f.locator(".cm-part.cm-lit")).toHaveCount(1);
+  await expect(f.locator('[data-node="tickets-context"]')).toHaveClass(/cm-lit/);
+  await expect(f.locator('[data-node="api-client"]')).toHaveClass(/cm-dim/);
+  for (const id of ["lookup", "insert", "notify"])
+    await expect(f.locator(`.cm-link-label[data-edge="${id}"]`)).toHaveClass(/cm-lit/);
+  await expect(f.locator('.cm-link-label[data-edge="save"]')).toHaveClass(/cm-dim/);
+  await expect(files.getByTestId("file-owners")).toHaveText(
+    "On the map: Tickets, recent with key, insert and ticket created",
+  );
+  // choosing it again shows the whole map again
+  await file.click();
+  await expect(f.locator(".cm-dim")).toHaveCount(0);
+  await expect(files.getByTestId("file-owners")).toHaveCount(0);
+});
+
+test("a file chosen in the overview shows in the sequence and state diagrams too", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const files = await openFiles(f);
+  await files.locator(".cm-file", { hasText: "lib/helpdesk/tickets.ex" }).click();
+  await f.locator('[data-tab="first-save"]').click();
+  // the messages with lines in it, or that stand for an interaction that has,
+  // and the participant that stands for the part that has
+  for (const id of ["m4", "m5", "m6", "m7", "m8"]) await expect(f.locator(`[data-item="${id}"]`)).toHaveClass(/cm-lit/);
+  for (const id of ["m1", "m9", "m10"]) await expect(f.locator(`[data-item="${id}"]`)).toHaveClass(/cm-dim/);
+  await expect(f.locator('.cm-seq-head[data-item="tickets"]')).toHaveClass(/cm-lit/);
+  await expect(f.locator('.cm-seq-head[data-item="form"]')).toHaveClass(/cm-dim/);
+  // another file, in the state diagram
+  await files.locator(".cm-file", { hasText: "web/src/TicketForm.tsx" }).click();
+  await f.locator('[data-tab="save-button"]').click();
+  await expect(f.locator('.cm-part[data-item="ready"]')).toHaveClass(/cm-lit/);
+  await expect(f.locator('[data-item="start"]')).toHaveClass(/cm-dim/);
+  await expect(f.locator('.cm-link-label[data-item="t2"]')).toHaveClass(/cm-lit/);
+});
+
+test("the filter of the overview's files has a search icon, and a lit part no ring", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  const files = await openFiles(f);
+  await expect(files.locator(".cm-finder-search svg")).toBeVisible();
+  // focused, the filter has the accent border and no ring
+  const filter = files.getByPlaceholder("Filter files");
+  await filter.click();
+  await expect(filter).toBeFocused();
+  expect(await filter.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("none");
+  await files.locator(".cm-file", { hasText: "lib/helpdesk/tickets.ex" }).click();
+  const part = f.locator('[data-node="tickets-context"]');
+  await expect(part).toHaveClass(/cm-lit/);
+  expect(await part.evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
+});
+
+test("the overview's files say how many of their lines are off the map", async ({ page }) => {
+  const plugin = await mountPlugin(page, dir, { review: narrowed() });
+  const files = await openFiles(plugin.frame);
+  await expect(files.locator(".cm-file", { hasText: "TicketForm.tsx" }).locator(".cm-file-off")).toHaveText(
+    "12 off map",
+  );
+  await expect(files.locator(".cm-file", { hasText: "api.ts" }).locator(".cm-file-off")).toHaveCount(0);
+  // a changelog is no part's, and that is right
+  await expect(files.locator(".cm-file", { hasText: "CHANGELOG.md" }).locator(".cm-file-off")).toHaveCount(0);
+  // a code file nothing names is not on the map at all
+  const review = JSON.parse(fs.readFileSync(path.join(dir, "samples", "dedup-tickets.json"), "utf8"));
+  review.payload.files.push({ path: "lib/helpdesk/forgotten.ex", status: "added", diff: "@@ -0,0 +1,2 @@\n+a\n+b\n" });
+  for (const entry of Object.values(review.attachments) as { path: string }[])
+    entry.path = path.join(dir, "samples", entry.path);
+  const extra = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cm-files-")), "review.json");
+  fs.writeFileSync(extra, JSON.stringify(review));
+  const again = await mountPlugin(page, dir, { review: fixture(extra) });
+  await expect(
+    (await openFiles(again.frame)).locator(".cm-file", { hasText: "forgotten.ex" }).locator(".cm-file-off"),
+  ).toHaveText("not on the map");
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;
@@ -1402,10 +1559,11 @@ test("the comment field stays at the bottom of the side panel while its details 
   // C still focuses it
   await plugin.sendKey("c");
   await expect(field).toBeFocused();
-  // the overview has no field, and no footer
+  // the overview has no field: its footer holds the change's files
   await f.locator(".cm-back").click();
   await expect(f.getByTestId("overview")).toBeVisible();
-  await expect(f.locator(".cm-panel-foot")).toBeHidden();
+  await expect(f.locator(".cm-panel-foot").getByPlaceholder("Add a comment")).toHaveCount(0);
+  await expect(f.locator(".cm-panel-foot").getByTestId("files")).toBeVisible();
 });
 
 test("the slider fits its images in the drawer, with the handle on the split", async ({ page }) => {

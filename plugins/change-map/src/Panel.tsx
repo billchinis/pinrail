@@ -5,8 +5,10 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ExternalLink,
   FileCode,
   GitBranch,
@@ -14,6 +16,7 @@ import {
   Image as ImageIcon,
   ListOrdered,
   MessageCircle,
+  Search,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -46,6 +49,7 @@ import {
   type Target,
 } from "./types";
 import { screenComments } from "./ScreenViewer";
+import { routine, type Unmapped } from "./lines";
 import { CommentItem } from "./CommentItem";
 import { Compose } from "./Compose";
 import { dedent, highlightLines, markdown } from "./markdown";
@@ -71,7 +75,11 @@ export type PanelProps = {
   /** each part's and interaction's comments and reviewed mark, as the map shows them */
   marks: Marks;
   /** how many of the change's lines are on the map, of how many */
-  coverage: { total: number; mapped: number };
+  coverage: { total: number; mapped: number; unmapped: Map<string, Unmapped> };
+  /** the file chosen in the overview's files, shown on the map, or null */
+  chosenFile: string | null;
+  /** chooses a file to show on the map, or none */
+  chooseFile(path: string | null): void;
   /** the view the panel showed before, to go back to */
   back: { to: string; go(): void } | null;
   /** the file in the diff drawer, marked in the lists */
@@ -126,7 +134,7 @@ function View(props: PanelProps) {
 }
 
 function Overview(props: PanelProps) {
-  const { payload, zoomTo, openFile, openLink, comments } = props;
+  const { payload, zoomTo, openLink, comments } = props;
   const change = payload.change;
   const claimed = new Set([
     ...payload.nodes.flatMap((n) => (n.changes ?? []).map((c) => c.file)),
@@ -226,20 +234,90 @@ function Overview(props: PanelProps) {
           />
         </>
       ) : null}
-      {others.length ? (
+      {/* comments on the lines of files no part or interaction names */}
+      {others.length ? <LineComments {...props} changes={others.map((f) => ({ file: f.path }))} /> : null}
+      {props.footer ? createPortal(<FileFinder {...props} claimed={claimed} />, props.footer) : null}
+    </div>
+  );
+}
+
+/** The change's files, a drawer at the bottom of the overview: closed, a
+ *  bar that names the chosen file; open, each file with its line counts and
+ *  how much of it is off the map, filtered as one types. A file chosen
+ *  opens in the drawer under the map, and the map shows what touches it. */
+function FileFinder(props: PanelProps & { claimed: Set<string> }) {
+  const { payload, chosenFile: found, chooseFile, claimed } = props;
+  const [filter, setFilter] = useState("");
+  const [open, setOpen] = useState(false);
+  const shown = payload.files.filter((f) => f.path.toLowerCase().includes(filter.trim().toLowerCase()));
+  // what on the map touches the chosen file, named as the map names it
+  const owners = found
+    ? [
+        ...payload.nodes.filter((n) => n.changes?.some((c) => c.file === found)).map((n) => n.title),
+        ...(payload.edges ?? [])
+          .filter((e) => e.changes?.some((c) => c.file === found))
+          .map((e) => e.label ?? e.kind ?? "call"),
+      ]
+    : [];
+  const listed = owners.length > 1 ? `${owners.slice(0, -1).join(", ")} and ${owners[owners.length - 1]}` : owners[0];
+  return (
+    <section className={`cm-finder${open ? " cm-finder-open" : ""}`} data-testid="files">
+      <button type="button" className="cm-finder-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="pinrail-eyebrow">Files · {payload.files.length}</span>
+        {!open && found ? <span className="cm-finder-chosen mono">{found}</span> : null}
+        {open ? <ChevronDown /> : <ChevronUp />}
+      </button>
+      {open ? (
         <>
-          <h3 className="pinrail-eyebrow">Other files</h3>
-          <Files
-            files={others.map((f) => ({ file: f.path }))}
-            payload={payload}
-            openFile={openFile}
-            comments={comments}
-            current={props.current}
-          />
-          <LineComments {...props} changes={others.map((f) => ({ file: f.path }))} />
+          <label className="cm-finder-search">
+            <Search aria-hidden="true" />
+            <input
+              className="pinrail-field cm-finder-filter"
+              type="search"
+              placeholder="Filter files"
+              aria-label="Filter files"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </label>
+          <ul className="cm-parts cm-finder-list">
+            {shown.map((f) => {
+              const { added, removed } = countLines(f.diff);
+              const missing = props.coverage.unmapped.get(f.path);
+              const off = missing ? missing.added.size + missing.removed.size : 0;
+              const nowhere = !claimed.has(f.path) && !routine(f.path);
+              return (
+                <li key={f.path}>
+                  <button
+                    type="button"
+                    className={`cm-row cm-file${found === f.path ? " cm-current" : ""}`}
+                    aria-pressed={found === f.path}
+                    onClick={() => chooseFile(found === f.path ? null : f.path)}
+                    title={f.path}
+                  >
+                    <FileCode />
+                    <span className="cm-row-title mono">{f.path}</span>
+                    {nowhere ? (
+                      <span className="cm-file-off">not on the map</span>
+                    ) : off ? (
+                      <span className="cm-file-off">{off} off map</span>
+                    ) : null}
+                    <span className="cm-counts mono">
+                      <span className="cm-add">+{added}</span> <span className="cm-del">−{removed}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {found && owners.length ? (
+            <p className="cm-finder-owners" data-testid="file-owners">
+              On the map: {listed}
+            </p>
+          ) : null}
         </>
       ) : null}
-    </div>
+    </section>
   );
 }
 

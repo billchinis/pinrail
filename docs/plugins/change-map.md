@@ -37,7 +37,7 @@ pinrail plugins install change-map
 ### The map
 
 - **A card for each part** of the change, such as a component, a module, an endpoint or a table, grouped into lanes such as *Web app*, *API* and *Database*, and **a line for each interaction** between two parts, labelled with what it does. A part's border and an interaction's line show whether it is new, changed, removed or unchanged. An interaction's label shows how many files implement it, so an interaction without code has no count. A card shows the part's kind and status in a header, and the lines its part of the change adds and removes. The button beside the zoom buttons switches to smaller cards with the title and the status only, and back, and the choice is kept as a setting.
-- **The side panel** with the change's summary, or the selected part or interaction with its summary, its files, its screenshots, the diagrams it appears in and its comments. You can drag the panel's left edge to make it wider.
+- **The side panel** with the change's summary, or the selected part or interaction with its summary, its files, its screenshots, the diagrams it appears in and its comments. You can drag the panel's left edge to make it wider. Under the change's summary, a drawer at the bottom of the panel opens the change's files, with their line counts and how many of their lines are off the map. You can filter them, and choosing one opens it in the drawer and highlights the parts, interactions and diagram entities that touch it, while the rest dims, on the map and in the diagrams.
 - **The diff drawer** under the map, with the selected part's files and the lines that implement it highlighted. A changed line that no part, interaction or diagram covers has an amber edge, and the overview says how many of the change's lines are on the map, not counting changelogs and lock files. Selecting another part of the same file scrolls to its lines. The button in the header shows or hides the drawer, and the choice is kept as a setting.
 
 ### Sequence and state diagrams
@@ -108,7 +108,7 @@ When a change is complex, submit it for review with the `change-map` Pinrail plu
 
 - `nodes` are the parts of the change. A part's `kind` sets its icon, its `status` its colour, and its `changes` the files and line ranges that implement it.
 - `edges` are the interactions between parts, such as calls, events or imports.
-- `files` holds the unified diff of each changed file. A file no part names is listed in the panel as one of the other files.
+- `files` holds the unified diff of each changed file. A code file that no part or interaction names is marked as not on the map in the panel's list of files.
 - `screens` hold screenshots of an interface part, each sent with `--attach` and named as `{"$attachment": "<name>"}`.
 - `diagrams` are optional sequence and state diagrams, whose participants and messages can name a part with `node` and an interaction with `edge`.
 

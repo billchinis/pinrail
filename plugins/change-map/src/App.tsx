@@ -200,6 +200,36 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
   const siblings = useMemo(() => changesOf(payload, selection), [payload, selection]);
   // how much of the change the map covers, and the lines it leaves out
   const covered = useMemo(() => coverage(payload), [payload]);
+  // the file chosen in the overview's files, and what on the map touches it;
+  // choosing a part or an interaction leaves it
+  const [found, setFound] = useState<string | null>(null);
+  useEffect(() => {
+    if (selection) setFound(null);
+  }, [selection]);
+  const findFile = (path: string | null) => {
+    setFound(path);
+    if (path) setFile({ path });
+  };
+  const lit = useMemo(
+    () =>
+      found
+        ? {
+            nodes: new Set(payload.nodes.filter((n) => n.changes?.some((c) => c.file === found)).map((n) => n.id)),
+            edges: new Set(
+              (payload.edges ?? []).filter((e) => e.changes?.some((c) => c.file === found)).map((e) => e.id),
+            ),
+            // the diagrams' own: those standing for a part or an interaction follow it
+            items: new Set(
+              (payload.diagrams ?? []).flatMap((d) =>
+                [...(d.participants ?? []), ...(d.messages ?? []), ...(d.states ?? []), ...(d.transitions ?? [])]
+                  .filter((x) => x.changes?.some((c) => c.file === found))
+                  .map((x) => `${d.id}:${x.id}`),
+              ),
+            ),
+          }
+        : null,
+    [found, payload],
+  );
   /** Opens the diff drawer on the selection's first file, or the change's
    *  first file when nothing is selected; closes it when it is open. */
   const toggleDiff = () =>
@@ -415,6 +445,7 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
     fit,
     onFit: () => setFit((n) => n + 1),
     select,
+    lit,
   };
 
   return (
@@ -597,6 +628,8 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               images={images}
               select={select}
               coverage={covered}
+              chosenFile={found}
+              chooseFile={findFile}
               zoomTo={(node) => {
                 select({ node });
                 setTab(null);
