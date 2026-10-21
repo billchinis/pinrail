@@ -5,6 +5,8 @@
 import {
   Bell,
   BellOff,
+  BookCheck,
+  BookOpenText,
   ChevronRight,
   Send,
   CircleCheck,
@@ -62,6 +64,11 @@ export function PluginsSection({ focus, onOpenReview }: { focus: string | null; 
     const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
     revealItemInDir(path).catch(() => {});
   };
+  // the folder of a plugin's skill, in the file manager
+  const openSkill = async (name: string) => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    invoke("open_plugin_skill", { name }).catch(() => {});
+  };
 
   // the origins a plugin may open without asking, while it keeps its source
   const allowedOrigins = (p: Plugin) => {
@@ -118,7 +125,7 @@ export function PluginsSection({ focus, onOpenReview }: { focus: string | null; 
             open={focus === p.name}
             fresh={fresh === p.name}
             onReveal={() => reveal(p.install?.link ? p.install.source : p.path)}
-            onRevealSkill={() => reveal(`${p.install?.link ? p.install.source : p.path}/skill/SKILL.md`)}
+            onOpenSkill={() => openSkill(p.name)}
             onReload={() => load().catch(() => {})}
             onNotify={(on) => setNotify(p.name, on)}
             links={allowedOrigins(p)}
@@ -165,7 +172,7 @@ function PluginEntry({
   open: openAtStart,
   fresh,
   onReveal,
-  onRevealSkill,
+  onOpenSkill,
   onReload,
   onNotify,
   links,
@@ -185,7 +192,7 @@ function PluginEntry({
   fresh: boolean;
   onReveal: () => void;
   /** shows the plugin's SKILL.md in the file manager */
-  onRevealSkill: () => void;
+  onOpenSkill: () => void;
   /** reads the installed plugins again */
   onReload: () => void;
   onNotify: (on: boolean) => void;
@@ -237,16 +244,24 @@ function PluginEntry({
     }
   };
 
-  // a copied plugin's skill, allowed to reach the agents or stopped
+  // the plugin's skill, added to the agents' pinrail skill or taken out
+  // shown at once, until the reloaded plugin agrees or the change fails
+  const [skillWanted, setSkillWanted] = useState<boolean | null>(null);
+  const skillStored = p.install?.skill_allowed === true;
+  useEffect(() => {
+    if (skillWanted === skillStored) setSkillWanted(null);
+  }, [skillWanted, skillStored]);
   const allowSkill = async (allowed: boolean) => {
+    setSkillWanted(allowed);
     try {
       await api.allowSkill(p.name, allowed);
       onReload();
     } catch (e) {
+      setSkillWanted(null);
       onMessage(e instanceof ApiError ? e.message : `The ${p.title || p.name} skill could not be changed`, "danger");
     }
   };
-  const skillAlways = p.install?.source_kind === "index" || p.install?.link === true;
+  const skillOn = skillWanted ?? skillStored;
 
   // an official plugin, to the newer version the app carries
   const [updating, setUpdating] = useState(false);
@@ -344,6 +359,26 @@ function PluginEntry({
                 {linked ? "linked" : p.dev ? "development" : "ready"}
               </span>
             )}
+            {p.skill ? (
+              // a skill for the agents, and whether it reaches them yet
+              <Tooltip
+                label={
+                  skillOn
+                    ? "Has a skill for your agents, which is in their pinrail skill."
+                    : "Has a skill for your agents, which is turned off."
+                }
+              >
+                <span
+                  className={`with-icon ${skillOn ? "ok" : "settings-skill-off"}`}
+                  tabIndex={0}
+                  aria-label={skillOn ? "Skill turned on" : "Skill turned off"}
+                  data-testid="plugin-has-skill"
+                >
+                  {skillOn ? <BookCheck size={12} /> : <BookOpenText size={12} />}
+                  skill
+                </span>
+              </Tooltip>
+            ) : null}
           </span>
         }
         note={note}
@@ -453,27 +488,20 @@ function PluginEntry({
               <>
                 <dt>Skill</dt>
                 <dd className="settings-plugin-skill" data-testid="plugin-skill">
-                  {skillAlways ? (
-                    <span>Reaches your connected agents</span>
-                  ) : (
-                    <>
-                      <Toggle
-                        label={`Let the ${p.name} skill reach your agents`}
-                        checked={p.install?.skill_allowed === true}
-                        onChange={allowSkill}
-                      />
-                      <span>
-                        {p.install?.skill_allowed
-                          ? "Reaches your connected agents"
-                          : "Waits until you allow it. It becomes instructions your agents follow, so read it first."}
-                      </span>
-                      {native ? (
-                        <button type="button" className="chrome-button" onClick={() => onRevealSkill()}>
-                          Show its files
-                        </button>
-                      ) : null}
-                    </>
-                  )}
+                  <Toggle label={`Skill of ${p.name}`} checked={skillOn} onChange={allowSkill} />
+                  <span>{skillOn ? "In your agents' pinrail skill" : "Off. Read it before you turn it on."}</span>
+                  {native ? (
+                    <Tooltip label="Open the skill's folder">
+                      <button
+                        type="button"
+                        className="bar-button"
+                        onClick={onOpenSkill}
+                        aria-label={`Open the folder of the ${p.name} skill`}
+                      >
+                        <FolderOpen size={15} />
+                      </button>
+                    </Tooltip>
+                  ) : null}
                 </dd>
               </>
             ) : p.skill_error ? (

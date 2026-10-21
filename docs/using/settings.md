@@ -66,7 +66,7 @@ Pinrail lists the agents it knows and finds each one by its configuration folder
 
 ![Settings, Plugins: the installed plugins with where each came from.](screenshot:settings-plugins "The installed plugins, each with where it came from.")
 
-Every installed plugin has a row with its icon, its title and whether it is ready. When a plugin is broken, hover over **broken** to see why. Every row has a **Notify** button, which turns notifications for that plugin's reviews on or off. The other buttons on a row depend on how the plugin was installed:
+Every installed plugin has a row with its icon, its title and whether it is ready. When a plugin is broken, hover over **broken** to see why. A plugin that ships a skill for your agents shows **skill**, and its tooltip says whether the skill is turned on. Every row has a **Notify** button, which turns notifications for that plugin's reviews on or off. The other buttons on a row depend on how the plugin was installed:
 
 - An official plugin, and an installed copy, have **Remove**. An official plugin also shows **Update** when an app update brings a newer version. To upgrade any other plugin, install the new version.
 - A linked folder has **Install a copy** and **Remove**.
@@ -79,7 +79,7 @@ Click a row to open its details:
 - **Version** and **Source**: the version installed, and the folder or zip it came from.
 - **Files**: the files the plugin takes beside a review, for a plugin that takes any.
 - **Clipboard**: shown for a plugin whose view may copy text and images from its reviews to the clipboard, because its manifest declares the `clipboard` capability. Pinrail shows a notice for every copy.
-- **Skill**: shown for a plugin that ships a skill for your agents. An official or linked plugin's skill reaches your connected agents. For a plugin copied from a folder or a zip, a switch allows its skill, and *Show its files* shows its `SKILL.md` to read first. See [Plugins with a skill](/docs/using/installing-plugins/#plugins-with-a-skill).
+- **Skill**: shown for a plugin that ships a skill for your agents. Its switch adds the skill to your agents' `pinrail` skill or removes it. In the app, the folder button beside it opens the skill's folder so you can read it before you turn it on. See [Plugins with a skill](/docs/using/installing-plugins/#plugins-with-a-skill).
 - **Opens without asking**: the sites whose links the plugin may open without asking you first. You allow a site from the question Pinrail shows when a plugin wants to open a link. Remove a site with its ✕. Removing the plugin removes all of them. Installing a new version from a folder or a zip keeps them, but installing a plugin in place of the copy that comes with Pinrail, or the other way round, does not.
 - **Send a sample**: sends the review the plugin ships to show itself, and opens it. Plugins without a sample don't have the button.
 - **Settings**: the plugin's own settings, when it has any. The code review plugin, for example, lets you choose between an inline and a side-by-side diff.

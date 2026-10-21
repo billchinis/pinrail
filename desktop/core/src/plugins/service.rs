@@ -204,8 +204,7 @@ impl PluginService {
     }
 
     /// Allows the skill of an installed plugin to reach the agents, or stops
-    /// it, and announces the change so that the agents' skills follow. An
-    /// official or linked plugin's skill reaches them whatever this says.
+    /// it, and announces the change so that the agents' skills follow.
     pub fn allow_skill(&self, name: &str, allowed: bool) -> Result<Value, Error> {
         let now = crate::reviews::iso(chrono::Utc::now());
         if !self.db.allow_skill(name, allowed, &now)? {

@@ -498,9 +498,8 @@ enum PluginsCommand {
         /// the plugin
         #[arg(long)]
         link: bool,
-        /// Let the plugin's skill reach your connected agents. The skills of
-        /// official and linked plugins always do; a copied plugin's waits
-        /// for this, or for Settings › Plugins in the app
+        /// Let the plugin's skill reach your connected agents. Without it, the
+        /// skill waits until you turn it on in Settings › Plugins in the app
         #[arg(long)]
         allow_skill: bool,
     },

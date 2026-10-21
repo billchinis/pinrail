@@ -286,7 +286,7 @@ test("a plugin that takes files but names none in its payload says so on its row
   }
 });
 
-test("a copied plugin's skill waits for the switch in its details, and a linked one's reaches the agents", async ({
+test("a plugin's skill is off until the switch in its details turns it on, for a copy and a link alike", async ({
   page,
 }) => {
   const withSkill = (name: string) => {
@@ -302,23 +302,40 @@ test("a copied plugin's skill waits for the switch in its details, and a linked 
   await linkPlugin(page.request, withSkill("linkskill"), "linkskill");
   try {
     await page.goto("/#/plugins");
+    for (const name of ["skilled", "linkskill"]) {
+      const row = page.getByTestId(`plugin-row-${name}`);
+      const mark = row.getByTestId("plugin-has-skill");
+      await mark.hover();
+      await expect(page.getByRole("tooltip")).toHaveText("Has a skill for your agents, which is turned off.");
+      await expect(mark).toHaveAttribute("aria-label", "Skill turned off");
+      // the switch is in its details, not among the row's buttons
+      await expect(row.getByRole("switch", { name: `Skill of ${name}` })).toHaveCount(0);
+      await page.getByRole("button", { name: `Details of ${name}` }).click();
+      const details = page.getByTestId("plugin-details").getByTestId("plugin-skill");
+      const toggle = details.getByRole("switch", { name: `Skill of ${name}` });
+      await expect(toggle).toHaveAttribute("aria-checked", "false");
+      await expect(details).toContainText("Off. Read it before you turn it on.");
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-checked", "true");
+      await expect(details).toContainText("In your agents' pinrail skill");
+      await page.getByRole("button", { name: `Details of ${name}` }).click();
+      await mark.hover();
+      await expect(page.getByRole("tooltip")).toHaveText(
+        "Has a skill for your agents, which is in their pinrail skill.",
+      );
+      await expect(mark).toHaveAttribute("aria-label", "Skill turned on");
+      const { plugins } = await (await page.request.get(`${core}/api/v1/plugins`)).json();
+      expect(plugins.find((p: { name: string }) => p.name === name).install.skill_allowed).toBe(true);
+    }
+    // and off again
     await page.getByRole("button", { name: "Details of skilled" }).click();
-    const skill = page.getByTestId("plugin-details").getByTestId("plugin-skill");
-    await expect(skill).toContainText("Waits until you allow it");
-    const toggle = skill.getByRole("switch", { name: "Let the skilled skill reach your agents" });
-    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    const toggle = page.getByTestId("plugin-details").getByRole("switch", { name: "Skill of skilled" });
     await toggle.click();
-    await expect(skill).toContainText("Reaches your connected agents");
-    await expect(toggle).toHaveAttribute("aria-checked", "true");
-    const { plugins } = await (await page.request.get(`${core}/api/v1/plugins`)).json();
-    expect(plugins.find((p: { name: string }) => p.name === "skilled").install.skill_allowed).toBe(true);
-
-    // a linked plugin's skill always reaches them: no switch
-    await page.getByRole("button", { name: "Details of skilled" }).click();
-    await page.getByRole("button", { name: "Details of linkskill" }).click();
-    const linked = page.getByTestId("plugin-details").getByTestId("plugin-skill");
-    await expect(linked).toHaveText("Reaches your connected agents");
-    await expect(linked.getByRole("switch")).toHaveCount(0);
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    // a plugin without a skill has neither
+    const list = page.getByTestId("plugin-row-list");
+    await expect(list.getByTestId("plugin-has-skill")).toHaveCount(0);
+    await expect(list.getByRole("switch", { name: "Skill of list" })).toHaveCount(0);
   } finally {
     await page.request.delete(`${core}/api/v1/plugins/skilled`);
     await page.request.delete(`${core}/api/v1/plugins/linkskill`);

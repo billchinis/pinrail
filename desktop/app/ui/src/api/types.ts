@@ -177,7 +177,7 @@ export type PluginInstall = {
   modified: boolean;
   /** a linked folder changed since it was stored; the next use stores it */
   folder_changed: boolean;
-  /** its skill may reach the agents: an official or linked plugin's always, another's once allowed */
+  /** the person allowed its skill to reach the agents */
   skill_allowed?: boolean;
   installed_at: string;
   updated_at: string;

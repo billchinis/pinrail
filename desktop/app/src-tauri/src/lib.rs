@@ -176,10 +176,10 @@ fn home() -> Result<PathBuf, String> {
 }
 
 /// The installed plugins as the agents' skill names them: each usable one,
-/// with its skill when that may reach the agents: an official plugin's, a
-/// linked one's, or another's the person allowed. A linked plugin's skill is
-/// read from its folder as it is now, so an edit reaches the agents without
-/// a reinstall, and the others' from the bundle installed.
+/// with its skill when the person allowed it to reach the agents. A linked
+/// plugin's skill is read from its folder as it is now, so an edit reaches
+/// the agents without a reinstall, and the others' from the bundle
+/// installed.
 fn installed_plugins(state: &Pinrail) -> Vec<agent_skills::InstalledPlugin> {
     let listing = state.plugins().listing(&serde_json::json!({}));
     let text = |v: &serde_json::Value| v.as_str().unwrap_or_default().to_string();
@@ -237,6 +237,37 @@ async fn agents_status(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// The folder of an installed plugin's skill, to read before turning it
+/// on: a linked plugin's in its folder, another's in its bundle.
+fn skill_folder(state: &Pinrail, name: &str) -> Option<PathBuf> {
+    let listing = state.plugins().listing(&serde_json::json!({}));
+    let plugin = listing["plugins"]
+        .as_array()?
+        .iter()
+        .find(|p| p["name"] == name && !p["skill"].is_null())?;
+    let folder = if plugin["install"]["link"] == true {
+        &plugin["install"]["source"]
+    } else {
+        &plugin["path"]
+    };
+    Some(PathBuf::from(folder.as_str()?).join(pinrail_core::skill::FOLDER))
+}
+
+/// Opens the folder of a plugin's skill in the system's file manager.
+#[tauri::command]
+fn open_plugin_skill(
+    app: AppHandle,
+    native: State<'_, Native>,
+    name: String,
+) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let folder = skill_folder(&native.state, &name)
+        .ok_or_else(|| format!("the {name} plugin has no skill"))?;
+    app.opener()
+        .open_path(folder.to_string_lossy(), None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// The skill as the app writes it now, for an agent the app does not know.
@@ -635,6 +666,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             server_url,
+            open_plugin_skill,
             send_feedback,
             take_pending_route,
             shortcut_state,
@@ -852,7 +884,7 @@ mod tests {
     }
 
     #[test]
-    fn an_official_plugins_skill_reaches_the_agents() {
+    fn an_official_plugins_skill_reaches_the_agents_once_turned_on() {
         let root = tempfile::tempdir().unwrap();
         let catalog = root.path().join("catalog");
         plugin_with_skill(&catalog, "mapper");
@@ -866,13 +898,17 @@ mod tests {
 
         let plugins = super::installed_plugins(&app);
         let mapper = plugins.iter().find(|p| p.name == "mapper").unwrap();
+        assert!(mapper.skill.is_none(), "off until the person turns it on");
+        app.plugins().allow_skill("mapper", true).unwrap();
+        let plugins = super::installed_plugins(&app);
+        let mapper = plugins.iter().find(|p| p.name == "mapper").unwrap();
         let (folder, files) = mapper.skill.clone().expect("the official plugin's skill");
         assert_eq!(files, ["SKILL.md"]);
         assert!(folder.join("SKILL.md").is_file(), "{}", folder.display());
     }
 
     #[test]
-    fn a_linked_plugins_skill_reaches_the_agents_and_a_copied_ones_once_allowed() {
+    fn a_linked_or_copied_plugins_skill_reaches_the_agents_once_turned_on() {
         let root = tempfile::tempdir().unwrap();
         let app =
             pinrail_core::Pinrail::open(pinrail_core::Config::new(root.path().join("data"), 0))
@@ -890,6 +926,10 @@ mod tests {
         install("linked", true);
         install("copied", false);
 
+        // no plugin's skill reaches the agents until the person turns it on
+        let plugins = super::installed_plugins(&app);
+        assert!(plugins.iter().all(|p| p.skill.is_none()));
+        app.plugins().allow_skill("linked", true).unwrap();
         let plugins = super::installed_plugins(&app);
         let linked = plugins.iter().find(|p| p.name == "linked").unwrap();
         let (folder, files) = linked.skill.clone().unwrap();
@@ -911,6 +951,18 @@ mod tests {
             folder.display()
         );
         assert!(folder.join("SKILL.md").is_file());
+
+        // the folder to read before turning a skill on: a linked plugin's in
+        // its folder, a copied one's in its bundle
+        assert_eq!(
+            super::skill_folder(&app, "linked"),
+            Some(root.path().join("linked/skill"))
+        );
+        let copied = super::skill_folder(&app, "copied").unwrap();
+        assert!(
+            copied.join("SKILL.md").is_file() && !copied.starts_with(root.path().join("copied"))
+        );
+        assert_eq!(super::skill_folder(&app, "nope"), None);
 
         // an edit in the linked folder is read as it is now
         std::fs::write(root.path().join("linked/skill/notes.md"), "# Notes").unwrap();

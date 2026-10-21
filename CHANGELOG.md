@@ -17,10 +17,10 @@ The `pinrail` command ships inside the app and carries the app's version.
   Pinrail writes into each connected agent's `pinrail` skill under
   `plugins/<name>/`, and the `pinrail` skill names the plugins that have
   one. Installing, updating or removing a plugin rewrites the connected
-  agents' skills. The skills of official and linked plugins
-  reach the agents at once. A copied plugin's skill waits until you
-  allow it in Settings › Plugins or with `pinrail plugins install
-  --allow-skill`.
+  agents' skills. Every plugin's skill is off until you turn it on in the
+  plugin's details in Settings › Plugins, where you can also open the
+  skill's folder to read it, or with `pinrail plugins install
+  --allow-skill`. A plugin's row shows whether its skill is on.
 - `pinrail plugins skill <name>` prints a plugin's skill, or a file it
   names, for an agent without the `pinrail` skill installed, and
   `pinrail plugins` says which plugins have one.

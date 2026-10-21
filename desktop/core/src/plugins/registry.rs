@@ -392,9 +392,7 @@ impl Registry {
             bundle: Some(install.bundle.clone()),
             modified,
             folder_changed,
-            skill_allowed: install.kind == "index"
-                || install.linked()
-                || self.db.skill_grants()?.contains(&install.name),
+            skill_allowed: self.db.skill_grants()?.contains(&install.name),
             installed_at: install.installed_at.clone(),
             updated_at: install.updated_at.clone(),
         });

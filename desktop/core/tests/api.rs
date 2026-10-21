@@ -2700,7 +2700,7 @@ async fn view_url(app: &App, review: &Value) -> String {
 }
 
 #[tokio::test]
-async fn a_copied_plugins_skill_reaches_the_agents_once_allowed_and_from_its_source_only() {
+async fn a_plugins_skill_reaches_the_agents_once_allowed_and_from_its_source_only() {
     let app = app();
     let scratch = tempfile::tempdir().unwrap();
     let hello = plugin_copy(scratch.path(), "hello", "1.0.0");
@@ -2782,9 +2782,9 @@ async fn a_copied_plugins_skill_reaches_the_agents_once_allowed_and_from_its_sou
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    // a linked plugin's and an official plugin's always do
+    // a linked plugin's and an official plugin's wait to be turned on too
     let (_, row) = install(&app, &hello, json!({"link": true})).await;
-    assert_eq!(row["install"]["skill_allowed"], true);
+    assert_eq!(row["install"]["skill_allowed"], false);
     let (_, row) = call(
         &app,
         "POST",
@@ -2792,7 +2792,7 @@ async fn a_copied_plugins_skill_reaches_the_agents_once_allowed_and_from_its_sou
         Some(json!({"id": "forgeplane/list"})),
     )
     .await;
-    assert_eq!(row["install"]["skill_allowed"], true);
+    assert_eq!(row["install"]["skill_allowed"], false);
 }
 
 #[tokio::test]

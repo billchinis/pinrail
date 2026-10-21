@@ -1863,11 +1863,13 @@ body.is-resizing iframe {
   margin-right: auto;
   font-size: 12px;
 }
+.settings-skill-off {
+  color: var(--faint);
+}
 .settings-plugin-skill {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
+  gap: 10px;
 }
 .settings-plugin-links {
   display: flex;
