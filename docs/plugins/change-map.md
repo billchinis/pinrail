@@ -1,6 +1,6 @@
 ---
 title: Change map
-description: "A code change, such as a pull request, reviewed as a diagram of the parts it touches and how they interact, with each part's diff, screenshots before and after, and sequence and state diagrams when the change needs them."
+description: "A code change, such as a pull request, reviewed as a diagram of the parts it touches and how they interact, with each part's diff, screenshots or recordings of the interface, and sequence and state diagrams when the change needs them."
 sidebar:
   badge:
     text: Optional
@@ -11,7 +11,7 @@ sidebar:
 
 The change map plugin turns the review of a code change into a review of its architecture. A pull request, or a branch an agent finished, is shown as a diagram of the parts it touches and the interactions between them, rather than as a list of files. You see what the change does to the system first, and then open the code of any part, its lines highlighted in the diff.
 
-When a diagram of parts is not enough, the agent adds **sequence diagrams** for the order of the calls and **state diagrams** for a lifecycle, so you review how the change behaves as well as what it touches. Parts of the interface carry **screenshots before and after**, so you see what the person using the software will see. Each comment goes back on a part, an interaction, lines of a file, an area of a screenshot or an entity of a diagram, so the agent knows exactly what it is about.
+When a diagram of parts is not enough, the agent adds **sequence diagrams** for the order of the calls and **state diagrams** for a lifecycle, so you review how the change behaves as well as what it touches. Parts of the interface carry **screenshots before and after**, or **recordings** of the part in use, so you see what the person using the software will see. Each comment goes back on a part, an interaction, lines of a file, an area of a screenshot, a moment of a recording or an entity of a diagram, so the agent knows exactly what it is about.
 
 ![The change map plugin: the diagram of a change, with the ticket form selected, its file open in the diff drawer under the diagram with a comment on three lines, and a comment on the part being written in the side panel.](screenshot:change-map "The ticket form selected, its file in the drawer, and a comment on three of its lines.")
 
@@ -19,7 +19,7 @@ When a diagram of parts is not enough, the agent adds **sequence diagrams** for 
 
 - **A pull or merge request** that touches several parts of a system, read as a whole before you read it file by file.
 - **A change an agent made on its own**, reviewed before it opens a pull request or merges.
-- **A change to an interface**, with screenshots of each screen before and after.
+- **A change to an interface**, with screenshots of each screen before and after, or a recording of how it behaves.
 - **A change to a flow or a lifecycle**, such as a retry, a handshake or a new status, explained with sequence and state diagrams for a detailed architectural review.
 
 To review the comments an agent wants to post on a pull request, use [Code review](/docs/plugins/code-review/) instead.
@@ -36,9 +36,28 @@ pinrail plugins install change-map
 
 ### The map
 
-- **A card for each part** of the change, such as a component, a module, an endpoint or a table, grouped into lanes such as *Web app*, *API* and *Database*, and **a line for each interaction** between two parts, labelled with what it does. A part's border and an interaction's line show whether it is new, changed, removed or unchanged. An interaction's label shows how many files implement it, so an interaction without code has no count. A card shows the part's kind and status in a header, and the lines its part of the change adds and removes. The button beside the zoom buttons switches to smaller cards with the title and the status only, and back, and the choice is kept as a setting.
-- **The side panel** with the change's summary, or the selected part or interaction with its summary, its files, its screenshots, the diagrams it appears in and its comments. You can drag the panel's left edge to make it wider. Under the change's summary, a drawer at the bottom of the panel opens the change's files, with their line counts and how many of their lines are off the map. You can filter them, and choosing one opens it in the drawer and highlights the parts, interactions and diagram entities that touch it, while the rest dims, on the map and in the diagrams.
-- **The diff drawer** under the map, with the selected part's files and the lines that implement it highlighted. A changed line that no part, interaction or diagram covers has an amber edge, and the overview says how many of the change's lines are on the map, not counting changelogs and lock files. Selecting another part of the same file scrolls to its lines. The button in the header shows or hides the drawer, and the choice is kept as a setting.
+Each part of the change, such as a component, a module, an endpoint or a table, is a card, and the cards are grouped into lanes such as *Web app*, *API* and *Database*. Each interaction between two parts is a line, labelled with what it does.
+
+- **A card** shows the part's kind and status in a header tinted with the status colour: new, changed, removed or unchanged. Under its title, a bar and two counts show the lines its part of the change adds and removes. A part of the interface also shows its first screenshot.
+- **An interaction's label** shows how many files implement it, so an interaction that no code implements has no count.
+- **The selected part** has a thicker border in the accent colour.
+
+The buttons in the map's top-left corner zoom in and out, fit the map to the view, and switch to compact cards, which show the title and the status only. The choice of cards is kept as a setting.
+
+### The side panel
+
+With nothing selected, the side panel shows the change as a whole:
+
+- **The change's summary**, its branches and a link to it, and how many of the change's changed lines are on the map, not counting changelogs and lock files.
+- **The parts changed**, each with a check on its icon once you have reviewed it and the number of its comments. Choosing one zooms the map in on it.
+- **The diagrams**, and the **other files**, which no part or interaction names.
+- **The files of the change**, in a drawer at the bottom of the panel. Each file shows its line counts and how many of its lines are off the map, and a filter narrows the list. Choosing a file opens it in the diff drawer and highlights the parts, interactions and diagram entities that touch it, while the rest of the map and the diagrams dims.
+
+Selecting a part or an interaction shows its summary, its files, its screenshots, the diagrams it appears in and its comments instead. You can drag the panel's left edge to make it wider.
+
+### The diff drawer
+
+The diff drawer under the map shows the selected part's files, with the lines that implement it highlighted. Selecting another part of the same file scrolls to its lines. A changed line that no part, interaction or diagram covers has an amber edge, and the drawer's header counts those lines. The button in the header shows or hides the drawer, and the choice is kept as a setting.
 
 ### Sequence and state diagrams
 
@@ -48,15 +67,15 @@ A change about the order of things or about a lifecycle is hard to read from a m
 
 ![A sequence diagram in the change map: a second save with the same dedup key, with a retry frame and the conflict reply selected.](screenshot:change-map-sequence "A retried request answered with the ticket the first one created.")
 
-- **A state diagram** shows the states, with a dot for the start and a ringed dot for the end, and the transitions between them, labelled with their event, guard and action. It runs from left to right, and the button beside its zoom buttons lays it out from top to bottom instead, which is kept as a setting.
+- **A state diagram** shows the states, with a dot for the start and a ringed dot for the end, and the transitions between them, labelled with their event, guard and action. It runs from left to right, and a button beside its zoom buttons lays it out from top to bottom instead. That choice is kept as a setting.
 
 ![A state diagram in the change map: the Save button's states Ready and Saving, with a failed save's transition selected.](screenshot:change-map-state "The Save button's states, with the transition back from a failed save selected.")
 
 Every participant, message, state and transition has a status, a summary and the files and lines that implement it, which open in the drawer, as a part of the map does. A participant or a message that stands for a part or an interaction of the map is the same thing as that part or interaction, so its files, comments and reviewed mark are shared and nothing is reviewed twice. The tabs show how many comments each diagram has.
 
-### Screenshots and recordings of interface changes
+### Screenshots of interface changes
 
-A part of the interface, such as a form or a page, can carry screenshots, each with a before and an after. The part's card on the map shows the after as a thumbnail, and the side panel shows each screen in turn. A screen can also be a recording of the part in use, sent as an MP4, MOV or WebM file in place of the screenshots. The side panel shows its first frame, and the drawer plays it, with a scrubber and the time. **Comment on this frame** comments on the frame at the playhead, and a box dragged on the video comments on an area of it. Each comment marks the scrubber at its moment, and its box shows when the playhead is there. A screenshot opens larger in the drawer:
+A part of the interface, such as a form or a page, can carry screenshots, each with a before and an after. The side panel shows each screen in turn, and a screenshot opens larger in the drawer:
 
 - **Side by side**, the before and the after at the same zoom and position, so a detail lines up across both.
 - **With a slider** over the two, which you drag to wipe from the before to the after.
@@ -66,10 +85,16 @@ You zoom with the scroll wheel or to the actual pixels, pan with the hand tool o
 
 ![The change map's screenshot viewer: the ticket form before and after side by side, with a comment on the area of the Save button in the after.](screenshot:change-map-screens "The ticket form before and after, with a comment on the spinner in the Save button.")
 
+### Recordings of interface changes
+
+When a change is about how the interface behaves over time, such as a spinner or a sequence of steps, a screen can be a recording of the part in use instead, an MP4, MOV or WebM file. The side panel shows its first frame with a play mark, and the drawer plays it, with a scrubber and the time.
+
+**Comment on this frame** pauses the recording and comments on the frame at the playhead, and a box dragged on the video comments on an area of that frame. Each comment marks the scrubber at its moment, and its box shows while the playhead is there. In the side panel, a recording's comment names its moment, and choosing it opens the recording there.
+
 ### Comments and reviewed marks
 
-- **Comments** go on a part, on an interaction, on a line or a range of lines in the drawer, on an area of a screenshot, and on an entity of a diagram. The field stays at the bottom of the side panel. Badges on the map, the tabs and the files count the comments.
-- **Reviewed marks** are set on each part, interaction or entity you have read, and go back to the agent. The header counts the parts and interactions the change adds, changes or removes that you have reviewed, and clicking the count goes to the next one left.
+- **Comments** go on a part, an interaction, a line or a range of lines in the drawer, an area of a screenshot, a moment of a recording or an area of its frame, and an entity of a diagram. The field stays at the bottom of the side panel. Badges on the map, the tabs and the files count the comments.
+- **Reviewed marks** are set on each part, interaction or entity you have read, and go back to the agent. The header counts the parts and interactions the change adds, changes or removes that you have reviewed. Clicking the count goes to the next one left.
 
 You choose **Approve** or **Request changes** in the header. Until you choose, comments ask for changes, and a review with none approves. With comments and **Approve**, the hand-over says *Approve with comments*.
 
