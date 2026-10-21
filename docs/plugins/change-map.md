@@ -54,9 +54,9 @@ A change about the order of things or about a lifecycle is hard to read from a m
 
 Every participant, message, state and transition has a status, a summary and the files and lines that implement it, which open in the drawer, as a part of the map does. A participant or a message that stands for a part or an interaction of the map is the same thing as that part or interaction, so its files, comments and reviewed mark are shared and nothing is reviewed twice. The tabs show how many comments each diagram has.
 
-### Screenshots of interface changes
+### Screenshots and recordings of interface changes
 
-A part of the interface, such as a form or a page, can carry screenshots, each with a before and an after. The part's card on the map shows the after as a thumbnail, and the side panel shows each screen in turn. A screenshot opens larger in the drawer:
+A part of the interface, such as a form or a page, can carry screenshots, each with a before and an after. The part's card on the map shows the after as a thumbnail, and the side panel shows each screen in turn. A screen can also be a recording of the part in use, sent as an MP4, MOV or WebM file in place of the screenshots. The side panel shows its first frame, and the drawer plays it, with a scrubber and the time. A screenshot opens larger in the drawer:
 
 - **Side by side**, the before and the after at the same zoom and position, so a detail lines up across both.
 - **With a slider** over the two, which you drag to wipe from the before to the after.
@@ -109,7 +109,7 @@ When a change is complex, submit it for review with the `change-map` Pinrail plu
 - `nodes` are the parts of the change. A part's `kind` sets its icon, its `status` its colour, and its `changes` the files and line ranges that implement it.
 - `edges` are the interactions between parts, such as calls, events or imports.
 - `files` holds the unified diff of each changed file. A file that no part or interaction names is listed in the panel as one of the other files.
-- `screens` hold screenshots of an interface part, each sent with `--attach` and named as `{"$attachment": "<name>"}`.
+- `screens` hold screenshots of an interface part, before and after, or a recording of it as `video`, each sent with `--attach` and named as `{"$attachment": "<name>"}`.
 - `diagrams` are optional sequence and state diagrams, whose participants and messages can name a part with `node` and an interaction with `edge`.
 
 ## What comes back

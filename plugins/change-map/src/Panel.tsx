@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
   ListOrdered,
   MessageCircle,
+  Play,
   Search,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -529,7 +530,29 @@ function Screens({
           }
         }}
       >
-        <div className={`cm-screen-pair${s.before && s.after ? "" : " cm-single"}`}>
+        {s.video ? (
+          // a recording: its first frame, with a play mark
+          <div className="cm-screen-pair cm-single">
+            <div>
+              <span className="pinrail-eyebrow">Recording</span>
+              <span className="cm-screen-frame">
+                {images.get(s.video.$attachment) ? (
+                  <video
+                    src={`${images.get(s.video.$attachment)}#t=0.1`}
+                    aria-label={`${s.title ?? part.title}, recording`}
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                ) : null}
+                <span className="cm-screen-play" aria-hidden="true">
+                  <Play />
+                </span>
+              </span>
+            </div>
+          </div>
+        ) : null}
+        <div className={`cm-screen-pair${s.before && s.after ? "" : " cm-single"}`} hidden={!!s.video}>
           {s.before ? (
             <div>
               <span className="pinrail-eyebrow">Before</span>

@@ -271,13 +271,13 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
     ...(draft.reviewed.length ? { reviewed: draft.reviewed } : {}),
   });
 
-  // the screenshots' addresses, once the app has them
+  // the screens' addresses, screenshots and recordings, once the app has them
   const [images, setImages] = useState<Map<string, string>>(new Map());
   useEffect(() => {
     let cancelled = false;
     const names = new Set(
       payload.nodes.flatMap((n) =>
-        (n.screens ?? []).flatMap((s) => [s.before, s.after].filter(Boolean).map((a) => a!.$attachment)),
+        (n.screens ?? []).flatMap((s) => [s.before, s.after, s.video].filter(Boolean).map((a) => a!.$attachment)),
       ),
     );
     Promise.all(

@@ -684,6 +684,37 @@ test("the overview's files say how many of their lines are off the map", async (
   ).toHaveText("not on the map");
 });
 
+test("a recording sits with a part's screenshots, and plays in the drawer", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 860 });
+  const plugin = await mountPlugin(page, dir, { review: dedup() });
+  const f = plugin.frame;
+  await f.locator('[data-node="ticket-form"]').click();
+  const panel = f.getByTestId("part-detail");
+  await expect(panel.getByTestId("panel-screen-position")).toHaveText("1 of 2");
+  await panel.getByRole("button", { name: "Next screen" }).click();
+  // in the panel: the recording's first frame, with a play mark
+  const thumb = panel.locator(".cm-screen");
+  await expect(thumb.locator("video")).toHaveCount(1);
+  await expect(thumb.locator(".cm-screen-play")).toBeVisible();
+  await thumb.click();
+  // in the drawer: the video, a play button, the time and a scrubber
+  const viewer = f.getByTestId("screen-viewer");
+  const video = viewer.locator("video");
+  await expect(video).toHaveCount(1);
+  await expect(viewer.getByRole("radio", { name: "Slider" })).toHaveCount(0);
+  await expect(viewer.getByTestId("video-time")).toHaveText("0:00 / 0:02");
+  await viewer.getByRole("button", { name: "Play" }).click();
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(0.3);
+  await viewer.getByRole("button", { name: "Pause" }).click();
+  expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+  // the scrubber goes to a moment
+  await viewer.getByRole("slider", { name: "Position in the recording" }).fill("2");
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => Math.round(v.currentTime))).toBe(2);
+  await expect(viewer.getByTestId("video-time")).toHaveText("0:02 / 0:02");
+  // no comments on a recording's frames yet: the hint says what a drag does
+  await expect(viewer.locator(".cm-shots-hint")).toHaveText("Drag to pan · scroll to zoom");
+});
+
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {
   const plugin = await mountPlugin(page, dir, { review: dedup() });
   const f = plugin.frame;

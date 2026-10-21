@@ -1,4 +1,4 @@
-# Screenshots of interface changes
+# Screenshots and recordings of interface changes
 
 Add screenshots when the change alters what a person sees: a form, a page,
 a dialog, a message. The person compares the before and the after side by
@@ -13,7 +13,21 @@ side, with a slider, or the after alone, and comments on an area of either.
 - One screen per state. Empty and filled, or light and dark, are two
   screens with a before and an after each.
 - A new screen has an `after` only, and a removed one a `before` only.
-- PNG, JPEG, WebP or GIF, up to 10 MB each and 32 files in all.
+- PNG, JPEG, WebP or GIF.
+- Files go up to 100 MB each, and 32 files in all.
+
+## Recordings
+
+When the change is about behaviour over time, such as a spinner, an
+animation or a sequence of steps, record the part in use instead. A screen
+with a `video` and no screenshots is played in the review:
+
+```json
+{ "title": "Saving, recorded", "video": { "$attachment": "form-saving.mp4" } }
+```
+
+Keep a recording short, a few seconds of the state the change is about, at
+the window size of the screenshots. MP4, MOV or WebM.
 
 ## In the payload
 

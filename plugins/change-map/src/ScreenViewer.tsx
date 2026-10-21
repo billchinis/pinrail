@@ -15,6 +15,8 @@ import {
   Hand,
   Image as ImageIcon,
   Minus,
+  Pause,
+  Play,
   Plus,
   SquareSplitHorizontal,
   X,
@@ -32,6 +34,8 @@ export type ScreenMode = Mode;
  *  keys and buttons on one row. */
 const POP_WIDTH = 380;
 type Image = "before" | "after";
+/** What a stage shows: a screenshot, or a screen's recording. */
+type Media = Image | "video";
 /** How image units map to stage pixels: a scale and an offset. `fit` is
  *  the view that shows each image whole, worked out by each stage. */
 type View = { s: number; x: number; y: number; fit: boolean };
@@ -94,10 +98,13 @@ export function ScreenViewer({
 
   // without both images there is nothing to compare: the one there is shows
   const compare: Mode = both ? mode : "side";
-  const url = (image: Image) => {
-    const a = screen?.[image];
+  const url = (media: Media) => {
+    const a = screen?.[media];
     return a ? images.get(a.$attachment) : undefined;
   };
+  const recording = !!screen?.video;
+  // the recording's element, which the play bar drives
+  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const mine = screenComments(comments, part.id, index);
   // the area being commented on, until the comment is added or cancelled;
   // `frame` is where the image was on the page when it was marked
@@ -109,7 +116,7 @@ export function ScreenViewer({
   const [hand, setHand] = useState(false);
   const [space, setSpace] = useState(false);
   // each stage's size and its image's, for the buttons' zoom on the middle
-  const sizes = useRef(new Map<Image, { W: number; H: number; w: number; h: number }>());
+  const sizes = useRef(new Map<Media, { W: number; H: number; w: number; h: number }>());
   // the stages' layers, which a pan moves directly while the drag lasts;
   // the view takes the new place once, at the end, and the layers' own
   // offset goes in the same frame
@@ -118,10 +125,10 @@ export function ScreenViewer({
     for (const layer of layers.current) layer.style.transform = "";
   }, [view]);
   const [, setMeasured] = useState(0);
-  const shown: Image = screen?.after ? "after" : "before";
+  const shown: Media = recording ? "video" : screen?.after ? "after" : "before";
 
   const zoomAt = useCallback(
-    (k: number, image: Image = shown, cx?: number, cy?: number) => {
+    (k: number, image: Media = shown, cx?: number, cy?: number) => {
       const size = sizes.current.get(image);
       if (!size) return;
       setView((v) => {
@@ -145,7 +152,7 @@ export function ScreenViewer({
     const size = sizes.current.get(shown);
     return size ? Math.round(effective(view, size.W, size.H, size.w, size.h).s * 100) : null;
   })();
-  const onSize = useCallback((image: Image, size: { W: number; H: number; w: number; h: number }) => {
+  const onSize = useCallback((image: Media, size: { W: number; H: number; w: number; h: number }) => {
     sizes.current.set(image, size);
     setMeasured((n) => n + 1);
   }, []);
@@ -257,15 +264,19 @@ export function ScreenViewer({
   // another screen starts from its own fit
   useEffect(() => setView(FIT), [index]);
 
-  const stage = (image: Image) => (
+  const stage = (image: Media) => (
     <figure>
-      <figcaption className="pinrail-eyebrow">{image === "before" ? "Before" : "After"}</figcaption>
+      <figcaption className="pinrail-eyebrow">
+        {image === "before" ? "Before" : image === "after" ? "After" : "Recording"}
+      </figcaption>
       <Stage
         src={url(image)}
-        alt={`${screen?.title ?? part.title}, ${image}`}
+        video={image === "video" ? setVideo : undefined}
+        alt={`${screen?.title ?? part.title}, ${image === "video" ? "recording" : image}`}
         view={view}
         setView={setView}
-        panning={readonly || hand || space}
+        // a recording takes no comments on its areas yet: a drag pans it
+        panning={readonly || hand || space || image === "video"}
         onSize={(size) => onSize(image, size)}
         layers={layers.current}
         zoomAt={(k, cx, cy) => zoomAt(k, image, cx, cy)}
@@ -275,6 +286,7 @@ export function ScreenViewer({
         draft={draft?.image === image ? draft.region : null}
         lit={lit}
         onMark={(region, frame) => {
+          if (image === "video") return;
           setDraft({ image, region, frame });
           setText("");
         }}
@@ -425,7 +437,12 @@ export function ScreenViewer({
         </button>
       </div>
       <div className="cm-shots-body" ref={body}>
-        {compare === "wipe" ? (
+        {recording ? (
+          <>
+            <div className="cm-stages cm-single">{stage("video")}</div>
+            <PlayBar video={video} />
+          </>
+        ) : compare === "wipe" ? (
           <div className="cm-wipe-wrap">
             <Wipe before={url("before")} after={url("after")} title={screen?.title ?? part.title} />
           </div>
@@ -466,7 +483,7 @@ export function ScreenViewer({
       </div>
       {compare !== "wipe" ? (
         <div className="pinrail-faint cm-shots-hint">
-          {readonly || hand
+          {readonly || hand || recording
             ? "Drag to pan · scroll to zoom"
             : "Drag a box or click a spot to comment · scroll to zoom · Space and drag to pan"}
         </div>
@@ -477,8 +494,67 @@ export function ScreenViewer({
 
 /** One image on a stage: moved and scaled by the shared view, with the
  *  areas drawn over it in stage pixels, so their lines stay sharp. */
+/** The time of a moment in a recording, as minutes and seconds. */
+const clock = (seconds: number) => {
+  const s = Math.floor(seconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+/** Plays and pauses a recording, says where it is, and moves it to a moment. */
+function PlayBar({ video }: { video: HTMLVideoElement | null }) {
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [length, setLength] = useState(0);
+  useEffect(() => {
+    if (!video) return;
+    const sync = () => {
+      setPlaying(!video.paused && !video.ended);
+      setTime(video.currentTime);
+      setLength(Number.isFinite(video.duration) ? video.duration : 0);
+    };
+    sync();
+    const events = ["play", "pause", "ended", "timeupdate", "seeked", "loadedmetadata", "durationchange"];
+    for (const e of events) video.addEventListener(e, sync);
+    return () => {
+      for (const e of events) video.removeEventListener(e, sync);
+    };
+  }, [video]);
+  return (
+    <div className="cm-playbar">
+      <button
+        type="button"
+        className="pinrail-btn pinrail-btn-ghost"
+        aria-label={playing ? "Pause" : "Play"}
+        title={playing ? "Pause" : "Play"}
+        disabled={!video}
+        onClick={() => (video!.paused || video!.ended ? void video!.play() : video!.pause())}
+      >
+        {playing ? <Pause /> : <Play />}
+      </button>
+      <input
+        type="range"
+        className="cm-scrub"
+        aria-label="Position in the recording"
+        min={0}
+        max={length || 0}
+        step={0.01}
+        value={time}
+        disabled={!video || !length}
+        onChange={(e) => {
+          video!.currentTime = Number(e.target.value);
+          setTime(video!.currentTime);
+        }}
+      />
+      <span className="cm-video-time mono" data-testid="video-time">
+        {clock(time)} / {clock(length)}
+      </span>
+    </div>
+  );
+}
+
 function Stage({
   src,
+  video,
   alt,
   view,
   setView,
@@ -493,6 +569,8 @@ function Stage({
   onLight,
 }: {
   src?: string;
+  /** a recording, not a screenshot: its element goes to the play bar */
+  video?: (el: HTMLVideoElement | null) => void;
   alt: string;
   view: View;
   setView(view: View): void;
@@ -638,7 +716,23 @@ function Stage({
           };
         }}
       >
-        {src ? (
+        {src && video ? (
+          <video
+            ref={video}
+            src={src}
+            aria-label={alt}
+            className="cm-stage-img"
+            muted
+            playsInline
+            preload="auto"
+            onLoadedMetadata={(e) => setNatural({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })}
+            style={
+              V
+                ? { transform: `translate(${V.x}px, ${V.y}px) scale(${V.s})`, visibility: "visible" }
+                : { visibility: "hidden" }
+            }
+          />
+        ) : src ? (
           <img
             src={src}
             alt={alt}

@@ -85,9 +85,16 @@
       "image/png",
       "image/jpeg",
       "image/webp",
-      "image/gif"
+      "image/gif",
+      ".mp4",
+      ".m4v",
+      ".mov",
+      ".webm",
+      "video/mp4",
+      "video/quicktime",
+      "video/webm"
     ],
-    "max_size": 10485760,
+    "max_size": 104857600,
     "max_count": 32
   },
   "shortcuts": [

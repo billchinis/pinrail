@@ -11,7 +11,9 @@ export type NodeStatus = "added" | "changed" | "removed" | "context";
 export type EdgeKind = "call" | "data" | "event" | "import" | "render";
 export type EdgeStatus = "added" | "changed" | "removed" | "unchanged";
 
-export type Screen = { title?: string; before?: Attachment; after?: Attachment };
+/** A screen of an interface part: screenshots before and after, or a
+ *  recording of the part in use. */
+export type Screen = { title?: string; before?: Attachment; after?: Attachment; video?: Attachment };
 
 export type Part = {
   id: string;

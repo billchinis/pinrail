@@ -87,8 +87,8 @@ A form that now sends a key with each save, to an endpoint that checks it:
 
 Read these only when the change needs them:
 
-- [Screenshots](references/screenshots.md), when the change alters what a
-  person sees on a screen.
+- [Screenshots and recordings](references/screenshots.md), when the change
+  alters what a person sees on a screen.
 - [Sequence and state diagrams](references/diagrams.md), when the order of
   calls or the states of something matter more than which parts talk.
 

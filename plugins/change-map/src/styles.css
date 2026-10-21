@@ -903,12 +903,37 @@ body.cm-resizing-panel * {
 .cm-screen-pair.cm-single {
   grid-template-columns: 1fr;
 }
-.cm-screen-pair img {
+.cm-screen-pair img,
+.cm-screen-frame video {
   display: block;
   width: 100%;
   margin-top: 3px;
   border: 1px solid var(--pinrail-border);
   border-radius: 5px;
+}
+/* a recording's first frame, with a play mark in its middle */
+.cm-screen-frame {
+  position: relative;
+  display: block;
+}
+.cm-screen-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: -15px 0 0 -17px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pinrail-text) 70%, transparent);
+  color: var(--pinrail-bg);
+}
+.cm-app .cm-screen-play svg.lucide {
+  width: 15px;
+  height: 15px;
+  margin-left: 2px;
+  fill: currentColor;
 }
 .cm-reviewed-tag {
   display: inline-flex;
@@ -1676,6 +1701,23 @@ body.cm-picking * {
 
 /* the screens in the drawer: stages that hold their image still in size,
    moved and scaled within them */
+/* a recording's play bar: play and pause, a scrubber and the time */
+.cm-playbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cm-scrub {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--pinrail-accent);
+}
+.cm-video-time {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--pinrail-dim);
+}
 .cm-shots-body {
   position: relative;
   flex: 1;

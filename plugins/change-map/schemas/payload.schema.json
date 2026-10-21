@@ -170,7 +170,7 @@
           "screens": {
             "type": "array",
             "maxItems": 12,
-            "description": "Screenshots of a user interface part: before and after the change, or one of them for a screen that is new or removed.",
+            "description": "Screens of a user interface part: screenshots before and after the change, or one of them for a screen that is new or removed, or a recording of the part in use.",
             "items": {
               "type": "object",
               "additionalProperties": false,
@@ -184,6 +184,11 @@
                   "required": [
                     "after"
                   ]
+                },
+                {
+                  "required": [
+                    "video"
+                  ]
                 }
               ],
               "properties": {
@@ -196,6 +201,10 @@
                 },
                 "after": {
                   "$ref": "#/$defs/attachment"
+                },
+                "video": {
+                  "$ref": "#/$defs/attachment",
+                  "description": "A recording of the part in use, such as an MP4 or a WebM screen capture, in place of screenshots."
                 }
               }
             }
