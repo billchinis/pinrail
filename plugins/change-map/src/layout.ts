@@ -244,6 +244,29 @@ export type SequenceLayout = {
   bottom: number;
 };
 
+/** A hidden participant's head, to measure titles in. */
+let probe: HTMLSpanElement | null = null;
+
+/** How wide a participant's title is drawn: measured in a hidden head with
+ *  the same classes, since the system font differs from one platform to
+ *  the next, or about 8 pixels a character outside a page. */
+function titleWidth(title: string): number {
+  if (typeof document === "undefined" || !document.body) return title.length * 8;
+  if (!probe) {
+    const head = document.createElement("div");
+    head.className = "cm-part cm-seq-head";
+    head.setAttribute("aria-hidden", "true");
+    head.style.cssText = "position: absolute; top: 0; left: -10000px; visibility: hidden";
+    probe = document.createElement("span");
+    probe.className = "cm-part-title";
+    probe.style.cssText = "flex: none; overflow: visible";
+    head.append(probe);
+    document.body.append(head);
+  }
+  probe.textContent = title;
+  return Math.ceil(probe.getBoundingClientRect().width);
+}
+
 export function sequenceLayout(diagram: ExtraDiagram): SequenceLayout {
   const people = diagram.participants ?? [];
   const messages = (diagram.messages ?? []).filter(
@@ -254,9 +277,9 @@ export function sequenceLayout(diagram: ExtraDiagram): SequenceLayout {
   // from it to its right-hand neighbour
   const heads = new Map<string, Box>();
   const lines = new Map<string, number>();
-  // the head's icon, padding and border, and about 8 pixels a character of
-  // its bold title, up to the widest a part of the map gets
-  const widths = people.map((p) => Math.round(Math.min(280, Math.max(120, p.title.length * 8 + 62))));
+  // the head's icon, padding and border, and its bold title, up to the
+  // widest a part of the map gets
+  const widths = people.map((p) => Math.round(Math.min(280, Math.max(120, titleWidth(p.title) + 62))));
   const gaps = people.map(() => COLUMN_GAP);
   for (const m of messages) {
     const a = people.findIndex((p) => p.id === m.from);

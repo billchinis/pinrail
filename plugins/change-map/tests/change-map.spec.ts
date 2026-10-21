@@ -1411,6 +1411,11 @@ test("a sequence participant's head is wide enough for its title", async ({ page
   };
   const plugin = await mountPlugin(page, dir, { review: { title: "names", payload } });
   const f = plugin.frame;
+  // a wider system font than the one the test runs with, as on another
+  // platform: the heads must fit the titles as drawn
+  await f
+    .locator("body")
+    .evaluate(() => document.documentElement.style.setProperty("--pinrail-sans", "Verdana, sans-serif"));
   await f.locator('[data-tab="s"]').click();
   await f.locator('[data-item="p1"]').waitFor();
   const cut = await f
