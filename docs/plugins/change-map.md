@@ -38,7 +38,7 @@ pinrail plugins install change-map
 
 - **A card for each part** of the change, such as a component, a module, an endpoint or a table, grouped into lanes such as *Web app*, *API* and *Database*, and **a line for each interaction** between two parts, labelled with what it does. A part's border and an interaction's line show whether it is new, changed, removed or unchanged. An interaction's label shows how many files implement it, so an interaction without code has no count. A card shows the part's kind and status in a header, and the lines its part of the change adds and removes. The button beside the zoom buttons switches to smaller cards with the title and the status only, and back, and the choice is kept as a setting.
 - **The side panel** with the change's summary, or the selected part or interaction with its summary, its files, its screenshots, the diagrams it appears in and its comments. You can drag the panel's left edge to make it wider.
-- **The diff drawer** under the map, with the selected part's files and the lines that implement it highlighted. Selecting another part of the same file scrolls to its lines. The button in the header shows or hides the drawer, and the choice is kept as a setting.
+- **The diff drawer** under the map, with the selected part's files and the lines that implement it highlighted. A changed line that no part, interaction or diagram covers has an amber edge, and the overview says how many of the change's lines are on the map, not counting changelogs and lock files. Selecting another part of the same file scrolls to its lines. The button in the header shows or hides the drawer, and the choice is kept as a setting.
 
 ### Sequence and state diagrams
 

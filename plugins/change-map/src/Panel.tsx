@@ -70,6 +70,8 @@ export type PanelProps = {
   zoomTo(node: string): void;
   /** each part's and interaction's comments and reviewed mark, as the map shows them */
   marks: Marks;
+  /** how many of the change's lines are on the map, of how many */
+  coverage: { total: number; mapped: number };
   /** the view the panel showed before, to go back to */
   back: { to: string; go(): void } | null;
   /** the file in the diff drawer, marked in the lists */
@@ -163,6 +165,16 @@ function Overview(props: PanelProps) {
         </p>
       ) : null}
       <Markdown text={payload.summary ?? change?.description} />
+      {props.coverage.total ? (
+        <p
+          className={`cm-coverage${props.coverage.mapped < props.coverage.total ? " cm-coverage-short" : ""}`}
+          data-testid="coverage"
+        >
+          {props.coverage.mapped === props.coverage.total
+            ? "Every changed line is on the map."
+            : `${props.coverage.mapped} of ${props.coverage.total} changed lines are on the map.`}
+        </p>
+      ) : null}
       <h3 className="pinrail-eyebrow">Parts changed</h3>
       <ul className="cm-parts">
         {changed.map((n) => {

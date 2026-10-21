@@ -8,6 +8,7 @@ import type { Init, Plugin, Settings } from "../pinrail-plugin";
 import { Diagram, type Marks } from "./Diagram";
 import { DiffViewer, savedHeight } from "./DiffViewer";
 import type { CardStyle, Direction } from "./layout";
+import { coverage } from "./lines";
 import { ScreenViewer, type ScreenMode } from "./ScreenViewer";
 import { Panel } from "./Panel";
 import { SequenceDiagram } from "./SequenceDiagram";
@@ -195,6 +196,8 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
   const selectedPart =
     selection && "node" in selection ? payload.nodes.find((n) => n.id === selection.node) : undefined;
   const siblings = useMemo(() => changesOf(payload, selection), [payload, selection]);
+  // how much of the change the map covers, and the lines it leaves out
+  const covered = useMemo(() => coverage(payload), [payload]);
   /** Opens the diff drawer on the selection's first file, or the change's
    *  first file when nothing is selected; closes it when it is open. */
   const toggleDiff = () =>
@@ -515,6 +518,7 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               payload={payload}
               path={file.path}
               siblings={siblings}
+              unmapped={file.path ? covered.unmapped.get(file.path) : undefined}
               owner={titleOf(payload, selection)}
               ownerAsCode={namedAsCode(payload, selection)}
               step={(c) => setFile({ path: c.file, change: c })}
@@ -550,6 +554,7 @@ export function App({ plugin, init }: { plugin: Plugin<Payload, Decision>; init:
               reviewed={reviewed}
               images={images}
               select={select}
+              coverage={covered}
               zoomTo={(node) => {
                 select({ node });
                 setTab(null);

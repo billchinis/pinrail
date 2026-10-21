@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import { layout, routePath } from "../src/layout";
+import { coverage } from "../src/lines";
 
 // The view alone, under the harness: no app, no CLI. `mountPlugin` serves
 // this folder as the app would and plays the app's side of the protocol.
@@ -379,6 +380,75 @@ test("the skill's check notes what a map leaves out, and passes a map that leave
   const out = check(gaps);
   expect(out).toContain("New or changed parts and interactions without lines:\n  part api-client\n  interaction post");
   expect(out).toContain("Lines in files the change does not touch:\n  part tickets-table: lib/elsewhere.ex");
+});
+
+/** The sample with the ticket form's lines narrowed to 40-45, and every
+ *  other mention of its file taken off the map: 12 of its changed lines,
+ *  the 11 added at 46-53 and 62-64 and the 1 removed before 62, are then
+ *  on no part, interaction or diagram. The 2 removed right after 45 are
+ *  on the ticket form. */
+function narrowed() {
+  const review = JSON.parse(fs.readFileSync(path.join(dir, "samples", "dedup-tickets.json"), "utf8"));
+  const form = "web/src/TicketForm.tsx";
+  const walk = (x: unknown): void => {
+    if (Array.isArray(x)) return x.forEach(walk);
+    if (!x || typeof x !== "object") return;
+    const o = x as { changes?: { file: string }[] };
+    if (o.changes) o.changes = o.changes.filter((c) => c.file !== form);
+    Object.values(o).forEach(walk);
+  };
+  walk(review.payload);
+  review.payload.nodes.find((n: { id: string }) => n.id === "ticket-form").changes = [
+    { file: form, lines: [[40, 45]] },
+  ];
+  // the screenshots stay where the sample keeps them
+  for (const entry of Object.values(review.attachments) as { path: string }[])
+    entry.path = path.join(dir, "samples", entry.path);
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cm-cover-")), "review.json");
+  fs.writeFileSync(file, JSON.stringify(review));
+  return fixture(file);
+}
+
+test("a line removed between two lines is on the map when a range reaches either of them", () => {
+  // line 49 removed: it sat between what are lines 48 and 49 on the new side
+  const diff = "@@ -47,4 +47,3 @@\n a\n b\n-gone\n c\n";
+  const at = (lines: [number, number][]) =>
+    coverage({
+      change: { title: "t" },
+      nodes: [{ id: "p", title: "P", changes: [{ file: "f.ts", lines }] }],
+      files: [{ path: "f.ts", status: "modified", diff }],
+    } as never).mapped;
+  expect(at([[40, 48]])).toBe(1);
+  expect(at([[49, 60]])).toBe(1);
+  expect(at([[30, 47]])).toBe(0);
+  expect(at([[50, 60]])).toBe(0);
+});
+
+test("the overview says how many changed lines are on the map", async ({ page }) => {
+  let plugin = await mountPlugin(page, dir, { review: dedup() });
+  await expect(plugin.frame.getByTestId("coverage")).toHaveText("Every changed line is on the map.");
+  // 87 changed lines outside the changelog, 12 of them on nothing
+  plugin = await mountPlugin(page, dir, { review: narrowed() });
+  await expect(plugin.frame.getByTestId("coverage")).toHaveText("75 of 87 changed lines are on the map.");
+});
+
+test("the drawer marks the changed lines that nothing on the map covers", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const plugin = await mountPlugin(page, dir, { review: narrowed(), settings: { show_diff: true } });
+  const f = plugin.frame;
+  await f.locator('[data-node="ticket-form"]').click();
+  const diff = f.getByTestId("diff");
+  await expect(diff.locator(".cm-unmapped")).toHaveCount(12);
+  // the lines removed right after the part's range are on it
+  await expect(diff.locator('[data-line="old:42"]')).not.toHaveClass(/cm-unmapped/);
+  await expect(diff.locator('[data-line="new:46"]')).toHaveClass(/cm-unmapped/);
+  await expect(diff.locator('[data-line="new:43"]')).not.toHaveClass(/cm-unmapped/);
+  await expect(diff.locator('[data-line="new:46"]')).toHaveAttribute("title", "Not on the map");
+  await expect(diff.getByTestId("unmapped-count")).toHaveText("12 not on the map");
+  // a file the map covers whole has none
+  await f.locator('[data-node="api-client"]').click();
+  await expect(diff.locator(".cm-unmapped")).toHaveCount(0);
+  await expect(diff.getByTestId("unmapped-count")).toHaveCount(0);
 });
 
 test("N and P walk the parts, and Enter opens the selected part's first file", async ({ page }) => {

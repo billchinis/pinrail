@@ -1157,6 +1157,25 @@ body.cm-resizing * {
   color: var(--pinrail-text);
 }
 
+/* a changed line that nothing on the map covers: an amber edge at its left */
+.cm-unmapped > td:first-child {
+  box-shadow: inset 3px 0 0 var(--pinrail-warning);
+}
+.cm-unmapped-count {
+  font-size: 11.5px;
+  color: var(--pinrail-warning);
+  white-space: nowrap;
+}
+/* the overview's line on how much of the change is on the map */
+.cm-coverage {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--pinrail-dim);
+}
+.cm-coverage-short {
+  color: var(--pinrail-warning);
+}
+
 /* lines with a comment, and lines being picked for one */
 .cm-commented .cm-code-line {
   background-image: linear-gradient(

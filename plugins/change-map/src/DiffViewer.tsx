@@ -34,6 +34,7 @@ import {
   type Target,
 } from "./types";
 import { CommentItem } from "./CommentItem";
+import type { Unmapped } from "./lines";
 import { Compose } from "./Compose";
 
 const { Pinrail } = window;
@@ -167,6 +168,7 @@ export function DiffViewer({
   payload,
   path,
   siblings,
+  unmapped,
   owner,
   ownerAsCode = false,
   step,
@@ -184,6 +186,8 @@ export function DiffViewer({
   payload: Payload;
   /** the file shown, or null when the selection has none to show */
   path: string | null;
+  /** the file's changed lines that nothing on the map covers */
+  unmapped?: Unmapped;
   /** the selection's file changes, to step through */
   siblings: FileChange[];
   /** the selection's title */
@@ -246,6 +250,10 @@ export function DiffViewer({
   const root = useRef<HTMLDivElement>(null);
 
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => resizeDrawer(event, root.current, setHeight);
+  // a changed line that no part, interaction or diagram covers
+  const offMap = (l: Line) =>
+    !!unmapped && (l.kind === "add" ? unmapped.added.has(l.new!) : l.kind === "del" && unmapped.removed.has(l.old!));
+  const off = unmapped ? unmapped.added.size + unmapped.removed.size : 0;
   const inRange = (l: Line) =>
     l.new !== undefined && l.kind !== "del" && !!change?.lines?.some(([a, b]) => l.new! >= a && l.new! <= b);
 
@@ -342,6 +350,11 @@ export function DiffViewer({
             <span className="cm-add">+{counts.added}</span> <span className="cm-del">−{counts.removed}</span>
           </span>
         ) : null}
+        {path && off ? (
+          <span className="cm-unmapped-count" data-testid="unmapped-count">
+            {off} not on the map
+          </span>
+        ) : null}
         <button
           type="button"
           className="pinrail-btn pinrail-btn-ghost"
@@ -374,11 +387,13 @@ export function DiffViewer({
                 line >= Math.min(drag.from, drag.to) &&
                 line <= Math.max(drag.from, drag.to);
               const commented = comments.some((c) => holds(c.target, path!, l));
+              const loose = offMap(l);
               return (
                 <Fragment key={i}>
                   <tr
-                    className={`cm-line cm-line-${l.kind}${inRange(l) ? " cm-in-range" : ""}${holds(at, path!, l) ? " cm-at" : ""}${commented ? " cm-commented" : ""}${picked || holds(writing, path!, l) ? " cm-picked" : ""}${drag && drag.side === side && drag.from === line ? " cm-anchor" : ""}`}
+                    className={`cm-line cm-line-${l.kind}${inRange(l) ? " cm-in-range" : ""}${holds(at, path!, l) ? " cm-at" : ""}${commented ? " cm-commented" : ""}${picked || holds(writing, path!, l) ? " cm-picked" : ""}${drag && drag.side === side && drag.from === line ? " cm-anchor" : ""}${loose ? " cm-unmapped" : ""}`}
                     data-line={l.kind === "del" ? `old:${l.old}` : `new:${l.new}`}
+                    title={loose ? "Not on the map" : undefined}
                   >
                     <td className="cm-num mono">{l.old ?? ""}</td>
                     <td className="cm-num mono">{l.new ?? ""}</td>
