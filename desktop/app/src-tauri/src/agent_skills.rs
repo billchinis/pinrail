@@ -55,9 +55,10 @@ pub struct Skill {
 }
 
 impl Skill {
-    /// The app's files, with the list of `plugins` at the end of SKILL.md
-    /// and the skills they ship under `plugins/`. A plugin skill whose files
-    /// cannot be read is left out, and its plugin listed without it.
+    /// The app's files, with the skills the `plugins` ship under `plugins/`
+    /// and SKILL.md naming those plugins in place of `{plugin_skills}`. The
+    /// other plugins are for `pinrail plugins` to list. A plugin skill whose
+    /// files cannot be read is left out, with its plugin.
     pub fn with(plugins: &[InstalledPlugin]) -> Skill {
         let mut extra: Vec<(String, Vec<u8>)> = Vec::new();
         let mut list = String::new();
@@ -76,34 +77,27 @@ impl Skill {
                         })
                         .collect()
                 });
-            list.push_str(&format!("- `{}` ({})", plugin.name, plugin.title));
-            if let Some(when) = plugin.use_when.as_deref().filter(|w| !w.trim().is_empty()) {
-                list.push_str(&format!(": {}", when.trim()));
-            }
             if let Some(files) = read {
                 list.push_str(&format!(
-                    " Before you submit to it, read [its skill]({PLUGINS}/{}/SKILL.md).",
-                    plugin.name
+                    "- `{}`: [its skill]({PLUGINS}/{}/SKILL.md)\n",
+                    plugin.name, plugin.name
                 ));
                 extra.extend(files);
             }
-            list.push('\n');
         }
-        let section = if plugins.is_empty() {
-            "\n## Installed plugins\n\nNo plugins were installed in Pinrail when it wrote this skill. \
-             `pinrail plugins` lists the ones installed since.\n"
-                .to_string()
+        let named = if list.is_empty() {
+            String::new()
         } else {
             format!(
-                "\n## Installed plugins\n\nThe plugins installed in Pinrail when it wrote this skill. \
-                 `pinrail plugins` lists the ones installed since.\n\n{list}"
+                "\n\nThe installed plugins with a skill:\n\n{}",
+                list.trim_end()
             )
         };
         let mut files: Vec<(String, Vec<u8>)> = FILES
             .iter()
             .map(|(rel, text)| {
                 let text = if *rel == "SKILL.md" {
-                    format!("{}\n{section}", text.trim_end_matches('\n'))
+                    text.replace("{plugin_skills}", &named)
                 } else {
                     text.to_string()
                 };
@@ -630,20 +624,21 @@ mod tests {
     }
 
     #[test]
-    fn the_skill_lists_the_installed_plugins_and_carries_their_skills() {
+    fn the_skill_names_the_plugins_with_a_skill_and_carries_their_skills() {
         let root = tempfile::tempdir().unwrap();
         let skill = Skill::with(&plugins(root.path()));
         let text = skill.text();
         assert!(
-            text.ends_with(
-                "## Installed plugins\n\nThe plugins installed in Pinrail when it wrote this skill. \
-                 `pinrail plugins` lists the ones installed since.\n\n\
-                 - `list` (List): Items to accept or reject.\n\
-                 - `change-map` (Change map): A code change to review as a diagram. \
-                 Before you submit to it, read [its skill](plugins/change-map/SKILL.md).\n"
+            text.contains(
+                "derive the payload from the work.\n\nThe installed plugins with a skill:\n\n\
+                 - `change-map`: [its skill](plugins/change-map/SKILL.md)\n"
             ),
             "{text}"
         );
+        // the others are for `pinrail plugins` to list
+        assert!(!text.contains("`list`: "), "{text}");
+        assert!(!text.contains("Items to accept or reject."), "{text}");
+        assert!(!text.contains("{plugin_skills}"), "{text}");
         assert_ne!(skill.sha, none().sha, "the hash covers the plugins");
 
         let home = home_with(&[".claude"]);
@@ -662,10 +657,7 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let text = Skill::with(&plugins(root.path())).to_copy();
         assert!(
-            text.contains(
-                "A code change to review as a diagram. Before you submit to it, read \
-                 `pinrail plugins skill change-map`.\n"
-            ),
+            text.contains("- `change-map`: `pinrail plugins skill change-map`\n"),
             "{text}"
         );
         assert!(!text.contains("](plugins/"), "{text}");
@@ -702,7 +694,25 @@ mod tests {
     }
 
     #[test]
-    fn a_plugin_skill_that_cannot_be_read_is_left_out_and_its_plugin_listed() {
+    fn without_plugin_skills_the_skill_names_no_plugins() {
+        let root = tempfile::tempdir().unwrap();
+        let text = Skill::with(&plugins(root.path())[..1]).text();
+        assert!(
+            text.contains(
+                "it says how to\nderive the payload from the work.\n\nA plugin fits only"
+            ),
+            "{text}"
+        );
+        assert!(
+            !text.contains("The installed plugins with a skill"),
+            "{text}"
+        );
+        assert!(!text.contains("{plugin_skills}"), "{text}");
+        assert_eq!(text, none().text());
+    }
+
+    #[test]
+    fn a_plugin_skill_that_cannot_be_read_is_left_out_with_its_plugin() {
         let root = tempfile::tempdir().unwrap();
         let mut listed = plugins(root.path());
         fs::remove_file(root.path().join("change-map/skill/scripts/files.mjs")).unwrap();
@@ -713,14 +723,7 @@ mod tests {
         ));
         let skill = Skill::with(&listed);
         let text = skill.text();
-        assert!(
-            text.contains("- `change-map` (Change map): A code change to review as a diagram.\n"),
-            "{text}"
-        );
-        assert!(
-            text.contains("- `list` (List): Items to accept or reject.\n"),
-            "{text}"
-        );
+        assert!(!text.contains("`change-map`"), "{text}");
         assert!(!text.contains("plugins/"), "{text}");
         assert!(
             skill

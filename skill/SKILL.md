@@ -111,7 +111,7 @@ pinrail plugins skill <plugin>                     # how to build its payload, i
 ```
 
 When a plugin has a skill, read it before you submit to it: it says how to
-derive the payload from the work.
+derive the payload from the work.{plugin_skills}
 
 A plugin fits only if it both shows what the person needs to review and
 returns the decision you need: a diff view does not make a plugin fit for

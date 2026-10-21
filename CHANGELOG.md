@@ -13,11 +13,11 @@ The `pinrail` command ships inside the app and carries the app's version.
 
 ### Added
 
-- The `pinrail` skill lists the installed plugins and when to use each.
-  A plugin can ship a skill of its own in a `skill/` folder, which
+- A plugin can ship a skill of its own in a `skill/` folder, which
   Pinrail writes into each connected agent's `pinrail` skill under
-  `plugins/<name>/`. Installing, updating or removing a plugin rewrites
-  the connected agents' skills. The skills of official and linked plugins
+  `plugins/<name>/`, and the `pinrail` skill names the plugins that have
+  one. Installing, updating or removing a plugin rewrites the connected
+  agents' skills. The skills of official and linked plugins
   reach the agents at once. A copied plugin's skill waits until you
   allow it in Settings › Plugins or with `pinrail plugins install
   --allow-skill`.
